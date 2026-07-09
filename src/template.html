@@ -1,0 +1,133 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audyt Dostępności Defibrylacji — Tychy (demo)</title>
+<style>
+/* ===== Leaflet (BSD-2-Clause, © Volodymyr Agafonkin) ===== */
+{{LEAFLET_CSS}}
+</style>
+<style>
+{{APP_CSS}}
+</style>
+
+<div id="app">
+  <header>
+    <div class="brand">
+      <h1>Audyt Dostępności Defibrylacji</h1>
+      <span class="sub">demonstrator narzędzia · miasto: <b>Tychy</b> · 121,5 tys. mieszkańców (GUS 2024)</span>
+      <span class="badge-demo">DEMO · AED i mapa: dane rzeczywiste (OSM) · ludność: poglądowa</span>
+    </div>
+    <div class="spacer"></div>
+    <div class="seg" id="seg-scenario">
+      <button data-v="asis" class="on">Stan obecny (as-is)</button>
+      <button data-v="tobe">Plan (to-be)</button>
+    </div>
+  </header>
+
+  <div id="main">
+    <aside id="panel">
+      <nav class="tabs">
+        <button data-tab="a" class="on"><span class="mod">A</span>Inwentaryzacja<br>i audyt</button>
+        <button data-tab="b"><span class="mod">B</span>Analiza<br>i rekomendacje</button>
+        <button data-tab="c"><span class="mod">C</span>Karty<br>punktów</button>
+      </nav>
+      <div class="tabbody">
+
+        <div id="tab-a" class="tabpane">
+          <section>
+            <h2>Inwentaryzacja — stan obecny</h2>
+            <div class="tiles" id="inv-tiles"></div>
+            <p class="note">Inwentaryzacja pobrana z <b>OpenStreetMap</b> (Overpass API, tag <code>emergency=defibrillator</code>), przycięta do granicy administracyjnej Tychów. Obejmuje sieć miejską (Budżet Obywatelski, HeartSine PAD 350P) oraz AED innych podmiotów (policja, szkoły, instytucje kultury, handel). Nie liczy się sama liczba urządzeń, ale ich <b>realna dostępność</b>: godziny otwarcia obiektu, oznakowanie dojścia, umiejscowienie (np. piętro), stan serwisowy. <b>Oznakowanie dojścia i przegląd</b> nie są opisane w OSM — wymagają audytu terenowego (poniżej oznaczone jako „do weryfikacji").</p>
+            <p class="note"><b>Benchmark regionalny:</b> Gliwice — AED w 74 lokalizacjach (XII 2025), Katowice — ok. 89 AED (~1/7 tys. mieszk.). Tychy: ~1 AED / 8 tys. mieszk.</p>
+          </section>
+          <section>
+            <h2>Punkty AED</h2>
+            <table class="list">
+              <thead><tr><th>Lokalizacja</th><th>Status audytu</th></tr></thead>
+              <tbody id="inv-rows"></tbody>
+            </table>
+          </section>
+          <section class="noprint">
+            <h2>Dane wsadowe</h2>
+            <p class="note">Wgraj własną inwentaryzację (CSV: <code>nazwa;adres;lat;lon;dostep;oznakowanie;przeglad</code>). W wersji produkcyjnej: synchronizacja z OpenStreetMap/Overpass, rejestrami miejskimi i formularzem audytora w terenie.</p>
+            <div class="btnrow">
+              <label class="btn" for="csv-file">⬆ Import CSV</label>
+              <input type="file" id="csv-file" accept=".csv" style="display:none">
+              <button class="btn" id="btn-tpl">Pobierz szablon</button>
+            </div>
+          </section>
+        </div>
+
+        <div id="tab-b" class="tabpane" style="display:none">
+          <section>
+            <h2>Standard dostępności (kontekst prawny)</h2>
+            <label class="ctl" for="standard">Przyjęty standard analizy</label>
+            <select id="standard"></select>
+            <div style="margin-top:8px" id="compliance"></div>
+            <div class="chk" style="margin-top:10px"><input type="checkbox" id="f-247"><label for="f-247">licz tylko AED dostępne 24/7</label></div>
+            <div class="chk"><input type="checkbox" id="f-sig"><label for="f-sig">licz tylko AED z oznakowaniem dojścia</label></div>
+            <div class="chk"><input type="checkbox" id="f-poi"><label for="f-poi">pokaż obiekty publiczne (kandydatów)</label></div>
+          </section>
+          <section>
+            <h2>Wskaźniki</h2>
+            <div class="tiles" id="stats-tiles"></div>
+          </section>
+          <section>
+            <div class="chart-wrap" id="chart"></div>
+          </section>
+          <section>
+            <h2>Największe luki (osiedla poza zasięgiem)</h2>
+            <table class="list">
+              <thead><tr><th>Osiedle / dzielnica</th><th style="text-align:right">Mieszk. poza zasięgiem</th><th style="text-align:right">Najgorszy czas</th></tr></thead>
+              <tbody id="gaps"></tbody>
+            </table>
+          </section>
+          <section class="noprint">
+            <h2>Rekomendacje — nowe punkty</h2>
+            <label class="ctl">Liczba nowych AED do zaproponowania</label>
+            <div class="range-row"><input type="range" id="n-new" min="1" max="15" step="1"><output id="n-new-out"></output></div>
+            <div class="btnrow">
+              <button class="btn primary" id="btn-opt">⚙ Wygeneruj rekomendacje</button>
+              <button class="btn" id="btn-add">+ Dodaj punkt ręcznie</button>
+              <button class="btn" id="btn-clear">Wyczyść</button>
+            </div>
+            <p class="note">Algorytm zachłanny maksymalnego pokrycia: każdy kolejny punkt trafia tam, gdzie obejmie najwięcej dotąd niepokrytych mieszkańców. Kandydaci = obiekty publiczne z gospodarzem. <b>Punkty można przesuwać na mapie</b> — wskaźniki przeliczą się na bieżąco.</p>
+          </section>
+          <section>
+            <h2>Roadmapa wdrożenia</h2>
+            <div id="roadmap"></div>
+            <label class="ctl" for="unit-cost">Koszt jednostkowy punktu (zł)</label>
+            <input type="number" id="unit-cost" min="5000" step="500" class="noprint">
+            <div class="btnrow noprint"><button class="btn" id="btn-export">⬇ Eksport planu (JSON)</button></div>
+          </section>
+        </div>
+
+        <div id="tab-c" class="tabpane" style="display:none">
+          <section>
+            <h2>Karta techniczna punktu</h2>
+            <div id="card"><p class="note">Kliknij punkt na mapie albo wiersz w inwentaryzacji (moduł A), aby wygenerować kartę techniczną punktu.</p></div>
+          </section>
+        </div>
+
+      </div>
+    </aside>
+    <div id="map"></div>
+  </div>
+
+  <footer>
+    Prototyp usługi „Audyt Dostępności Defibrylacji”. <b>Dane rzeczywiste:</b> mapa bazowa © Mapbox © OpenStreetMap; granica miasta (PRG); lokalizacje AED z OpenStreetMap (Overpass API, <code>emergency=defibrillator</code>, przycięte do granicy Tychów). <b>Dane poglądowe:</b> rozkład ludności osiedli i obiekty POI (kandydaci) — w produkcie zastępowane siatką GUS i rejestrami; status oznakowania dojścia i przeglądu AED — do audytu terenowego. <b>Czas dojścia:</b> model pieszy (100 m/min, współczynnik drogi 1,35) — nie izochrony po rzeczywistej sieci ulic (w produkcie: Openrouteservice/OSMnx).
+  </footer>
+</div>
+<div id="chart-tip"></div>
+
+<script>
+/* ===== Leaflet 1.9.4 (BSD-2-Clause) ===== */
+{{LEAFLET_JS}}
+</script>
+<script>
+{{BOUNDARY_JS}}
+{{AED_OSM_JS}}
+{{DATA_JS}}
+</script>
+<script>
+{{APP_JS}}
+</script>
