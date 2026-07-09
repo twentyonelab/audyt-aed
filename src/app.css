@@ -205,6 +205,8 @@ table.list tr { cursor: pointer; }
   border-left: 4px solid #7c1d6f; color: #2b2b2b;
 }
 .route-hint a { color: #7c1d6f; font-weight: 600; }
+.route-hint-err { border-left-color: #d03b3b; background: #fff5f5; }
+.route-hint code { background: #f1eee6; padding: 1px 4px; border-radius: 4px; font-size: 11px; }
 .map-legend .row { display: flex; align-items: center; gap: 8px; }
 .map-legend b { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-3); }
 .leaflet-popup-content { font: inherit; font-size: 12.5px; }

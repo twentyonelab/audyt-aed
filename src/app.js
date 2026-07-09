@@ -174,12 +174,7 @@ const layers = {
 const routeState = { active: false, origin: null };  // origin: {lat,lon,label}
 
 function startRouteFrom(lat, lon, label) {
-  if (!MAPBOX_TOKEN) {
-    alert("Pomiar trasy pieszej korzysta z Mapbox Directions.\n\n" +
-      "Dodaj publiczny token Mapbox do adresu, np.:\n" +
-      location.origin + location.pathname + "?mbtoken=pk....");
-    return;
-  }
+  if (!MAPBOX_TOKEN) { noticeNoToken("Pomiar trasy pieszej"); return; }
   routeState.active = true;
   routeState.origin = { lat, lon, label: label || "punkt startowy" };
   map.closePopup();
@@ -197,12 +192,7 @@ function cancelRoute() {
 
 /* ---------- obszar dojścia (izochrona, Mapbox Isochrone) ---------- */
 async function drawIsochrone(lat, lon, label, minutes) {
-  if (!MAPBOX_TOKEN) {
-    alert("Obszar dojścia (izochrona) korzysta z Mapbox Isochrone.\n\n" +
-      "Dodaj publiczny token Mapbox do adresu, np.:\n" +
-      location.origin + location.pathname + "?mbtoken=pk....");
-    return;
-  }
+  if (!MAPBOX_TOKEN) { noticeNoToken("Obszar dojścia (izochrona)"); return; }
   minutes = minutes || 4;
   layers.iso.clearLayers();
   map.closePopup();
@@ -212,12 +202,12 @@ async function drawIsochrone(lat, lon, label, minutes) {
   let feat;
   try {
     const res = await fetch(url);
-    const data = await res.json();
-    if (!res.ok || !data.features || !data.features.length) throw new Error((data && data.message) || "brak danych");
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.features || !data.features.length)
+      throw new Error("HTTP " + res.status + (data && data.message ? " — " + data.message : ""));
     feat = data.features[0];
   } catch (e) {
-    hideRouteHint();
-    alert("Nie udało się wyznaczyć obszaru dojścia: " + e.message);
+    noticeError("Nie udało się wyznaczyć obszaru dojścia", e.message);
     return;
   }
   const gj = L.geoJSON(feat, {
@@ -243,12 +233,12 @@ async function computeRoute(dest) {
   let route;
   try {
     const res = await fetch(url);
-    const data = await res.json();
-    if (!res.ok || !data.routes || !data.routes.length) throw new Error((data && data.message) || "brak trasy");
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.routes || !data.routes.length)
+      throw new Error("HTTP " + res.status + (data && data.message ? " — " + data.message : ""));
     route = data.routes[0];
   } catch (e) {
-    hideRouteHint();
-    alert("Nie udało się wyznaczyć trasy pieszej: " + e.message);
+    noticeError("Nie udało się wyznaczyć trasy pieszej", e.message);
     return;
   }
   const line = route.geometry.coordinates.map((c) => [c[1], c[0]]); // [lon,lat] -> [lat,lon]
@@ -283,18 +273,33 @@ async function computeRoute(dest) {
 
 /* pasek podpowiedzi/wyniku nad mapą */
 let routeHintCtl = null;
-function showRouteHint(html) {
+function showRouteHint(html, isError) {
   if (!routeHintCtl) {
     routeHintCtl = L.control({ position: "topleft" });
     routeHintCtl.onAdd = () => { const d = L.DomUtil.create("div", "route-hint"); L.DomEvent.disableClickPropagation(d); return d; };
     routeHintCtl.addTo(map);
   }
   const el = routeHintCtl.getContainer();
+  el.className = "route-hint" + (isError ? " route-hint-err" : "");
   el.innerHTML = html; el.style.display = "block";
   const c = el.querySelector("#route-clear-hint");
   if (c) c.addEventListener("click", (ev) => { ev.preventDefault(); cancelRoute(); });
 }
-function hideRouteHint() { if (routeHintCtl) routeHintCtl.getContainer().style.display = "none"; }
+function hideRouteHint() { if (routeHintCtl) { routeHintCtl.getContainer().style.display = "none"; routeHintCtl.getContainer().className = "route-hint"; } }
+
+function noticeNoToken(feature) {
+  map.getContainer().style.cursor = "";
+  routeState.active = false;
+  showRouteHint(
+    `⚠ <b>${feature}</b> wymaga mapy Mapbox. Ta strona działa teraz na podkładzie CARTO (bez tokenu).<br>` +
+    `Otwórz stronę z tokenem w adresie: <code>?mbtoken=pk...</code> ` +
+    `<a href="#" id="route-clear-hint">×</a>`, true);
+}
+function noticeError(title, detail) {
+  map.getContainer().style.cursor = "";
+  routeState.active = false;
+  showRouteHint(`⚠ ${title}: ${detail} <a href="#" id="route-clear-hint">×</a>`, true);
+}
 
 // kliknięcie mapy = punkt docelowy trasy (gdy tryb pomiaru aktywny)
 map.on("click", (e) => {
