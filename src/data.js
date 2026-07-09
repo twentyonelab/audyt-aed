@@ -22,28 +22,26 @@ const CITY = {
    Protection blokuje commit tokenów Mapbox).
    TODO(produkcja): token wstrzykiwać ze zmiennej środowiskowej przy build/deploy
    i ograniczyć go w panelu Mapbox do domeny hostingu (URL restrictions). */
-const BASEMAP = (function () {
-  var mbToken = "";
-  try { mbToken = new URLSearchParams(location.search).get("mbtoken") || window.MAPBOX_TOKEN || ""; } catch (e) { /* file:// */ }
-  if (mbToken) {
-    return {
-      provider: "mapbox",
-      url: "https://api.mapbox.com/styles/v1/mapbox/light-v11/tiles/512/{z}/{x}/{y}@2x?access_token=" + mbToken,
-      options: {
-        tileSize: 512, zoomOffset: -1, minZoom: 10, maxZoom: 18, crossOrigin: true,
-        attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-      },
-    };
-  }
-  return {
-    provider: "carto",
-    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-    options: {
-      subdomains: "abcd", minZoom: 10, maxZoom: 19, crossOrigin: true,
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a>',
-    },
-  };
+const MAPBOX_TOKEN = (function () {
+  try { return new URLSearchParams(location.search).get("mbtoken") || window.MAPBOX_TOKEN || ""; }
+  catch (e) { return ""; /* file:// */ }
 })();
+
+const BASEMAP = MAPBOX_TOKEN ? {
+  provider: "mapbox",
+  url: "https://api.mapbox.com/styles/v1/mapbox/light-v11/tiles/512/{z}/{x}/{y}@2x?access_token=" + MAPBOX_TOKEN,
+  options: {
+    tileSize: 512, zoomOffset: -1, minZoom: 10, maxZoom: 18, crossOrigin: true,
+    attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  },
+} : {
+  provider: "carto",
+  url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+  options: {
+    subdomains: "abcd", minZoom: 10, maxZoom: 19, crossOrigin: true,
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a>',
+  },
+};
 
 /* Osiedla i dzielnice — centroidy + szacunkowa liczba mieszkańców (demo).
    r = promień rozrzutu punktów popytu w metrach. */
