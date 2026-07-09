@@ -868,6 +868,12 @@ table.list tr { cursor: pointer; }
   border-radius: 10px; padding: 9px 12px; font-size: 11.5px; line-height: 1.7;
   color: var(--ink-2); box-shadow: 0 1px 6px rgba(0,0,0,0.08);
 }
+.route-hint {
+  background: #fff; padding: 7px 11px; border-radius: 8px; font-size: 12px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.25); max-width: 320px; line-height: 1.4;
+  border-left: 4px solid #7c1d6f; color: #2b2b2b;
+}
+.route-hint a { color: #7c1d6f; font-weight: 600; }
 .map-legend .row { display: flex; align-items: center; gap: 8px; }
 .map-legend b { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-3); }
 .leaflet-popup-content { font: inherit; font-size: 12.5px; }
@@ -1041,28 +1047,26 @@ const CITY = {
    Protection blokuje commit tokenów Mapbox).
    TODO(produkcja): token wstrzykiwać ze zmiennej środowiskowej przy build/deploy
    i ograniczyć go w panelu Mapbox do domeny hostingu (URL restrictions). */
-const BASEMAP = (function () {
-  var mbToken = "";
-  try { mbToken = new URLSearchParams(location.search).get("mbtoken") || window.MAPBOX_TOKEN || ""; } catch (e) { /* file:// */ }
-  if (mbToken) {
-    return {
-      provider: "mapbox",
-      url: "https://api.mapbox.com/styles/v1/mapbox/light-v11/tiles/512/{z}/{x}/{y}@2x?access_token=" + mbToken,
-      options: {
-        tileSize: 512, zoomOffset: -1, minZoom: 10, maxZoom: 18, crossOrigin: true,
-        attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-      },
-    };
-  }
-  return {
-    provider: "carto",
-    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-    options: {
-      subdomains: "abcd", minZoom: 10, maxZoom: 19, crossOrigin: true,
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a>',
-    },
-  };
+const MAPBOX_TOKEN = (function () {
+  try { return new URLSearchParams(location.search).get("mbtoken") || window.MAPBOX_TOKEN || ""; }
+  catch (e) { return ""; /* file:// */ }
 })();
+
+const BASEMAP = MAPBOX_TOKEN ? {
+  provider: "mapbox",
+  url: "https://api.mapbox.com/styles/v1/mapbox/light-v11/tiles/512/{z}/{x}/{y}@2x?access_token=" + MAPBOX_TOKEN,
+  options: {
+    tileSize: 512, zoomOffset: -1, minZoom: 10, maxZoom: 18, crossOrigin: true,
+    attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  },
+} : {
+  provider: "carto",
+  url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+  options: {
+    subdomains: "abcd", minZoom: 10, maxZoom: 19, crossOrigin: true,
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a>',
+  },
+};
 
 /* Osiedla i dzielnice — centroidy + szacunkowa liczba mieszkańców (demo).
    r = promień rozrzutu punktów popytu w metrach. */
@@ -1377,7 +1381,106 @@ const layers = {
   pois: L.layerGroup(),
   aeds: L.layerGroup().addTo(map),
   props: L.layerGroup().addTo(map),
+  route: L.layerGroup().addTo(map),
 };
+
+/* ---------- pomiar trasy pieszej (Mapbox Directions) ---------- */
+const routeState = { active: false, origin: null };  // origin: {lat,lon,label}
+
+function startRouteFrom(lat, lon, label) {
+  if (!MAPBOX_TOKEN) {
+    alert("Pomiar trasy pieszej korzysta z Mapbox Directions.\n\n" +
+      "Dodaj publiczny token Mapbox do adresu, np.:\n" +
+      location.origin + location.pathname + "?mbtoken=pk....");
+    return;
+  }
+  routeState.active = true;
+  routeState.origin = { lat, lon, label: label || "punkt startowy" };
+  map.closePopup();
+  map.getContainer().style.cursor = "crosshair";
+  showRouteHint(`Trasa piesza od: <b>${routeState.origin.label}</b> — kliknij punkt docelowy na mapie.`);
+}
+
+function cancelRoute() {
+  routeState.active = false; routeState.origin = null;
+  map.getContainer().style.cursor = "";
+  layers.route.clearLayers();
+  hideRouteHint();
+}
+
+async function computeRoute(dest) {
+  const o = routeState.origin;
+  layers.route.clearLayers();
+  showRouteHint("Wyznaczam trasę pieszą…");
+  const url = `https://api.mapbox.com/directions/v5/mapbox/walking/` +
+    `${o.lon},${o.lat};${dest.lon},${dest.lat}` +
+    `?geometries=geojson&overview=full&steps=false&access_token=${MAPBOX_TOKEN}`;
+  let route;
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!res.ok || !data.routes || !data.routes.length) throw new Error((data && data.message) || "brak trasy");
+    route = data.routes[0];
+  } catch (e) {
+    hideRouteHint();
+    alert("Nie udało się wyznaczyć trasy pieszej: " + e.message);
+    return;
+  }
+  const line = route.geometry.coordinates.map((c) => [c[1], c[0]]); // [lon,lat] -> [lat,lon]
+  L.polyline(line, { color: "#7c1d6f", weight: 5, opacity: 0.85, interactive: false }).addTo(layers.route);
+  L.polyline(line, { color: "#fff", weight: 9, opacity: 0.35, interactive: false }).addTo(layers.route).bringToBack();
+  L.circleMarker([o.lat, o.lon], { radius: 6, color: "#fff", weight: 2, fillColor: "#0ca30c", fillOpacity: 1 })
+    .addTo(layers.route).bindTooltip("Start: " + o.label);
+  L.circleMarker([dest.lat, dest.lon], { radius: 6, color: "#fff", weight: 2, fillColor: "#d03b3b", fillOpacity: 1 })
+    .addTo(layers.route).bindTooltip("Cel (wskazany ręcznie)");
+
+  const meters = route.distance, walkMin = route.duration / 60;
+  // porównanie z modelem demonstracyjnym (linia prosta × współczynnik)
+  const straight = distM({ lat: o.lat, lon: o.lon }, dest);
+  const modelMin = timeOneWayMin(straight);
+  const km = meters >= 1000 ? (meters / 1000).toFixed(2).replace(".", ",") + " km" : Math.round(meters) + " m";
+
+  L.popup({ maxWidth: 260, autoPan: true })
+    .setLatLng(line[Math.floor(line.length / 2)])
+    .setContent(
+      `<b>Trasa piesza (Mapbox)</b><br>` +
+      `dystans: <b>${km}</b><br>` +
+      `czas dojścia: <b>${walkMin.toFixed(1).replace(".", ",")} min</b> <span style="color:#898781">(≈5 km/h)</span><br>` +
+      `<span style="color:#898781">w linii prostej: ${Math.round(straight)} m · model demo: ${modelMin.toFixed(1).replace(".", ",")} min</span><br>` +
+      `<a href="#" data-route-clear="1">Wyczyść trasę</a>`)
+    .openOn(map);
+  map.getContainer().style.cursor = "";
+  routeState.active = false;
+  showRouteHint(
+    `Trasa: <b>${km}</b> · <b>${walkMin.toFixed(1).replace(".", ",")} min</b> pieszo ` +
+    `<a href="#" id="route-clear-hint">wyczyść</a>`);
+}
+
+/* pasek podpowiedzi/wyniku nad mapą */
+let routeHintCtl = null;
+function showRouteHint(html) {
+  if (!routeHintCtl) {
+    routeHintCtl = L.control({ position: "topleft" });
+    routeHintCtl.onAdd = () => { const d = L.DomUtil.create("div", "route-hint"); L.DomEvent.disableClickPropagation(d); return d; };
+    routeHintCtl.addTo(map);
+  }
+  const el = routeHintCtl.getContainer();
+  el.innerHTML = html; el.style.display = "block";
+  const c = el.querySelector("#route-clear-hint");
+  if (c) c.addEventListener("click", (ev) => { ev.preventDefault(); cancelRoute(); });
+}
+function hideRouteHint() { if (routeHintCtl) routeHintCtl.getContainer().style.display = "none"; }
+
+// kliknięcie mapy = punkt docelowy trasy (gdy tryb pomiaru aktywny)
+map.on("click", (e) => {
+  if (routeState.active && routeState.origin) computeRoute({ lat: e.latlng.lat, lon: e.latlng.lng });
+});
+// bindowanie linku „Wyczyść trasę" w popupie wyniku
+map.on("popupopen", (e) => {
+  const el = e.popup.getElement();
+  if (el) el.querySelectorAll("a[data-route-clear]").forEach((a) =>
+    a.addEventListener("click", (ev) => { ev.preventDefault(); cancelRoute(); }));
+});
 
 function drawBase() {
   layers.base.clearLayers();
@@ -1431,7 +1534,8 @@ function aedPopup(a) {
   if (a.access !== "24/7") issues.push("dostępność ograniczona: " + a.hours);
   return `<b>${a.name}</b><br>${a.addr} · ${a.owner}<br>` +
     (issues.length ? `<span style="color:#b45309">⚠ ${issues.join("; ")}</span><br>` : `<span style="color:#006300">✓ bez uwag krytycznych</span><br>`) +
-    `<a href="#" data-card="${a.id}">Otwórz kartę punktu →</a>`;
+    `<a href="#" data-card="${a.id}">Otwórz kartę punktu →</a><br>` +
+    `<a href="#" data-route="${a.id}">📏 Trasa piesza stąd →</a>`;
 }
 function drawAeds() {
   layers.aeds.clearLayers();
@@ -1456,7 +1560,7 @@ function drawProps() {
     mk.bindPopup(
       `<b>Propozycja ${i + 1}: ${p.host}</b><br>typ: ${p.type}<br>` +
       `nowo objęci mieszkańcy: ~${p.gain.toLocaleString("pl-PL")}<br>` +
-      `<a href="#" data-card="${p.id}">Karta wdrożenia →</a> · <a href="#" data-del="${p.id}">usuń</a>`
+      `<a href="#" data-card="${p.id}">Karta wdrożenia →</a> · <a href="#" data-route="${p.id}">📏 trasa piesza</a> · <a href="#" data-del="${p.id}">usuń</a>`
     );
     mk.on("popupopen", (e) => bindCardLinks(e.popup.getElement()));
     mk.on("dragend", () => {
@@ -1485,6 +1589,15 @@ function bindCardLinks(el) {
       state.proposals = state.proposals.filter((p) => p.id !== a.dataset.del);
       map.closePopup(); refresh(true);
     }));
+  el.querySelectorAll("a[data-route]").forEach((a) =>
+    a.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      const id = a.dataset.route;
+      const src = state.aeds.find((x) => x.id === id) || state.proposals.find((x) => x.id === id);
+      if (src) startRouteFrom(src.lat, src.lon, src.name || src.host || id);
+    }));
+  el.querySelectorAll("a[data-route-clear]").forEach((a) =>
+    a.addEventListener("click", (ev) => { ev.preventDefault(); cancelRoute(); }));
 }
 
 /* legenda na mapie */
@@ -1799,6 +1912,7 @@ function initUI() {
     map.getContainer().style.cursor = addMode ? "crosshair" : "";
   });
   map.on("click", (e) => {
+    if (routeState.active) return;   // tryb pomiaru trasy ma pierwszeństwo
     if (!addMode) return;
     state.proposals.push({
       id: "NOWY-" + String(state.proposals.length + 1).padStart(2, "0"),
