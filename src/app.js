@@ -167,6 +167,7 @@ const layers = {
   aeds: L.layerGroup().addTo(map),
   props: L.layerGroup().addTo(map),
   route: L.layerGroup().addTo(map),
+  iso: L.layerGroup().addTo(map),
 };
 
 /* ---------- pomiar trasy pieszej (Mapbox Directions) ---------- */
@@ -190,7 +191,46 @@ function cancelRoute() {
   routeState.active = false; routeState.origin = null;
   map.getContainer().style.cursor = "";
   layers.route.clearLayers();
+  layers.iso.clearLayers();
   hideRouteHint();
+}
+
+/* ---------- obszar dojścia (izochrona, Mapbox Isochrone) ---------- */
+async function drawIsochrone(lat, lon, label, minutes) {
+  if (!MAPBOX_TOKEN) {
+    alert("Obszar dojścia (izochrona) korzysta z Mapbox Isochrone.\n\n" +
+      "Dodaj publiczny token Mapbox do adresu, np.:\n" +
+      location.origin + location.pathname + "?mbtoken=pk....");
+    return;
+  }
+  minutes = minutes || 4;
+  layers.iso.clearLayers();
+  map.closePopup();
+  showRouteHint(`Wyznaczam obszar dojścia ${minutes} min od: <b>${label}</b>…`);
+  const url = `https://api.mapbox.com/isochrone/v1/mapbox/walking/${lon},${lat}` +
+    `?contours_minutes=${minutes}&polygons=true&denoise=1&generalize=8&access_token=${MAPBOX_TOKEN}`;
+  let feat;
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!res.ok || !data.features || !data.features.length) throw new Error((data && data.message) || "brak danych");
+    feat = data.features[0];
+  } catch (e) {
+    hideRouteHint();
+    alert("Nie udało się wyznaczyć obszaru dojścia: " + e.message);
+    return;
+  }
+  const gj = L.geoJSON(feat, {
+    style: { color: "#0f766e", weight: 2, dashArray: "5 4", fillColor: "#14b8a6", fillOpacity: 0.22 },
+    interactive: false,
+  }).addTo(layers.iso);
+  L.circleMarker([lat, lon], { radius: 6, color: "#fff", weight: 2, fillColor: "#0f766e", fillOpacity: 1 })
+    .addTo(layers.iso).bindTooltip(label);
+  try { map.fitBounds(gj.getBounds(), { padding: [30, 30], maxZoom: 16 }); } catch (e) {}
+  showRouteHint(
+    `Obszar dojścia <b>${minutes} min</b> pieszo od: <b>${label}</b> ` +
+    `<span style="color:#898781">(Mapbox Isochrone — realna sieć)</span> ` +
+    `<a href="#" id="route-clear-hint">wyczyść</a>`);
 }
 
 async function computeRoute(dest) {
@@ -320,7 +360,8 @@ function aedPopup(a) {
   return `<b>${a.name}</b><br>${a.addr} · ${a.owner}<br>` +
     (issues.length ? `<span style="color:#b45309">⚠ ${issues.join("; ")}</span><br>` : `<span style="color:#006300">✓ bez uwag krytycznych</span><br>`) +
     `<a href="#" data-card="${a.id}">Otwórz kartę punktu →</a><br>` +
-    `<a href="#" data-route="${a.id}">📏 Trasa piesza stąd →</a>`;
+    `<a href="#" data-route="${a.id}">📏 Trasa piesza stąd →</a><br>` +
+    `<a href="#" data-iso="${a.id}">🗺️ Obszar dojścia 4 min →</a>`;
 }
 function drawAeds() {
   layers.aeds.clearLayers();
@@ -383,6 +424,13 @@ function bindCardLinks(el) {
     }));
   el.querySelectorAll("a[data-route-clear]").forEach((a) =>
     a.addEventListener("click", (ev) => { ev.preventDefault(); cancelRoute(); }));
+  el.querySelectorAll("a[data-iso]").forEach((a) =>
+    a.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      const id = a.dataset.iso;
+      const src = state.aeds.find((x) => x.id === id) || state.proposals.find((x) => x.id === id);
+      if (src) drawIsochrone(src.lat, src.lon, src.name || src.host || id, 4);
+    }));
 }
 
 /* legenda na mapie */
