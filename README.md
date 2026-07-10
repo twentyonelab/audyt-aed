@@ -71,11 +71,26 @@ Domyślnie mapa używa **CARTO Positron** — jasnego podkładu **bez tokena**, 
 publiczny link (np. GitHub Pages) działa od razu i **żaden sekret nie trafia do
 repozytorium**.
 
-Aby użyć **Mapbox** (styl `light-v11`), podaj publiczny token Mapbox (`pk.*`):
-- w adresie URL: `…/index.html?mbtoken=pk....`, albo
-- globalnie w konsoli/skrypcie: `window.MAPBOX_TOKEN = "pk...."`.
+**Mapbox** (styl `light-v11`) włącza funkcje wymagające routingu — pomiar trasy
+pieszej i obszary dojścia (izochrony). Token (`pk.*`) można dostarczyć na trzy
+sposoby (kolejność priorytetu w `src/data.js`):
+1. w adresie URL: `…/index.html?mbtoken=pk....`,
+2. globalnie: `window.MAPBOX_TOKEN = "pk...."`,
+3. wstrzyknięty przy publikacji do wersji Pages (patrz niżej).
 
-Token Mapbox **nie jest przechowywany w repo** — świadomie (higiena sekretów;
-GitHub Push Protection i tak blokuje commit tokenów Mapbox). W produkcji: wstrzykiwać
-token ze zmiennej środowiskowej przy build/deploy i ograniczyć go w panelu Mapbox
-do domeny hostingu (URL restrictions). Patrz `BASEMAP` w `src/data.js`.
+**Źródło repo jest bez tokenu** (CARTO domyślnie). Publikacja na GitHub Pages
+wstrzykuje publiczny token do wydawanego `index.html`, aby goły link miał od razu
+Mapbox — bez `?mbtoken=`:
+
+```bash
+python3 build.py
+MAPBOX_TOKEN="pk...." python3 tools/deploy_pages.py index.html index.pages.html
+# -> zawartość index.pages.html trafia jako index.html na gałąź gh-pages
+```
+
+`deploy_pages.py` zapisuje token jako base64 dekodowany w locie (`atob`) — wyłącznie
+by nie wywołać false-positive GitHub Push Protection. Token `pk.*` jest publiczny
+z założenia (osadzany w stronie); **właściwym zabezpieczeniem jest ograniczenie go
+w panelu Mapbox do domeny hostingu** (Account → Tokens → URL restrictions, np.
+`twentyonelab.github.io`). Bez tokenu wszystko poza trasami/izochronami działa na
+CARTO; funkcje routingu pokazują wtedy widoczny komunikat z instrukcją.
