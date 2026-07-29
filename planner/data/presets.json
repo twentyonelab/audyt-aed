@@ -1,0 +1,132 @@
+[
+  {
+    "id": "P1",
+    "name": "Wewnętrzny — budynek publiczny",
+    "cost": 8500,
+    "requiredFields": [
+      "name",
+      "address",
+      "placement",
+      "access",
+      "keeper",
+      "signage.atDevice",
+      "signage.route",
+      "device.model",
+      "device.inspectionDue",
+      "dispatcherRegistered"
+    ],
+    "requiredPhotos": [
+      "device",
+      "signage_route"
+    ],
+    "checklist": [
+      "opiekun",
+      "oznakowanie wewnętrzne",
+      "oznakowanie dojścia"
+    ]
+  },
+  {
+    "id": "P2",
+    "name": "Wewnętrzny — obiekt 24/7",
+    "cost": 9000,
+    "requiredFields": [
+      "name",
+      "address",
+      "placement",
+      "access",
+      "keeper",
+      "signage.atDevice",
+      "signage.route",
+      "device.model",
+      "device.inspectionDue",
+      "dispatcherRegistered"
+    ],
+    "requiredPhotos": [
+      "device",
+      "signage_route"
+    ],
+    "checklist": [
+      "dostęp całodobowy",
+      "opiekun",
+      "oznakowanie dojścia"
+    ]
+  },
+  {
+    "id": "P3",
+    "name": "Zewnętrzny — szafka na elewacji",
+    "cost": 15000,
+    "requiredFields": [
+      "name",
+      "address",
+      "placement",
+      "keeper",
+      "signage.atDevice",
+      "signage.route",
+      "device.model",
+      "dispatcherRegistered",
+      "technical.power"
+    ],
+    "requiredPhotos": [
+      "device",
+      "mounting_spot",
+      "power"
+    ],
+    "checklist": [
+      "zasilanie 230 V",
+      "szafka ogrzewana IP55",
+      "oznakowanie dojścia",
+      "monitoring otwarcia"
+    ]
+  },
+  {
+    "id": "P4",
+    "name": "Zewnętrzny — słupek wolnostojący",
+    "cost": 24000,
+    "requiredFields": [
+      "name",
+      "address",
+      "placement",
+      "keeper",
+      "signage.atDevice",
+      "signage.route",
+      "device.model",
+      "dispatcherRegistered",
+      "technical.power",
+      "technical.works"
+    ],
+    "requiredPhotos": [
+      "device",
+      "mounting_spot",
+      "power",
+      "context"
+    ],
+    "checklist": [
+      "przyłącze energetyczne",
+      "fundament i uzgodnienia",
+      "oświetlenie",
+      "monitoring otwarcia"
+    ]
+  },
+  {
+    "id": "P5",
+    "name": "Sezonowy / mobilny",
+    "cost": 6000,
+    "requiredFields": [
+      "name",
+      "address",
+      "placement",
+      "access",
+      "keeper",
+      "device.model",
+      "dispatcherRegistered"
+    ],
+    "requiredPhotos": [
+      "device"
+    ],
+    "checklist": [
+      "harmonogram sezonu",
+      "miejsce przechowywania poza sezonem",
+      "opiekun"
+    ]
+  }
+]
