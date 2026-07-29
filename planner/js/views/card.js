@@ -1181,8 +1181,10 @@ export async function render(root, ctx) {
     boundary: state.boundary,
     districts: state.districtsGeo,
     showDistricts: true,
-    coverage: [{ lat: point.lat, lon: point.lon, radiusM, kind: isProposed ? 'proposed' : 'existing' }],
-    showCoverage: true,
+    // Bez okręgu strefy — promień jest podany liczbowo pod mapką, a okrąg
+    // przy tym kadrze zasłaniał sam punkt.
+    coverage: [],
+    showCoverage: false,
     targetMinutes: standardMinutes,
     points: [{ id: point.id, lat: point.lat, lon: point.lon, level: status.level, name: point.name }],
   };
@@ -1194,7 +1196,7 @@ export async function render(root, ctx) {
       width: 480,
       height: MINI_MAP_H,
       showDemand: false,
-      showCoverage: true,
+      showCoverage: false,
       showLabels: false,
     }),
   });

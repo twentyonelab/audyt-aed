@@ -93,6 +93,7 @@ const REASON_OUT_OF_SCOPE = 'poza zakresem iteracji 2';
 
 let map = null;
 let addMode = false;
+let movingPointId = null;
 let keyHandler = null;
 let outsideHandler = null;
 let openMenuEl = null;
@@ -285,7 +286,7 @@ export async function render(root, ctx) {
 
   const panel = h(
     'aside',
-    { class: 'panel', style: { width: '480px', flex: '0 0 480px' } },
+    { class: 'panel panel--side' },
     h(
       'div',
       { class: 'panel__head' },
@@ -317,6 +318,28 @@ export async function render(root, ctx) {
   mapEl.appendChild(h('div', { class: 'map-toolbar' }, addBtn, fitBtn));
   mapEl.appendChild(hint);
   mapEl.appendChild(legend(proposedRows.length));
+
+  /* Klik w puste miejsce mapy proponuje dodanie punktu — bez wcześniejszego
+     uzbrajania trybu. Pasek jest odrzucalny, więc przypadkowy klik nic nie psuje. */
+  const clickPrompt = h('div', {
+    class: 'card',
+    style: {
+      position: 'absolute',
+      left: '50%',
+      transform: 'translateX(-50%)',
+      bottom: '16px',
+      zIndex: '8',
+      display: 'none',
+      padding: '8px 10px',
+      boxShadow: '0 2px 10px rgba(0,0,0,0.14)',
+    },
+  });
+  mapEl.appendChild(clickPrompt);
+
+  const hideClickPrompt = () => {
+    clickPrompt.style.display = 'none';
+    mount(clickPrompt);
+  };
 
   /* mini-karta punktu — własny popup w rogu kontenera mapy */
   const popup = h('div', {
@@ -401,12 +424,27 @@ export async function render(root, ctx) {
         })
       ),
       h(
-        'button',
-        {
-          class: 'btn btn--sm btn--primary btn--block',
-          onclick: () => ctx.navigate(`#/card/${point.id}`),
-        },
-        'OTWÓRZ KARTĘ →'
+        'div',
+        { class: 'row', style: { gap: '6px' } },
+        h(
+          'button',
+          {
+            class: 'btn btn--sm',
+            style: { flex: '1' },
+            title: 'Włącz przeciąganie tego pinu po mapie',
+            onclick: () => startMoving(point),
+          },
+          '✥ PRZESUŃ'
+        ),
+        h(
+          'button',
+          {
+            class: 'btn btn--sm btn--primary',
+            style: { flex: '1' },
+            onclick: () => ctx.navigate(`#/card/${point.id}`),
+          },
+          'KARTA →'
+        )
       )
     );
     popup.style.display = '';
@@ -435,6 +473,15 @@ export async function render(root, ctx) {
 
   keyHandler = (e) => {
     if (e.key !== 'Escape') return;
+    if (movingPointId) {
+      stopMoving();
+      toast('Przesuwanie punktu anulowane.');
+      return;
+    }
+    if (clickPrompt.style.display !== 'none') {
+      hideClickPrompt();
+      return;
+    }
     if (addMode) {
       exitAddMode();
       toast('Tryb dodawania punktu wyłączony.');
@@ -453,9 +500,83 @@ export async function render(root, ctx) {
   });
 
   map.on('mapclick', async ({ lat, lon, addMode: fromMap }) => {
-    if (!addMode && !fromMap) return;
+    if (addMode || fromMap) {
+      exitAddMode();
+      hideClickPrompt();
+      await promptNewPoint(lat, lon);
+      return;
+    }
+    if (movingPointId) return; // trwa przesuwanie — klik nie dodaje punktu
+    showClickPrompt(lat, lon);
+  });
+
+  /** Pasek „dodaj punkt tutaj" po kliknięciu w puste miejsce mapy. */
+  function showClickPrompt(lat, lon) {
+    hidePopup();
+    mount(
+      clickPrompt,
+      h(
+        'div',
+        { class: 'row', style: { gap: '10px' } },
+        h('span', {
+          class: 'num',
+          style: { fontSize: '12px' },
+          text: `${lat.toFixed(5)}, ${lon.toFixed(5)}`,
+        }),
+        h(
+          'button',
+          {
+            class: 'btn btn--sm btn--primary',
+            onclick: async () => {
+              hideClickPrompt();
+              await promptNewPoint(lat, lon);
+            },
+          },
+          '+ Dodaj punkt tutaj'
+        ),
+        h('button', { class: 'btn btn--sm btn--ghost', title: 'Zamknij', onclick: hideClickPrompt }, '✕')
+      )
+    );
+    clickPrompt.style.display = '';
+  }
+
+  /* ---------------- przesuwanie istniejącego punktu ---------------- */
+
+  /** Uzbraja przeciąganie dla jednego punktu — reszta pinów zostaje nieruchoma. */
+  function startMoving(point) {
+    movingPointId = point.id;
+    hidePopup();
+    hideClickPrompt();
     exitAddMode();
-    await promptNewPoint(lat, lon);
+    hint.textContent = `Przeciągnij pin „${point.name}" w nowe miejsce · Esc anuluje`;
+    hint.style.display = '';
+    repaintPins();
+  }
+
+  function stopMoving() {
+    if (!movingPointId) return;
+    movingPointId = null;
+    hint.textContent = 'Kliknij na mapie, aby dodać punkt · Esc anuluje';
+    hint.style.display = 'none';
+    repaintPins();
+  }
+
+  map.on('pointdragend', async ({ id, lat, lon }) => {
+    const point = state.points.find((p) => p.id === id);
+    if (!point) return;
+    point.lat = Math.round(lat * 1e6) / 1e6;
+    point.lon = Math.round(lon * 1e6) / 1e6;
+    const district = districtAt(point.lat, point.lon);
+    const movedOut = district !== point.districtId;
+    point.districtId = district;
+    upsertPoint(point);
+    movingPointId = null;
+    toast(
+      movedOut
+        ? `Przesunięto „${point.name}" — nowa dzielnica: ${districtName(district)}.`
+        : `Przesunięto „${point.name}".`
+    );
+    await save();
   });
 
   /* ---------------- zaznaczenie punktu ---------------- */
@@ -658,14 +779,24 @@ export async function render(root, ctx) {
 
   /* ---------------- scena mapy ---------------- */
 
-  const pins = [...registry, ...proposedRows].map((r) => ({
-    id: r.point.id,
-    lat: r.point.lat,
-    lon: r.point.lon,
-    level: r.level,
-    name: r.point.name,
-    draggable: false,
-  }));
+  /** Piny sceny. Przeciągalny jest wyłącznie punkt uzbrojony przez „Przesuń punkt". */
+  function buildPins() {
+    return [...registry, ...proposedRows].map((r) => ({
+      id: r.point.id,
+      lat: r.point.lat,
+      lon: r.point.lon,
+      level: r.level,
+      name: r.point.name,
+      draggable: r.point.id === movingPointId,
+    }));
+  }
+
+  /** Przerysowuje same piny — bez odtwarzania całej sceny i bez utraty kadru. */
+  function repaintPins() {
+    if (map) map.setScene({ points: buildPins() });
+  }
+
+  const pins = buildPins();
 
   const labels = ((state.districtsGeo && state.districtsGeo.features) || []).map((feature) => {
     const centre = ringCentroid(feature.geometry.coordinates[0]);
@@ -950,6 +1081,7 @@ function cleanup() {
     keyHandler = null;
   }
   addMode = false;
+  movingPointId = null;
   if (map) {
     try {
       map.destroy();

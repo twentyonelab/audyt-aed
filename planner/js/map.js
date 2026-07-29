@@ -412,14 +412,20 @@ function createFallbackMap(container, opts) {
     if (!scene.boundary) return;
     const bbox = bboxOf(scene.boundary);
     projection = makeProjection(bbox, size.w, size.h, 24);
-    holder.innerHTML = renderSceneSvg(scene, {
-      width: size.w,
-      height: size.h,
-      showDemand: scene.showDemand !== false,
-      showCoverage: scene.showCoverage !== false,
-      showDistricts: scene.showDistricts !== false,
-      pad: 24,
-    });
+    // Points are appended below as interactive nodes, so the static pass must
+    // not draw them too — otherwise every pin renders twice and the selection
+    // outline sits on top of a slightly smaller duplicate.
+    holder.innerHTML = renderSceneSvg(
+      { ...scene, points: [] },
+      {
+        width: size.w,
+        height: size.h,
+        showDemand: scene.showDemand !== false,
+        showCoverage: scene.showCoverage !== false,
+        showDistricts: scene.showDistricts !== false,
+        pad: 24,
+      }
+    );
 
     const svg = holder.querySelector('svg');
     if (!svg) return;

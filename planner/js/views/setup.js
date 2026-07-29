@@ -532,9 +532,8 @@ export async function render(root, ctx) {
   const formColumn = h(
     'div',
     {
+      class: 'form-col',
       style: {
-        width: '560px',
-        flex: '0 0 560px',
         overflowY: 'auto',
         padding: '20px',
         background: 'var(--white)',

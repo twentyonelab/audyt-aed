@@ -437,7 +437,7 @@ export async function render(root, ctx) {
 
   const kpis = h(
     'div',
-    { class: 'kpi-grid', style: { gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: '14px' } },
+    { class: 'kpi-grid kpi-grid--3', style: { marginBottom: '14px' } },
     h(
       'div',
       { class: 'kpi' },

@@ -294,6 +294,7 @@ a { color: var(--ink); }
 /* ---------- KPI tiles ----------------------------------------------------- */
 
 .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.kpi-grid--3 { grid-template-columns: repeat(3, 1fr); }
 .kpi {
   border: 1px solid var(--line);
   background: var(--white);
@@ -696,6 +697,122 @@ a { color: var(--ink); }
 .modal__head { padding: 12px 16px; border-bottom: 1px solid var(--line); font-weight: 600; }
 .modal__body { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
 .modal__foot { padding: 12px 16px; border-top: 1px solid var(--line); display: flex; gap: 8px; justify-content: flex-end; }
+
+/* ==========================================================================
+   Responsywność
+
+   Widths that used to sit in inline styles live here as classes, so the
+   breakpoints below can actually override them. Three steps:
+     ≤1200px — chrome tightens, side panels shrink
+     ≤900px  — split views stack (map over panel), stepper turns horizontal
+     ≤620px  — single-column everything, top bar reduced to essentials
+   ========================================================================== */
+
+.panel--side { width: 480px; flex: 0 0 480px; }
+.panel--metrics { width: 380px; flex: 0 0 380px; }
+.form-col { width: 560px; flex: 0 0 560px; }
+
+@media (max-width: 1400px) {
+  .report-layout { grid-template-columns: 150px minmax(420px, 560px) 1fr; }
+}
+
+@media (max-width: 1200px) {
+  :root { --stepper-w: 176px; }
+  .panel--side { width: 400px; flex: 0 0 400px; }
+  .panel--metrics { width: 336px; flex: 0 0 336px; }
+  .form-col { width: 460px; flex: 0 0 460px; }
+  .stepper__label small { display: none; }
+  .report-layout { grid-template-columns: minmax(380px, 620px) 1fr; }
+  .report-thumbs { display: none; }
+  .report-kpis { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 900px) {
+  /* Stepper becomes a scrollable strip above the workspace. */
+  .layout { flex-direction: column; min-height: 0; }
+  .stepper {
+    width: 100%;
+    flex: 0 0 auto;
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    padding: 8px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    -webkit-overflow-scrolling: touch;
+  }
+  .stepper__item { width: auto; flex: 0 0 auto; margin: 0; padding: 6px 10px; }
+  .stepper__label { white-space: nowrap; font-size: 12px; }
+  .stepper__sep { display: none; }
+
+  /* Split views stack: map on top, panel below. */
+  .workspace { flex-direction: column; overflow-y: auto; }
+  .map-wrap { flex: 0 0 auto; height: 48vh; min-height: 300px; width: 100%; }
+  .panel,
+  .panel--side,
+  .panel--metrics {
+    width: 100%;
+    flex: 1 1 auto;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    min-height: 0;
+  }
+  .panel__body { overflow-y: visible; }
+  .form-col { width: 100%; flex: 1 1 auto; }
+
+  .kanban { grid-template-columns: 1fr; }
+  .kpi-grid--3 { grid-template-columns: 1fr 1fr; }
+  .report-layout { grid-template-columns: 1fr; height: auto; }
+  .report-preview { padding: 0; background: transparent; }
+  .report-page { padding: 22px; min-height: 0; }
+  .report-kpis { grid-template-columns: repeat(2, 1fr); }
+  .report-maps { grid-template-columns: 1fr; }
+  .card-section__body--cols { grid-template-columns: 1fr; }
+
+  /* Wide tables scroll instead of squeezing the page. */
+  .workspace--scroll { overflow-x: auto; }
+  .table { min-width: 720px; }
+}
+
+@media (max-width: 620px) {
+  body { font-size: 12.5px; }
+  .topbar { gap: 10px; padding: 0 10px; }
+  .topbar__project { display: none; }
+  .topbar__brand { font-size: 12.5px; }
+  .subbar {
+    height: auto;
+    flex: 0 0 auto;
+    min-height: var(--subbar-h);
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    padding: 8px 10px;
+  }
+  .subbar__spacer { display: none; }
+  .subbar__controls { width: 100%; }
+  .seg { width: 100%; }
+  .seg__btn { flex: 1; text-align: center; }
+  .kpi-grid, .kpi-grid--3 { grid-template-columns: 1fr; }
+  .dash__grid { grid-template-columns: 1fr; }
+  .preset-grid { grid-template-columns: 1fr; }
+  .report-kpis { grid-template-columns: 1fr; }
+  .map-wrap { height: 42vh; min-height: 240px; }
+  .map-legend { display: none; }
+  /* Keep the notice clear of the toolbar buttons on the right. */
+  .map-notice { max-width: calc(100% - 168px); font-size: 10.5px; padding: 5px 8px; }
+  /* District captions collide at this scale and add nothing — the panel lists them. */
+  .pin--district-label { display: none; }
+  .photo-slot { width: 92px; height: 92px; }
+  .workspace--scroll { padding: 12px; }
+  .modal { width: calc(100vw - 20px); }
+}
+
+/* Coarse pointers get bigger hit targets. */
+@media (pointer: coarse) {
+  .btn { padding: 9px 14px; }
+  .stepper__item { padding: 9px 12px; }
+  .pin { width: 24px; height: 24px; }
+  .list-row { padding: 12px 4px; }
+}
 
 /* ---------- print (spec §6.7) -------------------------------------------- */
 

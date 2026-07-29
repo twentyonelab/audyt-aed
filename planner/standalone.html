@@ -301,6 +301,7 @@ a { color: var(--ink); }
 /* ---------- KPI tiles ----------------------------------------------------- */
 
 .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.kpi-grid--3 { grid-template-columns: repeat(3, 1fr); }
 .kpi {
   border: 1px solid var(--line);
   background: var(--white);
@@ -703,6 +704,122 @@ a { color: var(--ink); }
 .modal__head { padding: 12px 16px; border-bottom: 1px solid var(--line); font-weight: 600; }
 .modal__body { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
 .modal__foot { padding: 12px 16px; border-top: 1px solid var(--line); display: flex; gap: 8px; justify-content: flex-end; }
+
+/* ==========================================================================
+   Responsywność
+
+   Widths that used to sit in inline styles live here as classes, so the
+   breakpoints below can actually override them. Three steps:
+     ≤1200px — chrome tightens, side panels shrink
+     ≤900px  — split views stack (map over panel), stepper turns horizontal
+     ≤620px  — single-column everything, top bar reduced to essentials
+   ========================================================================== */
+
+.panel--side { width: 480px; flex: 0 0 480px; }
+.panel--metrics { width: 380px; flex: 0 0 380px; }
+.form-col { width: 560px; flex: 0 0 560px; }
+
+@media (max-width: 1400px) {
+  .report-layout { grid-template-columns: 150px minmax(420px, 560px) 1fr; }
+}
+
+@media (max-width: 1200px) {
+  :root { --stepper-w: 176px; }
+  .panel--side { width: 400px; flex: 0 0 400px; }
+  .panel--metrics { width: 336px; flex: 0 0 336px; }
+  .form-col { width: 460px; flex: 0 0 460px; }
+  .stepper__label small { display: none; }
+  .report-layout { grid-template-columns: minmax(380px, 620px) 1fr; }
+  .report-thumbs { display: none; }
+  .report-kpis { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 900px) {
+  /* Stepper becomes a scrollable strip above the workspace. */
+  .layout { flex-direction: column; min-height: 0; }
+  .stepper {
+    width: 100%;
+    flex: 0 0 auto;
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    padding: 8px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    -webkit-overflow-scrolling: touch;
+  }
+  .stepper__item { width: auto; flex: 0 0 auto; margin: 0; padding: 6px 10px; }
+  .stepper__label { white-space: nowrap; font-size: 12px; }
+  .stepper__sep { display: none; }
+
+  /* Split views stack: map on top, panel below. */
+  .workspace { flex-direction: column; overflow-y: auto; }
+  .map-wrap { flex: 0 0 auto; height: 48vh; min-height: 300px; width: 100%; }
+  .panel,
+  .panel--side,
+  .panel--metrics {
+    width: 100%;
+    flex: 1 1 auto;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    min-height: 0;
+  }
+  .panel__body { overflow-y: visible; }
+  .form-col { width: 100%; flex: 1 1 auto; }
+
+  .kanban { grid-template-columns: 1fr; }
+  .kpi-grid--3 { grid-template-columns: 1fr 1fr; }
+  .report-layout { grid-template-columns: 1fr; height: auto; }
+  .report-preview { padding: 0; background: transparent; }
+  .report-page { padding: 22px; min-height: 0; }
+  .report-kpis { grid-template-columns: repeat(2, 1fr); }
+  .report-maps { grid-template-columns: 1fr; }
+  .card-section__body--cols { grid-template-columns: 1fr; }
+
+  /* Wide tables scroll instead of squeezing the page. */
+  .workspace--scroll { overflow-x: auto; }
+  .table { min-width: 720px; }
+}
+
+@media (max-width: 620px) {
+  body { font-size: 12.5px; }
+  .topbar { gap: 10px; padding: 0 10px; }
+  .topbar__project { display: none; }
+  .topbar__brand { font-size: 12.5px; }
+  .subbar {
+    height: auto;
+    flex: 0 0 auto;
+    min-height: var(--subbar-h);
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    padding: 8px 10px;
+  }
+  .subbar__spacer { display: none; }
+  .subbar__controls { width: 100%; }
+  .seg { width: 100%; }
+  .seg__btn { flex: 1; text-align: center; }
+  .kpi-grid, .kpi-grid--3 { grid-template-columns: 1fr; }
+  .dash__grid { grid-template-columns: 1fr; }
+  .preset-grid { grid-template-columns: 1fr; }
+  .report-kpis { grid-template-columns: 1fr; }
+  .map-wrap { height: 42vh; min-height: 240px; }
+  .map-legend { display: none; }
+  /* Keep the notice clear of the toolbar buttons on the right. */
+  .map-notice { max-width: calc(100% - 168px); font-size: 10.5px; padding: 5px 8px; }
+  /* District captions collide at this scale and add nothing — the panel lists them. */
+  .pin--district-label { display: none; }
+  .photo-slot { width: 92px; height: 92px; }
+  .workspace--scroll { padding: 12px; }
+  .modal { width: calc(100vw - 20px); }
+}
+
+/* Coarse pointers get bigger hit targets. */
+@media (pointer: coarse) {
+  .btn { padding: 9px 14px; }
+  .stepper__item { padding: 9px 12px; }
+  .pin { width: 24px; height: 24px; }
+  .list-row { padding: 12px 4px; }
+}
 
 /* ---------- print (spec §6.7) -------------------------------------------- */
 
@@ -2517,14 +2634,20 @@ function createFallbackMap(container, opts) {
     if (!scene.boundary) return;
     const bbox = bboxOf(scene.boundary);
     projection = makeProjection(bbox, size.w, size.h, 24);
-    holder.innerHTML = renderSceneSvg(scene, {
-      width: size.w,
-      height: size.h,
-      showDemand: scene.showDemand !== false,
-      showCoverage: scene.showCoverage !== false,
-      showDistricts: scene.showDistricts !== false,
-      pad: 24,
-    });
+    // Points are appended below as interactive nodes, so the static pass must
+    // not draw them too — otherwise every pin renders twice and the selection
+    // outline sits on top of a slightly smaller duplicate.
+    holder.innerHTML = renderSceneSvg(
+      { ...scene, points: [] },
+      {
+        width: size.w,
+        height: size.h,
+        showDemand: scene.showDemand !== false,
+        showCoverage: scene.showCoverage !== false,
+        showDistricts: scene.showDistricts !== false,
+        pad: 24,
+      }
+    );
 
     const svg = holder.querySelector('svg');
     if (!svg) return;
@@ -5610,9 +5733,8 @@ async function render(root, ctx) {
   const formColumn = h(
     'div',
     {
+      class: 'form-col',
       style: {
-        width: '560px',
-        flex: '0 0 560px',
         overflowY: 'auto',
         padding: '20px',
         background: 'var(--white)',
@@ -5828,6 +5950,7 @@ const REASON_OUT_OF_SCOPE = 'poza zakresem iteracji 2';
 
 let map = null;
 let addMode = false;
+let movingPointId = null;
 let keyHandler = null;
 let outsideHandler = null;
 let openMenuEl = null;
@@ -6020,7 +6143,7 @@ async function render(root, ctx) {
 
   const panel = h(
     'aside',
-    { class: 'panel', style: { width: '480px', flex: '0 0 480px' } },
+    { class: 'panel panel--side' },
     h(
       'div',
       { class: 'panel__head' },
@@ -6052,6 +6175,28 @@ async function render(root, ctx) {
   mapEl.appendChild(h('div', { class: 'map-toolbar' }, addBtn, fitBtn));
   mapEl.appendChild(hint);
   mapEl.appendChild(legend(proposedRows.length));
+
+  /* Klik w puste miejsce mapy proponuje dodanie punktu — bez wcześniejszego
+     uzbrajania trybu. Pasek jest odrzucalny, więc przypadkowy klik nic nie psuje. */
+  const clickPrompt = h('div', {
+    class: 'card',
+    style: {
+      position: 'absolute',
+      left: '50%',
+      transform: 'translateX(-50%)',
+      bottom: '16px',
+      zIndex: '8',
+      display: 'none',
+      padding: '8px 10px',
+      boxShadow: '0 2px 10px rgba(0,0,0,0.14)',
+    },
+  });
+  mapEl.appendChild(clickPrompt);
+
+  const hideClickPrompt = () => {
+    clickPrompt.style.display = 'none';
+    mount(clickPrompt);
+  };
 
   /* mini-karta punktu — własny popup w rogu kontenera mapy */
   const popup = h('div', {
@@ -6136,12 +6281,27 @@ async function render(root, ctx) {
         })
       ),
       h(
-        'button',
-        {
-          class: 'btn btn--sm btn--primary btn--block',
-          onclick: () => ctx.navigate(`#/card/${point.id}`),
-        },
-        'OTWÓRZ KARTĘ →'
+        'div',
+        { class: 'row', style: { gap: '6px' } },
+        h(
+          'button',
+          {
+            class: 'btn btn--sm',
+            style: { flex: '1' },
+            title: 'Włącz przeciąganie tego pinu po mapie',
+            onclick: () => startMoving(point),
+          },
+          '✥ PRZESUŃ'
+        ),
+        h(
+          'button',
+          {
+            class: 'btn btn--sm btn--primary',
+            style: { flex: '1' },
+            onclick: () => ctx.navigate(`#/card/${point.id}`),
+          },
+          'KARTA →'
+        )
       )
     );
     popup.style.display = '';
@@ -6170,6 +6330,15 @@ async function render(root, ctx) {
 
   keyHandler = (e) => {
     if (e.key !== 'Escape') return;
+    if (movingPointId) {
+      stopMoving();
+      toast('Przesuwanie punktu anulowane.');
+      return;
+    }
+    if (clickPrompt.style.display !== 'none') {
+      hideClickPrompt();
+      return;
+    }
     if (addMode) {
       exitAddMode();
       toast('Tryb dodawania punktu wyłączony.');
@@ -6188,9 +6357,83 @@ async function render(root, ctx) {
   });
 
   map.on('mapclick', async ({ lat, lon, addMode: fromMap }) => {
-    if (!addMode && !fromMap) return;
+    if (addMode || fromMap) {
+      exitAddMode();
+      hideClickPrompt();
+      await promptNewPoint(lat, lon);
+      return;
+    }
+    if (movingPointId) return; // trwa przesuwanie — klik nie dodaje punktu
+    showClickPrompt(lat, lon);
+  });
+
+  /** Pasek „dodaj punkt tutaj" po kliknięciu w puste miejsce mapy. */
+  function showClickPrompt(lat, lon) {
+    hidePopup();
+    mount(
+      clickPrompt,
+      h(
+        'div',
+        { class: 'row', style: { gap: '10px' } },
+        h('span', {
+          class: 'num',
+          style: { fontSize: '12px' },
+          text: `${lat.toFixed(5)}, ${lon.toFixed(5)}`,
+        }),
+        h(
+          'button',
+          {
+            class: 'btn btn--sm btn--primary',
+            onclick: async () => {
+              hideClickPrompt();
+              await promptNewPoint(lat, lon);
+            },
+          },
+          '+ Dodaj punkt tutaj'
+        ),
+        h('button', { class: 'btn btn--sm btn--ghost', title: 'Zamknij', onclick: hideClickPrompt }, '✕')
+      )
+    );
+    clickPrompt.style.display = '';
+  }
+
+  /* ---------------- przesuwanie istniejącego punktu ---------------- */
+
+  /** Uzbraja przeciąganie dla jednego punktu — reszta pinów zostaje nieruchoma. */
+  function startMoving(point) {
+    movingPointId = point.id;
+    hidePopup();
+    hideClickPrompt();
     exitAddMode();
-    await promptNewPoint(lat, lon);
+    hint.textContent = `Przeciągnij pin „${point.name}" w nowe miejsce · Esc anuluje`;
+    hint.style.display = '';
+    repaintPins();
+  }
+
+  function stopMoving() {
+    if (!movingPointId) return;
+    movingPointId = null;
+    hint.textContent = 'Kliknij na mapie, aby dodać punkt · Esc anuluje';
+    hint.style.display = 'none';
+    repaintPins();
+  }
+
+  map.on('pointdragend', async ({ id, lat, lon }) => {
+    const point = state.points.find((p) => p.id === id);
+    if (!point) return;
+    point.lat = Math.round(lat * 1e6) / 1e6;
+    point.lon = Math.round(lon * 1e6) / 1e6;
+    const district = districtAt(point.lat, point.lon);
+    const movedOut = district !== point.districtId;
+    point.districtId = district;
+    upsertPoint(point);
+    movingPointId = null;
+    toast(
+      movedOut
+        ? `Przesunięto „${point.name}" — nowa dzielnica: ${districtName(district)}.`
+        : `Przesunięto „${point.name}".`
+    );
+    await save();
   });
 
   /* ---------------- zaznaczenie punktu ---------------- */
@@ -6393,14 +6636,24 @@ async function render(root, ctx) {
 
   /* ---------------- scena mapy ---------------- */
 
-  const pins = [...registry, ...proposedRows].map((r) => ({
-    id: r.point.id,
-    lat: r.point.lat,
-    lon: r.point.lon,
-    level: r.level,
-    name: r.point.name,
-    draggable: false,
-  }));
+  /** Piny sceny. Przeciągalny jest wyłącznie punkt uzbrojony przez „Przesuń punkt". */
+  function buildPins() {
+    return [...registry, ...proposedRows].map((r) => ({
+      id: r.point.id,
+      lat: r.point.lat,
+      lon: r.point.lon,
+      level: r.level,
+      name: r.point.name,
+      draggable: r.point.id === movingPointId,
+    }));
+  }
+
+  /** Przerysowuje same piny — bez odtwarzania całej sceny i bez utraty kadru. */
+  function repaintPins() {
+    if (map) map.setScene({ points: buildPins() });
+  }
+
+  const pins = buildPins();
 
   const labels = ((state.districtsGeo && state.districtsGeo.features) || []).map((feature) => {
     const centre = ringCentroid(feature.geometry.coordinates[0]);
@@ -6685,6 +6938,7 @@ function cleanup() {
     keyHandler = null;
   }
   addMode = false;
+  movingPointId = null;
   if (map) {
     try {
       map.destroy();
@@ -7008,7 +7262,7 @@ async function render(root, ctx) {
 
   const panel = h(
     'aside',
-    { class: 'panel', style: { width: '380px', flex: '0 0 380px' } },
+    { class: 'panel panel--metrics' },
     h(
       'div',
       { class: 'panel__head' },
@@ -7382,7 +7636,9 @@ async function render(root, ctx) {
       h('div', {
         class: 'note',
         style: { marginTop: '4px' },
-        text: `Strefa = ${fmtNum(analysis.radiusM, 0)} m wokół czynnego AED (${fmtMin(standardMinutes, 0)}).`,
+        text:
+          `Kryterium: ${fmtNum(analysis.radiusM, 0)} m od czynnego AED ` +
+          `(${fmtMin(standardMinutes, 0)} dojścia w jedną stronę).`,
       })
     )
   );
@@ -7391,6 +7647,11 @@ async function render(root, ctx) {
     h(
       'div',
       { class: 'map-toolbar' },
+      h('span', {
+        class: 'pill pill--warn',
+        style: { padding: '5px 10px', lineHeight: '1.35', maxWidth: '260px', whiteSpace: 'normal', textAlign: 'right' },
+        text: 'DO OPRACOWANIA W ITERACJI 3 — izochrony po rzeczywistej sieci pieszej',
+      }),
       disabledControl(
         h('button', { class: 'btn btn--sm' }, 'IZOCHRONY — SIEĆ PIESZA'),
         'poza zakresem iteracji 2'
@@ -7455,13 +7716,12 @@ async function render(root, ctx) {
     boundary: state.boundary,
     districts: state.districtsGeo,
     showDistricts: true,
-    coverage: analysis.activePoints.map((p) => ({
-      lat: p.lat,
-      lon: p.lon,
-      radiusM: analysis.radiusM,
-      kind: p.kind === 'proposed' ? 'proposed' : 'existing',
-    })),
-    showCoverage: true,
+    // Okręgi stref wyłączone na życzenie: przy kilkunastu punktach zlewały się
+    // w plamę i zasłaniały punkty popytu, które niosą tę samą informację
+    // dokładniej (kolor = w zasięgu / blisko granicy / poza). Dane zostają —
+    // wystarczy przywrócić showCoverage: true, żeby wrócić do okręgów.
+    coverage: [],
+    showCoverage: false,
     demand: analysis.demandStatus,
     showDemand: true,
     targetMinutes: standardMinutes,
@@ -9368,8 +9628,10 @@ async function render(root, ctx) {
     boundary: state.boundary,
     districts: state.districtsGeo,
     showDistricts: true,
-    coverage: [{ lat: point.lat, lon: point.lon, radiusM, kind: isProposed ? 'proposed' : 'existing' }],
-    showCoverage: true,
+    // Bez okręgu strefy — promień jest podany liczbowo pod mapką, a okrąg
+    // przy tym kadrze zasłaniał sam punkt.
+    coverage: [],
+    showCoverage: false,
     targetMinutes: standardMinutes,
     points: [{ id: point.id, lat: point.lat, lon: point.lon, level: status.level, name: point.name }],
   };
@@ -9381,7 +9643,7 @@ async function render(root, ctx) {
       width: 480,
       height: MINI_MAP_H,
       showDemand: false,
-      showCoverage: true,
+      showCoverage: false,
       showLabels: false,
     }),
   });
@@ -9997,7 +10259,7 @@ async function render(root, ctx) {
 
   const kpis = h(
     'div',
-    { class: 'kpi-grid', style: { gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: '14px' } },
+    { class: 'kpi-grid kpi-grid--3', style: { marginBottom: '14px' } },
     h(
       'div',
       { class: 'kpi' },

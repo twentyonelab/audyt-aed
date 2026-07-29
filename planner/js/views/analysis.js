@@ -341,7 +341,7 @@ export async function render(root, ctx) {
 
   const panel = h(
     'aside',
-    { class: 'panel', style: { width: '380px', flex: '0 0 380px' } },
+    { class: 'panel panel--metrics' },
     h(
       'div',
       { class: 'panel__head' },
@@ -715,7 +715,9 @@ export async function render(root, ctx) {
       h('div', {
         class: 'note',
         style: { marginTop: '4px' },
-        text: `Strefa = ${fmtNum(analysis.radiusM, 0)} m wokół czynnego AED (${fmtMin(standardMinutes, 0)}).`,
+        text:
+          `Kryterium: ${fmtNum(analysis.radiusM, 0)} m od czynnego AED ` +
+          `(${fmtMin(standardMinutes, 0)} dojścia w jedną stronę).`,
       })
     )
   );
@@ -724,6 +726,11 @@ export async function render(root, ctx) {
     h(
       'div',
       { class: 'map-toolbar' },
+      h('span', {
+        class: 'pill pill--warn',
+        style: { padding: '5px 10px', lineHeight: '1.35', maxWidth: '260px', whiteSpace: 'normal', textAlign: 'right' },
+        text: 'DO OPRACOWANIA W ITERACJI 3 — izochrony po rzeczywistej sieci pieszej',
+      }),
       disabledControl(
         h('button', { class: 'btn btn--sm' }, 'IZOCHRONY — SIEĆ PIESZA'),
         'poza zakresem iteracji 2'
@@ -788,13 +795,12 @@ export async function render(root, ctx) {
     boundary: state.boundary,
     districts: state.districtsGeo,
     showDistricts: true,
-    coverage: analysis.activePoints.map((p) => ({
-      lat: p.lat,
-      lon: p.lon,
-      radiusM: analysis.radiusM,
-      kind: p.kind === 'proposed' ? 'proposed' : 'existing',
-    })),
-    showCoverage: true,
+    // Okręgi stref wyłączone na życzenie: przy kilkunastu punktach zlewały się
+    // w plamę i zasłaniały punkty popytu, które niosą tę samą informację
+    // dokładniej (kolor = w zasięgu / blisko granicy / poza). Dane zostają —
+    // wystarczy przywrócić showCoverage: true, żeby wrócić do okręgów.
+    coverage: [],
+    showCoverage: false,
     demand: analysis.demandStatus,
     showDemand: true,
     targetMinutes: standardMinutes,
