@@ -25,6 +25,7 @@ import {
 import {
   completeness,
   pointStatusLevel,
+  coverageGainFor,
   ringCentroid,
   fmtNum,
   fmtPct,
@@ -838,24 +839,56 @@ export async function render(root, ctx) {
     );
     const addressInput = h('input', { class: 'input', type: 'text', placeholder: 'np. ul. Szkolna 3' });
 
+    /* Punkt wskazany na mapie to domyślnie REKOMENDACJA — nowa lokalizacja do
+       wdrożenia (fioletowy kwadrat, trafia do propozycji w kroku 2). Drugi tryb
+       zostaje, bo krok 1 musi umieć zapisać AED zastany w terenie, którego nie
+       było w rejestrze. */
+    let kind = 'proposed';
+    const noteEl = h('p', { class: 'note' });
+    const typeButtons = [
+      { value: 'proposed', label: 'Rekomendacja — nowa lokalizacja' },
+      { value: 'existing', label: 'Istniejący AED zastany w terenie' },
+    ].map((option) =>
+      h(
+        'button',
+        {
+          type: 'button',
+          class: `seg__btn${option.value === kind ? ' is-on' : ''}`,
+          onclick: (e) => {
+            kind = option.value;
+            for (const b of e.currentTarget.parentElement.children) b.classList.remove('is-on');
+            e.currentTarget.classList.add('is-on');
+            paintNote();
+          },
+        },
+        option.label
+      )
+    );
+
+    const paintNote = () => {
+      noteEl.textContent =
+        `Współrzędne: ${fmtNum(lat, 5)} N · ${fmtNum(lon, 5)} E · dzielnica: ${districtName(districtId)}. ` +
+        (kind === 'proposed'
+          ? 'Punkt trafi do propozycji jako rekomendacja (fioletowy kwadrat). ' +
+            'Zysk w pokryciu policzy się od razu, a zaakceptujesz go w kroku 2 — Analiza dostępności.'
+          : 'Punkt trafi do rejestru ze statusem NIEZWERYFIKOWANY — resztę danych uzupełnisz w karcie (krok 3).');
+    };
+    paintNote();
+
     const body = h(
       'div',
       { class: 'form', style: { maxWidth: 'none' } },
+      field('Rodzaj punktu', h('div', { class: 'seg', style: { width: '100%' } }, ...typeButtons)),
       field('Nazwa punktu', nameInput),
       field('Preset', presetSelect),
       field('Adres', addressInput),
-      h('p', {
-        class: 'note',
-        text:
-          `Współrzędne: ${fmtNum(lat, 5)} N · ${fmtNum(lon, 5)} E · dzielnica: ${districtName(districtId)}. ` +
-          'Punkt trafi do rejestru ze statusem NIEZWERYFIKOWANY — resztę danych uzupełnisz w karcie (krok 3).',
-      })
+      noteEl
     );
 
     const confirmed = await modal({
-      title: 'Nowy punkt AED',
+      title: 'Nowy punkt na mapie',
       body,
-      confirmLabel: 'DODAJ DO REJESTRU',
+      confirmLabel: 'DODAJ',
       cancelLabel: 'Anuluj',
     });
 
@@ -864,24 +897,50 @@ export async function render(root, ctx) {
       return;
     }
 
+    const presetId = presetSelect.value || 'P1';
+    const isProposal = kind === 'proposed';
+
     const point = makePoint({
-      id: nextId('AED'),
-      name: nameInput.value.trim() || 'Nowy punkt AED',
+      id: nextId(isProposal ? 'NEW' : 'AED'),
+      name: nameInput.value.trim() || (isProposal ? 'Nowa lokalizacja AED' : 'Nowy punkt AED'),
       lat,
       lon,
-      presetId: presetSelect.value || 'P1',
+      presetId,
       districtId,
-      kind: 'existing',
+      kind,
     });
     point.address = addressInput.value.trim();
-    point.status = 'unverified';
-    point.verification = { date: null, by: null, source: 'operator' };
+
+    if (isProposal) {
+      // Zysk liczony tym samym wzorem co propozycje z optymalizatora, więc
+      // karta propozycji w kroku 2 pokazuje porównywalną liczbę.
+      const gain = coverageGainFor(
+        { lat, lon },
+        {
+          demandPoints: state.demandPoints,
+          points: state.points,
+          standardMinutes: project.standardMinutes,
+          mode: 'day',
+        }
+      );
+      point.gainWeight = gain.gainWeight;
+      point.gainPct = Math.round(gain.gainPct * 10) / 10;
+      point.access = { always: ['P2', 'P3', 'P4'].includes(presetId), hours: null, weekend: null, barriers: null };
+      point.verification = { date: null, by: null, source: null };
+    } else {
+      point.status = 'unverified';
+      point.verification = { date: null, by: null, source: 'operator' };
+    }
 
     upsertPoint(point);
     state.ui.selectedPointId = point.id;
     markStepDone(1);
     await save();
-    toast(`Dodano punkt ${point.id} — ${point.name}.`);
+    toast(
+      isProposal
+        ? `Dodano rekomendację ${point.id} — ${point.name} (+${fmtPct(point.gainPct, 1)} pokrycia). Zaakceptuj ją w kroku 2.`
+        : `Dodano punkt ${point.id} — ${point.name}.`
+    );
   }
 
   /* ---------------- usunięcie punktu ---------------- */
@@ -1063,7 +1122,7 @@ function legend(proposedCount) {
       h('div', {
         class: 'note',
         style: { marginTop: '4px' },
-        text: `kwadraty — ${fmtNum(proposedCount)} propozycji z kroku 2`,
+        text: `fioletowe kwadraty — ${fmtNum(proposedCount)} rekomendacji (nowe lokalizacje)`,
       })
     );
   }
