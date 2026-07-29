@@ -208,6 +208,10 @@ a { color: var(--ink); }
 .topbar .btn { border-color: #5a5a5a; background: transparent; color: var(--white); }
 .topbar .btn:hover { border-color: var(--white); }
 .topbar .btn--primary { background: var(--white); color: var(--ink); border-color: var(--white); }
+.topbar .btn[disabled] { background: transparent; color: #8a8a8a; border-color: #454545; }
+.topbar .btn[disabled]:hover { border-color: #454545; }
+/* Sits immediately after the brand — the top-left corner the operator reaches for. */
+.topbar__undo { margin-left: -12px; }
 
 /* ---------- segmented control -------------------------------------------- */
 
@@ -467,11 +471,20 @@ a { color: var(--ink); }
 .map-legend__row { display: flex; align-items: center; gap: 7px; margin-top: 3px; }
 .map-legend b { font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-2); }
 .map-toolbar { position: absolute; right: 12px; top: 12px; z-index: 5; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+/* Prawy dolny róg, przesunięty tak, by ominąć kontrolkę zoomu Mapboksa. */
+.map-corner-note {
+  position: absolute; right: 56px; bottom: 12px; z-index: 5;
+  max-width: 250px; text-align: right;
+}
+.map-corner-note .pill { padding: 5px 10px; line-height: 1.35; white-space: normal; display: inline-block; }
 .map-hint {
   position: absolute; left: 50%; top: 12px; transform: translateX(-50%);
   z-index: 6; background: var(--bar); color: var(--white);
   font-size: 12px; padding: 6px 12px; border-radius: 2px;
 }
+/* Mapa zapasowa dokłada u góry po lewej swój komunikat (do trzech wierszy) —
+   wyśrodkowana podpowiedź schodzi pod niego, zamiast wchodzić mu na róg. */
+.map-notice ~ .map-hint { top: 84px; }
 
 .pin {
   width: 20px; height: 20px;
@@ -797,6 +810,8 @@ a { color: var(--ink); }
   .report-kpis { grid-template-columns: 1fr; }
   .map-wrap { height: 42vh; min-height: 240px; }
   .map-legend { display: none; }
+  /* Na telefonie etykieta iteracji zabrałaby połowę mapy — zostaje w panelu. */
+  .map-corner-note { display: none; }
   /* Keep the notice clear of the toolbar buttons on the right. */
   .map-notice { max-width: calc(100% - 168px); font-size: 10.5px; padding: 5px 8px; }
   /* District captions collide at this scale and add nothing — the panel lists them. */

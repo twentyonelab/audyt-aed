@@ -6,7 +6,7 @@
  */
 
 import { h, mount, clear, toast } from './ui.js';
-import { state } from './state.js';
+import { state, canUndo, undo, undoLabel } from './state.js';
 import { OPERATOR } from '../config.js';
 
 /** The five audit steps plus setup (spec §3). */
@@ -55,6 +55,30 @@ export function navigate(hash) {
  * Shell
  * ------------------------------------------------------------------ */
 
+/** Roll back the last checkpointed action and tell the operator what went back. */
+export async function undoLast() {
+  if (!canUndo()) {
+    toast('Nie ma czego cofnąć.');
+    return;
+  }
+  const label = await undo();
+  toast(`Cofnięto: ${label}`);
+}
+
+function undoButton() {
+  const enabled = canUndo();
+  return h(
+    'button',
+    {
+      class: 'btn btn--sm btn--ghost topbar__undo',
+      disabled: enabled ? null : '',
+      onclick: undoLast,
+      title: enabled ? `Cofnij: ${undoLabel()} (Ctrl+Z)` : 'Nie ma czego cofnąć',
+    },
+    '↩ Cofnij'
+  );
+}
+
 function topbar() {
   const project = state.project;
   return h(
@@ -69,6 +93,7 @@ function topbar() {
       }),
       h('span', { html: '<b>SINECCO</b> · AED Planner' })
     ),
+    undoButton(),
     project
       ? h('span', {
           class: 'topbar__project',
@@ -213,6 +238,14 @@ function topbarIf(meta) {
 
 export function initRouter() {
   window.addEventListener('hashchange', render);
+  window.addEventListener('keydown', (ev) => {
+    if (!(ev.ctrlKey || ev.metaKey) || ev.key.toLowerCase() !== 'z' || ev.shiftKey) return;
+    // Inside a field, Ctrl+Z belongs to the browser's own text undo.
+    const t = ev.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    ev.preventDefault();
+    undoLast();
+  });
   return render();
 }
 

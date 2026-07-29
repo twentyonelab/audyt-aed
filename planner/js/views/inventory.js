@@ -20,6 +20,8 @@ import {
   makePoint,
   districtAt,
   markStepDone,
+  checkpoint,
+  dropCheckpoint,
 } from '../state.js';
 
 import {
@@ -98,6 +100,8 @@ let movingPointId = null;
 let keyHandler = null;
 let outsideHandler = null;
 let openMenuEl = null;
+/** Ostatni kadr mapy — odtwarzany przy każdym przerysowaniu widoku. */
+let savedCamera = null;
 
 /* ------------------------------------------------------------------ *
  * Pomocniki lokalne (rdzenia nie ruszamy — brakujące rzeczy są tutaj)
@@ -314,11 +318,23 @@ export async function render(root, ctx) {
   });
 
   const addBtn = h('button', { class: 'btn btn--sm' }, '+ DODAJ PUNKT');
-  const fitBtn = h('button', { class: 'btn btn--sm', onclick: () => map && map.fit() }, 'DOPASUJ WIDOK');
+  const fitBtn = h(
+    'button',
+    {
+      class: 'btn btn--sm',
+      onclick: () => {
+        if (!map) return;
+        savedCamera = null;
+        map.fit();
+      },
+    },
+    'DOPASUJ WIDOK'
+  );
 
   mapEl.appendChild(h('div', { class: 'map-toolbar' }, addBtn, fitBtn));
   mapEl.appendChild(hint);
-  mapEl.appendChild(legend(proposedRows.length));
+  const legendEl = legend(proposedRows.length);
+  mapEl.appendChild(legendEl);
 
   /* Klik w puste miejsce mapy proponuje dodanie punktu — bez wcześniejszego
      uzbrajania trybu. Pasek jest odrzucalny, więc przypadkowy klik nic nie psuje. */
@@ -339,6 +355,7 @@ export async function render(root, ctx) {
 
   const hideClickPrompt = () => {
     clickPrompt.style.display = 'none';
+    legendEl.style.visibility = '';
     mount(clickPrompt);
   };
 
@@ -539,6 +556,8 @@ export async function render(root, ctx) {
       )
     );
     clickPrompt.style.display = '';
+    // Pasek stoi w tym samym pasie co legenda — na czas decyzji legenda ustępuje.
+    legendEl.style.visibility = 'hidden';
   }
 
   /* ---------------- przesuwanie istniejącego punktu ---------------- */
@@ -565,6 +584,7 @@ export async function render(root, ctx) {
   map.on('pointdragend', async ({ id, lat, lon }) => {
     const point = state.points.find((p) => p.id === id);
     if (!point) return;
+    checkpoint(`przesunięcie punktu „${point.name}”`);
     point.lat = Math.round(lat * 1e6) / 1e6;
     point.lon = Math.round(lon * 1e6) / 1e6;
     const district = districtAt(point.lat, point.lon);
@@ -807,7 +827,7 @@ export async function render(root, ctx) {
   map.setScene({
     boundary: state.boundary,
     districts: state.districtsGeo,
-    showDistricts: true,
+    showDistricts: false,
     coverage: [],
     showCoverage: false,
     demand: [],
@@ -817,7 +837,10 @@ export async function render(root, ctx) {
     labels,
     selectedId: state.ui.selectedPointId,
   });
-  map.fit();
+  // Kadr przeżywa przerysowanie widoku — po przesunięciu pinu mapa zostaje tam,
+  // gdzie ustawił ją operator, zamiast wracać do widoku całego miasta.
+  if (savedCamera && typeof map.setCamera === 'function') map.setCamera(savedCamera);
+  else map.fit();
   paintAddMode();
 
   const selectedRow = [...registry, ...proposedRows].find((r) => r.point.id === state.ui.selectedPointId);
@@ -932,6 +955,7 @@ export async function render(root, ctx) {
       point.verification = { date: null, by: null, source: 'operator' };
     }
 
+    checkpoint(isProposal ? 'dodanie rekomendacji' : 'dodanie punktu');
     upsertPoint(point);
     state.ui.selectedPointId = point.id;
     markStepDone(1);
@@ -951,12 +975,13 @@ export async function render(root, ctx) {
       title: 'Usunąć punkt z rejestru?',
       body:
         `<p>${escapeHtml(point.name)} (${escapeHtml(point.id)}), ${escapeHtml(districtName(point.districtId))}.</p>` +
-        '<p class="note">Razem z punktem znikną jego rekomendacje i zdjęcia. Operacji nie można cofnąć.</p>',
+        '<p class="note">Razem z punktem znikną jego rekomendacje i zdjęcia. Przyciskiem „Cofnij” w pasku górnym można to odwrócić.</p>',
       confirmLabel: 'USUŃ PUNKT',
       cancelLabel: 'Anuluj',
     });
     if (!confirmed) return;
 
+    checkpoint(`usunięcie punktu „${point.name}”`);
     removePoint(point.id);
     if (state.ui.selectedPointId === point.id) state.ui.selectedPointId = null;
     await save();
@@ -1012,8 +1037,10 @@ export async function render(root, ctx) {
           const file = await pickFile('.csv,text/csv');
           if (!file) return;
           try {
+            checkpoint('import CSV');
             const result = applyCsv(parseCsv(await file.text()));
             if (!result.added && !result.updated) {
+              dropCheckpoint();
               toast('Nie znaleziono wierszy z poprawnymi kolumnami lat i lon.');
               return;
             }
@@ -1025,6 +1052,7 @@ export async function render(root, ctx) {
             );
           } catch (err) {
             console.error(err);
+            dropCheckpoint();
             toast('Nie udało się odczytać pliku CSV.');
           }
         },
@@ -1142,6 +1170,11 @@ function cleanup() {
   addMode = false;
   movingPointId = null;
   if (map) {
+    try {
+      if (typeof map.getCamera === 'function') savedCamera = map.getCamera();
+    } catch (err) {
+      console.warn('map.getCamera() failed', err);
+    }
     try {
       map.destroy();
     } catch (err) {

@@ -31,6 +31,35 @@ wyjaśniającą, co podstawić. Cała logika, KPI i interakcje pozostają te sam
 Pulpit → 0 Setup → 1 Inwentaryzacja → 2 Analiza → 3 Karty → 4 Roadmapa → 5 Raport.
 Kliknięcie w dowolny krok w stepperze przenosi do niego (makieta nie blokuje kolejności).
 
+### Praca na mapie
+
+| gest | inwentaryzacja | analiza dostępności |
+| --- | --- | --- |
+| klik w puste miejsce | pasek „dodaj punkt tutaj" → okno z rodzajem punktu | od razu dokłada rekomendację (fioletowy kwadrat) z policzonym zyskiem |
+| klik w pin | mini‑karta punktu | otwiera kartę punktu |
+| przeciągnięcie pinu | zmienia pozycję i dzielnicę, nic nie otwiera | zmienia pozycję, przelicza zysk, nic nie otwiera |
+| kółko / podwójny klik | przybliża | przybliża |
+| przeciągnięcie tła | przesuwa kadr | przesuwa kadr |
+
+Kadr (przybliżenie i przesunięcie) przeżywa przerysowanie widoku, więc po
+przesunięciu pinu mapa zostaje tam, gdzie ją ustawiono. „DOPASUJ WIDOK" wraca
+do całego miasta.
+
+Obrysy dzielnic są w obu tych widokach wyłączone (`showDistricts: false`) —
+przy kilkunastu punktach zlewały się z pinami. Zostają nazwy dzielnic i granica
+miasta. Karta punktu, setup i raport rysują dzielnice dalej, bo tam są
+jedynym kontekstem.
+
+### Cofnij
+
+Przycisk „↩ Cofnij" w lewym górnym rogu (albo Ctrl+Z poza polem tekstowym)
+odwraca ostatnią operację: dodanie punktu, przesunięcie pinu, usunięcie punktu,
+akceptację lub odrzucenie propozycji, wygenerowanie propozycji, import CSV.
+Stos ma 30 pozycji i żyje w pamięci sesji — przeładowanie strony go czyści.
+Edycje pól w karcie punktu nie trafiają na stos: zasypałyby operacje mapowe,
+o które w tym przycisku chodzi. Zdjęcia wracają jako metadane, ich bloby
+zostają w IndexedDB (nic ich potem nie czyta).
+
 ## Struktura
 
 ```
@@ -48,9 +77,20 @@ js/views/*.js         osiem widoków
 data/                 dane demo Tychy + granice
 tools/generate-demo.mjs  generator danych z kontrolą KPI
 tools/smoke.mjs          test przeglądarkowy całej ścieżki
+tools/interactions.mjs   test interakcji mapy (klik, przeciąganie, cofnij, kadr)
 CONTRACT.md           interfejsy modułów (wiążące)
 ITERACJA2_SPEC.md     specyfikacja produktu
 ```
+
+## Testy
+
+```bash
+node tools/smoke.mjs          # 31 sprawdzeń: cała ścieżka 0→5, zero błędów konsoli
+node tools/interactions.mjs   # 18 sprawdzeń: klik, przeciąganie, cofnij, kadr mapy
+```
+
+Oba potrzebują Chromium (Playwright) i same podnoszą lokalny serwer.
+Zrzuty ekranu lądują w `tools/shots/`.
 
 ## Dane demo
 

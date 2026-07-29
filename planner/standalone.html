@@ -215,6 +215,10 @@ a { color: var(--ink); }
 .topbar .btn { border-color: #5a5a5a; background: transparent; color: var(--white); }
 .topbar .btn:hover { border-color: var(--white); }
 .topbar .btn--primary { background: var(--white); color: var(--ink); border-color: var(--white); }
+.topbar .btn[disabled] { background: transparent; color: #8a8a8a; border-color: #454545; }
+.topbar .btn[disabled]:hover { border-color: #454545; }
+/* Sits immediately after the brand — the top-left corner the operator reaches for. */
+.topbar__undo { margin-left: -12px; }
 
 /* ---------- segmented control -------------------------------------------- */
 
@@ -474,11 +478,20 @@ a { color: var(--ink); }
 .map-legend__row { display: flex; align-items: center; gap: 7px; margin-top: 3px; }
 .map-legend b { font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-2); }
 .map-toolbar { position: absolute; right: 12px; top: 12px; z-index: 5; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+/* Prawy dolny róg, przesunięty tak, by ominąć kontrolkę zoomu Mapboksa. */
+.map-corner-note {
+  position: absolute; right: 56px; bottom: 12px; z-index: 5;
+  max-width: 250px; text-align: right;
+}
+.map-corner-note .pill { padding: 5px 10px; line-height: 1.35; white-space: normal; display: inline-block; }
 .map-hint {
   position: absolute; left: 50%; top: 12px; transform: translateX(-50%);
   z-index: 6; background: var(--bar); color: var(--white);
   font-size: 12px; padding: 6px 12px; border-radius: 2px;
 }
+/* Mapa zapasowa dokłada u góry po lewej swój komunikat (do trzech wierszy) —
+   wyśrodkowana podpowiedź schodzi pod niego, zamiast wchodzić mu na róg. */
+.map-notice ~ .map-hint { top: 84px; }
 
 .pin {
   width: 20px; height: 20px;
@@ -804,6 +817,8 @@ a { color: var(--ink); }
   .report-kpis { grid-template-columns: 1fr; }
   .map-wrap { height: 42vh; min-height: 240px; }
   .map-legend { display: none; }
+  /* Na telefonie etykieta iteracji zabrałaby połowę mapy — zostaje w panelu. */
+  .map-corner-note { display: none; }
   /* Keep the notice clear of the toolbar buttons on the right. */
   .map-notice { max-width: calc(100% - 168px); font-size: 10.5px; padding: 5px 8px; }
   /* District captions collide at this scale and add nothing — the panel lists them. */
@@ -2062,8 +2077,64 @@ async function save({ silent = false } = {}) {
   if (!silent) notify();
 }
 
+/* ------------------------------------------------------------------ *
+ * Undo
+ * ------------------------------------------------------------------ */
+
+/**
+ * One entry per discrete operator action — adding a point on the map, moving a
+ * pin, accepting a proposal. Field-level edits inside a card are not stacked;
+ * they would bury the map actions the button is there for.
+ *
+ * Photo blobs are not rolled back: undoing a photo upload drops its metadata
+ * and leaves an orphan blob in IndexedDB, which nothing reads.
+ */
+const undoStack = [];
+const UNDO_LIMIT = 30;
+
+const UNDO_SLICES = ['project', 'points', 'photos', 'recommendations', 'candidates', 'pendingProposals'];
+
+function cloneUndoSlice() {
+  const raw = {};
+  for (const key of UNDO_SLICES) raw[key] = state[key];
+  return typeof structuredClone === 'function' ? structuredClone(raw) : JSON.parse(JSON.stringify(raw));
+}
+
+/** Record the state as it is *before* a mutation. Call it, then mutate, then save(). */
+function checkpoint(label) {
+  undoStack.push({ label: label || 'ostatnią zmianę', data: cloneUndoSlice() });
+  if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+}
+
+/** Discard the last checkpoint without restoring it — for an action that turned out to be a no-op. */
+function dropCheckpoint() {
+  undoStack.pop();
+}
+
+function canUndo() {
+  return undoStack.length > 0;
+}
+
+/** Label of the action the next undo would reverse. */
+function undoLabel() {
+  return undoStack.length ? undoStack[undoStack.length - 1].label : '';
+}
+
+/** Roll back the last checkpointed action. Returns its label, or null. */
+async function undo() {
+  const entry = undoStack.pop();
+  if (!entry) return null;
+  for (const key of UNDO_SLICES) state[key] = entry.data[key];
+  if (state.ui.selectedPointId && !getPoint(state.ui.selectedPointId)) {
+    state.ui.selectedPointId = null;
+  }
+  await save();
+  return entry.label;
+}
+
 /** Wipe persisted data and reload the demo project. */
 async function resetToDemo() {
+  undoStack.length = 0;
   await idbDelete('kv', STORAGE_KEY).catch(() => {});
   for (const ph of state.photos) {
     await deletePhotoBlob(ph.blobKey);
@@ -2217,7 +2288,7 @@ function districtAt(lat, lon) {
   return null;
 }
 
-return { TODAY_DATE, deletePhotoBlob, districtAt, districtName, exportProject, getDistrict, getPhotoUrl, getPoint, getPreset, importProject, initState, makePoint, markStepDone, nextId, notify, photosForPoint, recommendationsForPoint, removePoint, removeRecommendation, resetToDemo, save, savePhotoBlob, state, subscribe, upsertPoint, upsertRecommendation };
+return { TODAY_DATE, canUndo, checkpoint, deletePhotoBlob, districtAt, districtName, dropCheckpoint, exportProject, getDistrict, getPhotoUrl, getPoint, getPreset, importProject, initState, makePoint, markStepDone, nextId, notify, photosForPoint, recommendationsForPoint, removePoint, removeRecommendation, resetToDemo, save, savePhotoBlob, state, subscribe, undo, undoLabel, upsertPoint, upsertRecommendation };
 };
 
 __defs['js/map.js'] = function () {
@@ -2238,6 +2309,9 @@ __defs['js/map.js'] = function () {
 const { MAPBOX_TOKEN, MAP_STYLE, MAP_DEFAULT } = __req('config.js');
 const { metresPerDegLon } = __req('js/model.js');
 const TOKEN_IS_REAL = typeof MAPBOX_TOKEN === 'string' && MAPBOX_TOKEN.startsWith('pk.');
+
+/** Ile klik na mapie czeka na ewentualny dblclick, zanim zostanie wysłany. */
+const CLICK_DELAY_MS = 260;
 
 function mapboxAvailable() {
   return TOKEN_IS_REAL && typeof window !== 'undefined' && typeof window.mapboxgl !== 'undefined';
@@ -2340,7 +2414,9 @@ function renderSceneSvg(scene, opts = {}) {
   const width = opts.width || 600;
   const height = opts.height || 400;
   const bbox = scene.boundary ? bboxOf(scene.boundary) : [18.92, 50.07, 19.1, 50.18];
-  const { project, metres } = makeProjection(bbox, width, height, opts.pad ?? 10);
+  // A caller may supply its own projection (the interactive fallback does, so
+  // that panning and zooming reuse this exact renderer).
+  const { project, metres } = opts.projection || makeProjection(bbox, width, height, opts.pad ?? 10);
   const parts = [];
 
   parts.push(`<rect width="${width}" height="${height}" fill="#f2f2ef"/>`);
@@ -2458,6 +2534,8 @@ function createMapboxMap(container, opts) {
   let scene = {};
   let ready = false;
   let addMode = false;
+  // A click that terminates a pin drag must not open anything.
+  let dragged = false;
 
   const src = (id, data) => {
     if (map.getSource(id)) map.getSource(id).setData(data);
@@ -2513,8 +2591,21 @@ function createMapboxMap(container, opts) {
     if (scene.boundary) applyScene(scene);
   });
 
+  // Podwójny klik przybliża mapę i po drodze wysyła dwa zwykłe kliknięcia.
+  // Skoro klik dokłada punkt, emisja czeka na ewentualny dblclick.
+  let clickTimer = null;
   map.on('click', (e) => {
-    bus.emit('mapclick', { lat: e.lngLat.lat, lon: e.lngLat.lng, addMode });
+    if (clickTimer) clearTimeout(clickTimer);
+    const payload = { lat: e.lngLat.lat, lon: e.lngLat.lng, addMode };
+    clickTimer = setTimeout(() => {
+      clickTimer = null;
+      bus.emit('mapclick', payload);
+    }, CLICK_DELAY_MS);
+  });
+  map.on('dblclick', () => {
+    if (!clickTimer) return;
+    clearTimeout(clickTimer);
+    clickTimer = null;
   });
 
   function applyScene(next) {
@@ -2550,14 +2641,24 @@ function createMapboxMap(container, opts) {
       const node = document.createElement('div');
       node.className = `pin pin--${p.level}${p.id === scene.selectedId ? ' is-selected' : ''}`;
       node.title = p.name || '';
+      node.addEventListener('pointerdown', () => {
+        dragged = false;
+      });
       node.addEventListener('click', (ev) => {
         ev.stopPropagation();
+        if (dragged) {
+          dragged = false;
+          return;
+        }
         bus.emit('pointclick', p);
       });
       const marker = new window.mapboxgl.Marker({ element: node, draggable: !!p.draggable })
         .setLngLat([p.lon, p.lat])
         .addTo(map);
       if (p.draggable) {
+        marker.on('dragstart', () => {
+          dragged = true;
+        });
         marker.on('drag', () => {
           const ll = marker.getLngLat();
           bus.emit('pointdrag', { ...p, lat: ll.lat, lon: ll.lng });
@@ -2587,6 +2688,21 @@ function createMapboxMap(container, opts) {
       addMode = value;
       canvas.style.cursor = value ? 'crosshair' : '';
     },
+    /** Camera so a view can restore the framing after a re-render. */
+    getCamera() {
+      const c = map.getCenter();
+      return { center: [c.lng, c.lat], zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch() };
+    },
+    setCamera(cam) {
+      // Shapes differ per renderer; ignore a camera saved by the other one.
+      if (!cam || !Array.isArray(cam.center)) return;
+      map.jumpTo({
+        center: cam.center,
+        zoom: cam.zoom,
+        bearing: cam.bearing || 0,
+        pitch: cam.pitch || 0,
+      });
+    },
     fit(geojson) {
       const [w, s, e, n] = bboxOf(geojson || scene.boundary);
       map.fitBounds([[w, s], [e, n]], { padding: 40, duration: 0 });
@@ -2595,6 +2711,7 @@ function createMapboxMap(container, opts) {
       map.flyTo({ center: [lon, lat], zoom, duration: 400 });
     },
     destroy() {
+      if (clickTimer) clearTimeout(clickTimer);
       markers.forEach((m) => m.remove());
       labelMarkers.forEach((m) => m.remove());
       map.remove();
@@ -2605,6 +2722,12 @@ function createMapboxMap(container, opts) {
 
 /* --------------------------- Fallback ----------------------------- */
 
+
+/**
+ * Schematic renderer used when Mapbox is unavailable. It is a real map, not a
+ * placeholder: pan with the mouse, zoom with the wheel, drag pins — so the
+ * makieta stays usable offline and on a pendrive.
+ */
 function createFallbackMap(container, opts) {
   const bus = emitterMixin();
   const holder = document.createElement('div');
@@ -2620,55 +2743,91 @@ function createFallbackMap(container, opts) {
 
   let scene = {};
   let size = { w: container.clientWidth || 900, h: container.clientHeight || 600 };
-  let projection = null;
+  let base = null;      // projection fitted to the boundary
+  let projection = null; // base + pan/zoom
   let addMode = false;
-  let dragging = null;
+
+  /** Pan/zoom applied on top of the fitted projection. */
+  const view = { scale: opts.viewScale || 1, tx: opts.viewTx || 0, ty: opts.viewTy || 0 };
+
+  let dragging = null;   // { point, node, moved }
+  let panning = null;    // { x, y, tx, ty }
+  let clickBlocked = false; // set after any drag so the trailing click is ignored
+  let clickTimer = null;    // pending mapclick, cancelled by a dblclick
+
+  let rafId = 0;
+  /** Coalesce redraws so a wheel or resize burst costs one repaint, not twenty. */
+  function scheduleDraw() {
+    if (rafId) return;
+    rafId = requestAnimationFrame(() => {
+      rafId = 0;
+      draw();
+    });
+  }
 
   const ro = new ResizeObserver(() => {
     size = { w: container.clientWidth || size.w, h: container.clientHeight || size.h };
-    draw();
+    scheduleDraw();
   });
   ro.observe(container);
 
+  function buildProjection() {
+    const bbox = bboxOf(scene.boundary);
+    base = makeProjection(bbox, size.w, size.h, 24);
+    projection = {
+      project: (lon, lat) => {
+        const [x, y] = base.project(lon, lat);
+        return [x * view.scale + view.tx, y * view.scale + view.ty];
+      },
+      unproject: (px, py) => base.unproject((px - view.tx) / view.scale, (py - view.ty) / view.scale),
+      metres: (m) => base.metres(m) * view.scale,
+      scale: base.scale * view.scale,
+    };
+  }
+
   function draw() {
     if (!scene.boundary) return;
-    const bbox = bboxOf(scene.boundary);
-    projection = makeProjection(bbox, size.w, size.h, 24);
+    buildProjection();
+
     // Points are appended below as interactive nodes, so the static pass must
-    // not draw them too — otherwise every pin renders twice and the selection
-    // outline sits on top of a slightly smaller duplicate.
+    // not draw them too — otherwise every pin renders twice.
     holder.innerHTML = renderSceneSvg(
       { ...scene, points: [] },
       {
         width: size.w,
         height: size.h,
+        projection,
         showDemand: scene.showDemand !== false,
         showCoverage: scene.showCoverage !== false,
         showDistricts: scene.showDistricts !== false,
-        pad: 24,
       }
     );
 
     const svg = holder.querySelector('svg');
     if (!svg) return;
-    svg.style.cursor = addMode ? 'crosshair' : 'default';
+    svg.style.cursor = addMode ? 'crosshair' : 'grab';
+    svg.style.touchAction = 'none';
 
-    // labels
     for (const l of scene.labels || []) {
       const [x, y] = projection.project(l.lon, l.lat);
       const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       t.setAttribute('x', x.toFixed(1));
-      t.setAttribute('y', y.toFixed(1));
+      // Bez obrysów dzielnic podpis siada dokładnie tam, gdzie bywa pin —
+      // 14 px niżej mija się z nim, a biała otoczka trzyma go czytelnym.
+      t.setAttribute('y', (y + 14).toFixed(1));
       t.setAttribute('text-anchor', 'middle');
-      t.setAttribute('class', l.kind === 'gap' ? 'gap-label' : 'pin--district-label');
       t.setAttribute('font-size', l.kind === 'gap' ? '10.5' : '10');
       t.setAttribute('fill', l.kind === 'gap' ? '#a5322e' : '#8d8d8d');
       t.setAttribute('font-weight', '600');
+      t.setAttribute('stroke', '#ffffff');
+      t.setAttribute('stroke-width', '2.6');
+      t.setAttribute('paint-order', 'stroke');
+      t.setAttribute('stroke-linejoin', 'round');
+      t.setAttribute('pointer-events', 'none');
       t.textContent = l.text;
       svg.appendChild(t);
     }
 
-    // interactive pins drawn on top
     for (const p of scene.points || []) {
       const [x, y] = projection.project(p.lon, p.lat);
       const isProposed = p.level === 'proposed';
@@ -2689,58 +2848,159 @@ function createFallbackMap(container, opts) {
       node.setAttribute('stroke', p.id === scene.selectedId ? '#1e1e1e' : '#ffffff');
       node.setAttribute('stroke-width', p.id === scene.selectedId ? '2.4' : '2');
       node.style.cursor = p.draggable ? 'grab' : 'pointer';
+
       node.addEventListener('click', (ev) => {
         ev.stopPropagation();
-        if (!dragging) bus.emit('pointclick', p);
+        // A click that closes a drag must not also open anything.
+        if (clickBlocked) {
+          clickBlocked = false;
+          return;
+        }
+        bus.emit('pointclick', p);
       });
+
       if (p.draggable) {
         node.addEventListener('pointerdown', (ev) => {
           ev.stopPropagation();
-          node.setPointerCapture(ev.pointerId);
+          ev.preventDefault();
+          try {
+            svg.setPointerCapture(ev.pointerId);
+          } catch {
+            /* capture is best-effort */
+          }
           dragging = { point: p, node, moved: false };
         });
       }
+
       const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
       title.textContent = p.name || p.id;
       node.appendChild(title);
       svg.appendChild(node);
     }
 
-    svg.addEventListener('pointermove', (ev) => {
-      if (!dragging || !projection) return;
-      const rect = svg.getBoundingClientRect();
-      const [lon, lat] = projection.unproject(ev.clientX - rect.left, ev.clientY - rect.top);
-      dragging.moved = true;
-      if (dragging.node.tagName === 'rect') {
-        dragging.node.setAttribute('x', (ev.clientX - rect.left - 6).toFixed(1));
-        dragging.node.setAttribute('y', (ev.clientY - rect.top - 6).toFixed(1));
-      } else {
-        dragging.node.setAttribute('cx', (ev.clientX - rect.left).toFixed(1));
-        dragging.node.setAttribute('cy', (ev.clientY - rect.top).toFixed(1));
+    /* ---- panning the background ---- */
+    // Any fresh gesture clears a pending suppression, so a drag whose trailing
+    // click never arrives cannot swallow the next real click.
+    svg.addEventListener('pointerdown', () => { clickBlocked = false; }, true);
+
+    svg.addEventListener('pointerdown', (ev) => {
+      if (dragging || addMode) return;
+      try {
+        svg.setPointerCapture(ev.pointerId);
+      } catch {
+        /* best-effort */
       }
-      bus.emit('pointdrag', { ...dragging.point, lat, lon });
+      panning = { x: ev.clientX, y: ev.clientY, dx: 0, dy: 0, moved: false };
+      svg.style.cursor = 'grabbing';
     });
 
-    const endDrag = (ev) => {
-      if (!dragging || !projection) return;
+    svg.addEventListener('pointermove', (ev) => {
       const rect = svg.getBoundingClientRect();
-      const [lon, lat] = projection.unproject(ev.clientX - rect.left, ev.clientY - rect.top);
-      const payload = { ...dragging.point, lat, lon };
-      const moved = dragging.moved;
-      dragging = null;
-      if (moved) bus.emit('pointdragend', payload);
+
+      if (dragging && projection) {
+        const [lon, lat] = projection.unproject(ev.clientX - rect.left, ev.clientY - rect.top);
+        dragging.moved = true;
+        const px = ev.clientX - rect.left;
+        const py = ev.clientY - rect.top;
+        if (dragging.node.tagName === 'rect') {
+          dragging.node.setAttribute('x', (px - 6).toFixed(1));
+          dragging.node.setAttribute('y', (py - 6).toFixed(1));
+        } else {
+          dragging.node.setAttribute('cx', px.toFixed(1));
+          dragging.node.setAttribute('cy', py.toFixed(1));
+        }
+        bus.emit('pointdrag', { ...dragging.point, lat, lon });
+        return;
+      }
+
+      if (panning) {
+        // Move the whole SVG with a transform and commit the offset on release
+        // — redrawing a thousand demand dots per pointermove would stutter.
+        panning.dx = ev.clientX - panning.x;
+        panning.dy = ev.clientY - panning.y;
+        if (Math.abs(panning.dx) > 2 || Math.abs(panning.dy) > 2) panning.moved = true;
+        svg.style.transform = `translate(${panning.dx}px, ${panning.dy}px)`;
+      }
+    });
+
+    const finish = (ev) => {
+      if (dragging) {
+        const rect = svg.getBoundingClientRect();
+        const [lon, lat] = projection.unproject(ev.clientX - rect.left, ev.clientY - rect.top);
+        const payload = { ...dragging.point, lat, lon };
+        const moved = dragging.moved;
+        dragging = null;
+        if (moved) {
+          clickBlocked = true;
+          bus.emit('pointdragend', payload);
+        }
+        return;
+      }
+      if (panning) {
+        const { dx, dy, moved } = panning;
+        panning = null;
+        svg.style.transform = '';
+        svg.style.cursor = addMode ? 'crosshair' : 'grab';
+        if (moved) {
+          clickBlocked = true;
+          view.tx += dx;
+          view.ty += dy;
+          draw();
+        }
+      }
     };
-    svg.addEventListener('pointerup', endDrag);
-    svg.addEventListener('pointerleave', () => {
+    svg.addEventListener('pointerup', finish);
+    svg.addEventListener('pointercancel', () => {
       dragging = null;
+      panning = null;
+      svg.style.transform = '';
+    });
+
+    /* ---- zoom: wheel and double click, both around the cursor ---- */
+    const zoomAt = (px, py, factor) => {
+      const next = Math.min(12, Math.max(0.9, view.scale * factor));
+      const applied = next / view.scale;
+      view.tx = px - (px - view.tx) * applied;
+      view.ty = py - (py - view.ty) * applied;
+      view.scale = next;
+      scheduleDraw();
+    };
+
+    svg.addEventListener(
+      'wheel',
+      (ev) => {
+        ev.preventDefault();
+        const rect = svg.getBoundingClientRect();
+        zoomAt(ev.clientX - rect.left, ev.clientY - rect.top, Math.exp(-ev.deltaY * 0.0015));
+      },
+      { passive: false }
+    );
+
+    // Podwójny klik przybliża — tak samo jak w Mapboksie. Anuluje przy tym
+    // pojedynczy klik, żeby przybliżenie nie dołożyło przy okazji punktu.
+    svg.addEventListener('dblclick', (ev) => {
+      ev.preventDefault();
+      if (clickTimer) {
+        clearTimeout(clickTimer);
+        clickTimer = null;
+      }
+      const rect = svg.getBoundingClientRect();
+      zoomAt(ev.clientX - rect.left, ev.clientY - rect.top, 1.7);
     });
 
     svg.addEventListener('click', (ev) => {
-      if (ev.target !== svg && ev.target.tagName !== 'path' && ev.target.tagName !== 'rect') return;
+      if (clickBlocked) {
+        clickBlocked = false;
+        return;
+      }
       if (!projection) return;
       const rect = svg.getBoundingClientRect();
       const [lon, lat] = projection.unproject(ev.clientX - rect.left, ev.clientY - rect.top);
-      bus.emit('mapclick', { lat, lon, addMode });
+      if (clickTimer) clearTimeout(clickTimer);
+      clickTimer = setTimeout(() => {
+        clickTimer = null;
+        bus.emit('mapclick', { lat, lon, addMode });
+      }, CLICK_DELAY_MS);
     });
   }
 
@@ -2754,15 +3014,31 @@ function createFallbackMap(container, opts) {
     setAddMode(value) {
       addMode = value;
       const svg = holder.querySelector('svg');
-      if (svg) svg.style.cursor = value ? 'crosshair' : 'default';
+      if (svg) svg.style.cursor = value ? 'crosshair' : 'grab';
+    },
+    /** Camera so a view can restore the framing after a re-render. */
+    getCamera() {
+      return { viewScale: view.scale, viewTx: view.tx, viewTy: view.ty };
+    },
+    setCamera(cam) {
+      if (!cam) return;
+      if (typeof cam.viewScale === 'number') view.scale = cam.viewScale;
+      if (typeof cam.viewTx === 'number') view.tx = cam.viewTx;
+      if (typeof cam.viewTy === 'number') view.ty = cam.viewTy;
+      draw();
     },
     fit() {
+      view.scale = 1;
+      view.tx = 0;
+      view.ty = 0;
       draw();
     },
     flyTo() {
-      /* schematic view always shows the whole city */
+      /* the schematic view keeps whatever framing the operator set */
     },
     destroy() {
+      if (clickTimer) clearTimeout(clickTimer);
+      if (rafId) cancelAnimationFrame(rafId);
       ro.disconnect();
       holder.remove();
       notice.remove();
@@ -4542,7 +4818,7 @@ __defs['js/router.js'] = function () {
  */
 
 const { h, mount, clear, toast } = __req('js/ui.js');
-const { state } = __req('js/state.js');
+const { state, canUndo, undo, undoLabel } = __req('js/state.js');
 const { OPERATOR } = __req('config.js');
 /** The five audit steps plus setup (spec §3). */
 const STEPS = [
@@ -4590,6 +4866,30 @@ function navigate(hash) {
  * Shell
  * ------------------------------------------------------------------ */
 
+/** Roll back the last checkpointed action and tell the operator what went back. */
+async function undoLast() {
+  if (!canUndo()) {
+    toast('Nie ma czego cofnąć.');
+    return;
+  }
+  const label = await undo();
+  toast(`Cofnięto: ${label}`);
+}
+
+function undoButton() {
+  const enabled = canUndo();
+  return h(
+    'button',
+    {
+      class: 'btn btn--sm btn--ghost topbar__undo',
+      disabled: enabled ? null : '',
+      onclick: undoLast,
+      title: enabled ? `Cofnij: ${undoLabel()} (Ctrl+Z)` : 'Nie ma czego cofnąć',
+    },
+    '↩ Cofnij'
+  );
+}
+
 function topbar() {
   const project = state.project;
   return h(
@@ -4604,6 +4904,7 @@ function topbar() {
       }),
       h('span', { html: '<b>SINECCO</b> · AED Planner' })
     ),
+    undoButton(),
     project
       ? h('span', {
           class: 'topbar__project',
@@ -4748,6 +5049,14 @@ function topbarIf(meta) {
 
 function initRouter() {
   window.addEventListener('hashchange', render);
+  window.addEventListener('keydown', (ev) => {
+    if (!(ev.ctrlKey || ev.metaKey) || ev.key.toLowerCase() !== 'z' || ev.shiftKey) return;
+    // Inside a field, Ctrl+Z belongs to the browser's own text undo.
+    const t = ev.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    ev.preventDefault();
+    undoLast();
+  });
   return render();
 }
 
@@ -4755,7 +5064,7 @@ function currentHash() {
   return window.location.hash || '#/';
 }
 
-return { STEPS, currentHash, initRouter, navigate, registerRoute, render };
+return { STEPS, currentHash, initRouter, navigate, registerRoute, render, undoLast };
 };
 
 __defs['js/views/dashboard.js'] = function () {
@@ -5901,7 +6210,7 @@ __defs['js/views/inventory.js'] = function () {
  * formatowane wyłącznie przez fmtNum/fmtPct/fmtCost.
  */
 
-const { state, save, getPreset, districtName, upsertPoint, removePoint, nextId, makePoint, districtAt, markStepDone } = __req('js/state.js');
+const { state, save, getPreset, districtName, upsertPoint, removePoint, nextId, makePoint, districtAt, markStepDone, checkpoint, dropCheckpoint } = __req('js/state.js');
 const { completeness, pointStatusLevel, coverageGainFor, ringCentroid, fmtNum, fmtPct, fmtCost } = __req('js/model.js');
 const { h, mount, escapeHtml, dotHtml, statusMeta, toast, modal, disabledControl, download, pickFile, toCsv, parseCsv } = __req('js/ui.js');
 const { createMap } = __req('js/map.js');
@@ -5954,6 +6263,8 @@ let movingPointId = null;
 let keyHandler = null;
 let outsideHandler = null;
 let openMenuEl = null;
+/** Ostatni kadr mapy — odtwarzany przy każdym przerysowaniu widoku. */
+let savedCamera = null;
 
 /* ------------------------------------------------------------------ *
  * Pomocniki lokalne (rdzenia nie ruszamy — brakujące rzeczy są tutaj)
@@ -6170,11 +6481,23 @@ async function render(root, ctx) {
   });
 
   const addBtn = h('button', { class: 'btn btn--sm' }, '+ DODAJ PUNKT');
-  const fitBtn = h('button', { class: 'btn btn--sm', onclick: () => map && map.fit() }, 'DOPASUJ WIDOK');
+  const fitBtn = h(
+    'button',
+    {
+      class: 'btn btn--sm',
+      onclick: () => {
+        if (!map) return;
+        savedCamera = null;
+        map.fit();
+      },
+    },
+    'DOPASUJ WIDOK'
+  );
 
   mapEl.appendChild(h('div', { class: 'map-toolbar' }, addBtn, fitBtn));
   mapEl.appendChild(hint);
-  mapEl.appendChild(legend(proposedRows.length));
+  const legendEl = legend(proposedRows.length);
+  mapEl.appendChild(legendEl);
 
   /* Klik w puste miejsce mapy proponuje dodanie punktu — bez wcześniejszego
      uzbrajania trybu. Pasek jest odrzucalny, więc przypadkowy klik nic nie psuje. */
@@ -6195,6 +6518,7 @@ async function render(root, ctx) {
 
   const hideClickPrompt = () => {
     clickPrompt.style.display = 'none';
+    legendEl.style.visibility = '';
     mount(clickPrompt);
   };
 
@@ -6395,6 +6719,8 @@ async function render(root, ctx) {
       )
     );
     clickPrompt.style.display = '';
+    // Pasek stoi w tym samym pasie co legenda — na czas decyzji legenda ustępuje.
+    legendEl.style.visibility = 'hidden';
   }
 
   /* ---------------- przesuwanie istniejącego punktu ---------------- */
@@ -6421,6 +6747,7 @@ async function render(root, ctx) {
   map.on('pointdragend', async ({ id, lat, lon }) => {
     const point = state.points.find((p) => p.id === id);
     if (!point) return;
+    checkpoint(`przesunięcie punktu „${point.name}”`);
     point.lat = Math.round(lat * 1e6) / 1e6;
     point.lon = Math.round(lon * 1e6) / 1e6;
     const district = districtAt(point.lat, point.lon);
@@ -6663,7 +6990,7 @@ async function render(root, ctx) {
   map.setScene({
     boundary: state.boundary,
     districts: state.districtsGeo,
-    showDistricts: true,
+    showDistricts: false,
     coverage: [],
     showCoverage: false,
     demand: [],
@@ -6673,7 +7000,10 @@ async function render(root, ctx) {
     labels,
     selectedId: state.ui.selectedPointId,
   });
-  map.fit();
+  // Kadr przeżywa przerysowanie widoku — po przesunięciu pinu mapa zostaje tam,
+  // gdzie ustawił ją operator, zamiast wracać do widoku całego miasta.
+  if (savedCamera && typeof map.setCamera === 'function') map.setCamera(savedCamera);
+  else map.fit();
   paintAddMode();
 
   const selectedRow = [...registry, ...proposedRows].find((r) => r.point.id === state.ui.selectedPointId);
@@ -6788,6 +7118,7 @@ async function render(root, ctx) {
       point.verification = { date: null, by: null, source: 'operator' };
     }
 
+    checkpoint(isProposal ? 'dodanie rekomendacji' : 'dodanie punktu');
     upsertPoint(point);
     state.ui.selectedPointId = point.id;
     markStepDone(1);
@@ -6807,12 +7138,13 @@ async function render(root, ctx) {
       title: 'Usunąć punkt z rejestru?',
       body:
         `<p>${escapeHtml(point.name)} (${escapeHtml(point.id)}), ${escapeHtml(districtName(point.districtId))}.</p>` +
-        '<p class="note">Razem z punktem znikną jego rekomendacje i zdjęcia. Operacji nie można cofnąć.</p>',
+        '<p class="note">Razem z punktem znikną jego rekomendacje i zdjęcia. Przyciskiem „Cofnij” w pasku górnym można to odwrócić.</p>',
       confirmLabel: 'USUŃ PUNKT',
       cancelLabel: 'Anuluj',
     });
     if (!confirmed) return;
 
+    checkpoint(`usunięcie punktu „${point.name}”`);
     removePoint(point.id);
     if (state.ui.selectedPointId === point.id) state.ui.selectedPointId = null;
     await save();
@@ -6868,8 +7200,10 @@ async function render(root, ctx) {
           const file = await pickFile('.csv,text/csv');
           if (!file) return;
           try {
+            checkpoint('import CSV');
             const result = applyCsv(parseCsv(await file.text()));
             if (!result.added && !result.updated) {
+              dropCheckpoint();
               toast('Nie znaleziono wierszy z poprawnymi kolumnami lat i lon.');
               return;
             }
@@ -6881,6 +7215,7 @@ async function render(root, ctx) {
             );
           } catch (err) {
             console.error(err);
+            dropCheckpoint();
             toast('Nie udało się odczytać pliku CSV.');
           }
         },
@@ -6999,6 +7334,11 @@ function cleanup() {
   movingPointId = null;
   if (map) {
     try {
+      if (typeof map.getCamera === 'function') savedCamera = map.getCamera();
+    } catch (err) {
+      console.warn('map.getCamera() failed', err);
+    }
+    try {
       map.destroy();
     } catch (err) {
       console.warn('map.destroy() failed', err);
@@ -7031,7 +7371,7 @@ __defs['js/views/analysis.js'] = function () {
  * więc przełączniki realnie przeliczają zarówno mapę, jak i panel.
  */
 
-const { state, save, markStepDone, getPoint, getPreset, districtName, districtAt, upsertPoint, makePoint, nextId } = __req('js/state.js');
+const { state, save, markStepDone, getPoint, getPreset, districtName, districtAt, upsertPoint, makePoint, nextId, checkpoint } = __req('js/state.js');
 const { analyze, proposeNewPoints, coverageGainFor, completeness, pointStatusLevel, coverageRadiusM, ringCentroid, fmtPct, fmtMin, fmtNum, fmtCost, WALK_SPEED, DETOUR } = __req('js/model.js');
 const { h, mount, toast, barHtml, pillHtml, dotHtml, statusMeta, disabledControl } = __req('js/ui.js');
 const { createMap } = __req('js/map.js');
@@ -7068,6 +7408,8 @@ const EPS = 0.05;
 
 let map = null;
 let dragTimer = null;
+/** Ostatni kadr mapy — odtwarzany przy każdym przerysowaniu widoku. */
+let savedCamera = null;
 
 /* ------------------------------------------------------------------ *
  * Pomocniki lokalne (rdzenia nie ruszamy)
@@ -7305,6 +7647,7 @@ async function render(root, ctx) {
           return;
         }
 
+        checkpoint('wygenerowanie propozycji');
         state.pendingProposals = [...state.pendingProposals, ...picks];
         await save();
         toast(
@@ -7450,6 +7793,7 @@ async function render(root, ctx) {
     point.access.always = OUTDOOR_PRESETS.has(presetId);
     point.phase = OUTDOOR_PRESETS.has(presetId) ? 3 : 2;
 
+    checkpoint(`akceptację propozycji „${proposal.name}”`);
     upsertPoint(point);
     state.pendingProposals = state.pendingProposals.filter((p) => p.candidateId !== candidateId);
     await save();
@@ -7459,6 +7803,7 @@ async function render(root, ctx) {
   const rejectPending = async (candidateId) => {
     const proposal = state.pendingProposals.find((p) => p.candidateId === candidateId);
     if (!proposal) return;
+    checkpoint(`odrzucenie propozycji „${proposal.name}”`);
     state.pendingProposals = state.pendingProposals.filter((p) => p.candidateId !== candidateId);
     await save();
     toast(`Odrzucono propozycję: ${proposal.name}.`);
@@ -7467,6 +7812,7 @@ async function render(root, ctx) {
   const setPointStatus = async (pointId, status, message) => {
     const point = getPoint(pointId);
     if (!point) return;
+    checkpoint(`zmianę statusu „${point.name}”`);
     point.status = status;
     upsertPoint(point);
     await save();
@@ -7668,17 +8014,14 @@ async function render(root, ctx) {
 
   /* ---------------- Mapa ---------------- */
 
-  if (map) {
-    map.destroy();
-    map = null;
-  }
+  releaseMap();
 
   map = createMap(mapEl, { center: project.center || undefined, zoom: project.zoom || undefined });
 
   mapEl.appendChild(
     h('div', {
       class: 'map-hint',
-      text: 'Przeciągnij kwadratowy pin propozycji — wskaźniki liczą się na żywo.',
+      text: 'Kliknij w mapę, aby dodać rekomendację · przeciągnij kwadratowy pin, aby ją przesunąć.',
     })
   );
 
@@ -7705,15 +8048,23 @@ async function render(root, ctx) {
     h(
       'div',
       { class: 'map-toolbar' },
-      h('span', {
-        class: 'pill pill--warn',
-        style: { padding: '5px 10px', lineHeight: '1.35', maxWidth: '260px', whiteSpace: 'normal', textAlign: 'right' },
-        text: 'DO OPRACOWANIA W ITERACJI 3 — izochrony po rzeczywistej sieci pieszej',
-      }),
       disabledControl(
         h('button', { class: 'btn btn--sm' }, 'IZOCHRONY — SIEĆ PIESZA'),
         'poza zakresem iteracji 2'
       )
+    )
+  );
+
+  // Prawy dolny róg, nie pasek narzędzi: tam etykieta nie nachodzi ani na
+  // podpowiedź na górze, ani na legendę po lewej.
+  mapEl.appendChild(
+    h(
+      'div',
+      { class: 'map-corner-note' },
+      h('span', {
+        class: 'pill pill--warn',
+        text: 'DO OPRACOWANIA W ITERACJI 3 — izochrony po rzeczywistej sieci pieszej',
+      })
     )
   );
 
@@ -7773,7 +8124,9 @@ async function render(root, ctx) {
   map.setScene({
     boundary: state.boundary,
     districts: state.districtsGeo,
-    showDistricts: true,
+    // Obrysy dzielnic wyłączone: nakładały się na punkty popytu i utrudniały
+    // czytanie kolorów. Nazwy dzielnic zostają w panelu luk.
+    showDistricts: false,
     // Okręgi stref wyłączone na życzenie: przy kilkunastu punktach zlewały się
     // w plamę i zasłaniały punkty popytu, które niosą tę samą informację
     // dokładniej (kolor = w zasięgu / blisko granicy / poza). Dane zostają —
@@ -7787,7 +8140,10 @@ async function render(root, ctx) {
     labels: buildGapLabels(analysis),
     selectedId: state.ui.selectedPointId,
   });
-  map.fit();
+  // Widok przerysowuje się po każdej zmianie danych (przesunięcie pinu, nowa
+  // rekomendacja). Kadr wraca taki, jaki był — bez odjeżdżania do całego miasta.
+  if (savedCamera && typeof map.setCamera === 'function') map.setCamera(savedCamera);
+  else map.fit();
 
   /* ---------------- Interakcje mapy ---------------- */
 
@@ -7797,6 +8153,40 @@ async function render(root, ctx) {
       return;
     }
     ctx.navigate(`#/card/${encodeURIComponent(pin.id)}`);
+  });
+
+  // Klik w puste miejsce mapy dokłada rekomendację (fioletowy kwadrat) — to
+  // najszybsza odpowiedź na pytanie „a gdyby AED stanęło tutaj?". Zysk liczy
+  // ten sam coverageGainFor(), którego używa optymalizator, więc nowa
+  // rekomendacja jest porównywalna z propozycjami wygenerowanymi automatycznie.
+  // Pomyłkę odwraca „Cofnij" w pasku górnym.
+  map.on('mapclick', async ({ lat, lon }) => {
+    const districtId = districtAt(lat, lon);
+    if (!districtId) {
+      toast('Kliknięcie poza granicą miasta — rekomendacji nie dodano.');
+      return;
+    }
+
+    const presetId = 'P1';
+    const point = makePoint({
+      id: nextId('NEW'),
+      name: `Rekomendacja — ${districtName(districtId)}`,
+      lat: Math.round(lat * 1e6) / 1e6,
+      lon: Math.round(lon * 1e6) / 1e6,
+      presetId,
+      districtId,
+      kind: 'proposed',
+    });
+    const gain = gainFor({ lat: point.lat, lon: point.lon }, state.points);
+    point.gainPct = gain.gainPct;
+    point.gainWeight = gain.gainWeight;
+    point.access.always = OUTDOOR_PRESETS.has(presetId);
+    point.phase = OUTDOOR_PRESETS.has(presetId) ? 3 : 2;
+
+    checkpoint('dodanie rekomendacji na mapie');
+    upsertPoint(point);
+    await save();
+    toast(`Rekomendacja ${point.id} · +${fmtPct(gain.gainPct, 1)} pokrycia. Zaakceptuj ją albo cofnij.`);
   });
 
   // Przeciąganie na żywo: liczymy na tymczasowej kopii i przemalowujemy panel.
@@ -7830,6 +8220,7 @@ async function render(root, ctx) {
     if (isPendingPin(pin.id)) {
       const proposal = state.pendingProposals.find((p) => pendingPinId(p) === pin.id);
       if (!proposal) return;
+      checkpoint(`przesunięcie propozycji „${proposal.name}”`);
       proposal.lat = pin.lat;
       proposal.lon = pin.lon;
       proposal.districtId = districtAt(pin.lat, pin.lon) || proposal.districtId;
@@ -7843,6 +8234,7 @@ async function render(root, ctx) {
 
     const point = getPoint(pin.id);
     if (!point) return;
+    checkpoint(`przesunięcie punktu „${point.name}”`);
     point.lat = pin.lat;
     point.lon = pin.lon;
     point.districtId = districtAt(pin.lat, pin.lon) || point.districtId;
@@ -7857,19 +8249,28 @@ async function render(root, ctx) {
   });
 }
 
+/** Zdejmuje mapę, zapamiętując wcześniej kadr. */
+function releaseMap() {
+  if (!map) return;
+  try {
+    if (typeof map.getCamera === 'function') savedCamera = map.getCamera();
+  } catch (err) {
+    console.warn('map.getCamera() failed', err);
+  }
+  try {
+    map.destroy();
+  } catch (err) {
+    console.warn('map.destroy() failed', err);
+  }
+  map = null;
+}
+
 function destroy() {
   if (dragTimer) {
     clearTimeout(dragTimer);
     dragTimer = null;
   }
-  if (map) {
-    try {
-      map.destroy();
-    } catch (err) {
-      console.warn('map.destroy() failed', err);
-    }
-    map = null;
-  }
+  releaseMap();
 }
 
 return { destroy, meta, render };

@@ -25,6 +25,7 @@ import {
   upsertPoint,
   makePoint,
   nextId,
+  checkpoint,
 } from '../state.js';
 
 import {
@@ -89,6 +90,8 @@ const EPS = 0.05;
 
 let map = null;
 let dragTimer = null;
+/** Ostatni kadr mapy — odtwarzany przy każdym przerysowaniu widoku. */
+let savedCamera = null;
 
 /* ------------------------------------------------------------------ *
  * Pomocniki lokalne (rdzenia nie ruszamy)
@@ -326,6 +329,7 @@ export async function render(root, ctx) {
           return;
         }
 
+        checkpoint('wygenerowanie propozycji');
         state.pendingProposals = [...state.pendingProposals, ...picks];
         await save();
         toast(
@@ -471,6 +475,7 @@ export async function render(root, ctx) {
     point.access.always = OUTDOOR_PRESETS.has(presetId);
     point.phase = OUTDOOR_PRESETS.has(presetId) ? 3 : 2;
 
+    checkpoint(`akceptację propozycji „${proposal.name}”`);
     upsertPoint(point);
     state.pendingProposals = state.pendingProposals.filter((p) => p.candidateId !== candidateId);
     await save();
@@ -480,6 +485,7 @@ export async function render(root, ctx) {
   const rejectPending = async (candidateId) => {
     const proposal = state.pendingProposals.find((p) => p.candidateId === candidateId);
     if (!proposal) return;
+    checkpoint(`odrzucenie propozycji „${proposal.name}”`);
     state.pendingProposals = state.pendingProposals.filter((p) => p.candidateId !== candidateId);
     await save();
     toast(`Odrzucono propozycję: ${proposal.name}.`);
@@ -488,6 +494,7 @@ export async function render(root, ctx) {
   const setPointStatus = async (pointId, status, message) => {
     const point = getPoint(pointId);
     if (!point) return;
+    checkpoint(`zmianę statusu „${point.name}”`);
     point.status = status;
     upsertPoint(point);
     await save();
@@ -689,17 +696,14 @@ export async function render(root, ctx) {
 
   /* ---------------- Mapa ---------------- */
 
-  if (map) {
-    map.destroy();
-    map = null;
-  }
+  releaseMap();
 
   map = createMap(mapEl, { center: project.center || undefined, zoom: project.zoom || undefined });
 
   mapEl.appendChild(
     h('div', {
       class: 'map-hint',
-      text: 'Przeciągnij kwadratowy pin propozycji — wskaźniki liczą się na żywo.',
+      text: 'Kliknij w mapę, aby dodać rekomendację · przeciągnij kwadratowy pin, aby ją przesunąć.',
     })
   );
 
@@ -726,15 +730,23 @@ export async function render(root, ctx) {
     h(
       'div',
       { class: 'map-toolbar' },
-      h('span', {
-        class: 'pill pill--warn',
-        style: { padding: '5px 10px', lineHeight: '1.35', maxWidth: '260px', whiteSpace: 'normal', textAlign: 'right' },
-        text: 'DO OPRACOWANIA W ITERACJI 3 — izochrony po rzeczywistej sieci pieszej',
-      }),
       disabledControl(
         h('button', { class: 'btn btn--sm' }, 'IZOCHRONY — SIEĆ PIESZA'),
         'poza zakresem iteracji 2'
       )
+    )
+  );
+
+  // Prawy dolny róg, nie pasek narzędzi: tam etykieta nie nachodzi ani na
+  // podpowiedź na górze, ani na legendę po lewej.
+  mapEl.appendChild(
+    h(
+      'div',
+      { class: 'map-corner-note' },
+      h('span', {
+        class: 'pill pill--warn',
+        text: 'DO OPRACOWANIA W ITERACJI 3 — izochrony po rzeczywistej sieci pieszej',
+      })
     )
   );
 
@@ -794,7 +806,9 @@ export async function render(root, ctx) {
   map.setScene({
     boundary: state.boundary,
     districts: state.districtsGeo,
-    showDistricts: true,
+    // Obrysy dzielnic wyłączone: nakładały się na punkty popytu i utrudniały
+    // czytanie kolorów. Nazwy dzielnic zostają w panelu luk.
+    showDistricts: false,
     // Okręgi stref wyłączone na życzenie: przy kilkunastu punktach zlewały się
     // w plamę i zasłaniały punkty popytu, które niosą tę samą informację
     // dokładniej (kolor = w zasięgu / blisko granicy / poza). Dane zostają —
@@ -808,7 +822,10 @@ export async function render(root, ctx) {
     labels: buildGapLabels(analysis),
     selectedId: state.ui.selectedPointId,
   });
-  map.fit();
+  // Widok przerysowuje się po każdej zmianie danych (przesunięcie pinu, nowa
+  // rekomendacja). Kadr wraca taki, jaki był — bez odjeżdżania do całego miasta.
+  if (savedCamera && typeof map.setCamera === 'function') map.setCamera(savedCamera);
+  else map.fit();
 
   /* ---------------- Interakcje mapy ---------------- */
 
@@ -818,6 +835,40 @@ export async function render(root, ctx) {
       return;
     }
     ctx.navigate(`#/card/${encodeURIComponent(pin.id)}`);
+  });
+
+  // Klik w puste miejsce mapy dokłada rekomendację (fioletowy kwadrat) — to
+  // najszybsza odpowiedź na pytanie „a gdyby AED stanęło tutaj?". Zysk liczy
+  // ten sam coverageGainFor(), którego używa optymalizator, więc nowa
+  // rekomendacja jest porównywalna z propozycjami wygenerowanymi automatycznie.
+  // Pomyłkę odwraca „Cofnij" w pasku górnym.
+  map.on('mapclick', async ({ lat, lon }) => {
+    const districtId = districtAt(lat, lon);
+    if (!districtId) {
+      toast('Kliknięcie poza granicą miasta — rekomendacji nie dodano.');
+      return;
+    }
+
+    const presetId = 'P1';
+    const point = makePoint({
+      id: nextId('NEW'),
+      name: `Rekomendacja — ${districtName(districtId)}`,
+      lat: Math.round(lat * 1e6) / 1e6,
+      lon: Math.round(lon * 1e6) / 1e6,
+      presetId,
+      districtId,
+      kind: 'proposed',
+    });
+    const gain = gainFor({ lat: point.lat, lon: point.lon }, state.points);
+    point.gainPct = gain.gainPct;
+    point.gainWeight = gain.gainWeight;
+    point.access.always = OUTDOOR_PRESETS.has(presetId);
+    point.phase = OUTDOOR_PRESETS.has(presetId) ? 3 : 2;
+
+    checkpoint('dodanie rekomendacji na mapie');
+    upsertPoint(point);
+    await save();
+    toast(`Rekomendacja ${point.id} · +${fmtPct(gain.gainPct, 1)} pokrycia. Zaakceptuj ją albo cofnij.`);
   });
 
   // Przeciąganie na żywo: liczymy na tymczasowej kopii i przemalowujemy panel.
@@ -851,6 +902,7 @@ export async function render(root, ctx) {
     if (isPendingPin(pin.id)) {
       const proposal = state.pendingProposals.find((p) => pendingPinId(p) === pin.id);
       if (!proposal) return;
+      checkpoint(`przesunięcie propozycji „${proposal.name}”`);
       proposal.lat = pin.lat;
       proposal.lon = pin.lon;
       proposal.districtId = districtAt(pin.lat, pin.lon) || proposal.districtId;
@@ -864,6 +916,7 @@ export async function render(root, ctx) {
 
     const point = getPoint(pin.id);
     if (!point) return;
+    checkpoint(`przesunięcie punktu „${point.name}”`);
     point.lat = pin.lat;
     point.lon = pin.lon;
     point.districtId = districtAt(pin.lat, pin.lon) || point.districtId;
@@ -878,17 +931,26 @@ export async function render(root, ctx) {
   });
 }
 
+/** Zdejmuje mapę, zapamiętując wcześniej kadr. */
+function releaseMap() {
+  if (!map) return;
+  try {
+    if (typeof map.getCamera === 'function') savedCamera = map.getCamera();
+  } catch (err) {
+    console.warn('map.getCamera() failed', err);
+  }
+  try {
+    map.destroy();
+  } catch (err) {
+    console.warn('map.destroy() failed', err);
+  }
+  map = null;
+}
+
 export function destroy() {
   if (dragTimer) {
     clearTimeout(dragTimer);
     dragTimer = null;
   }
-  if (map) {
-    try {
-      map.destroy();
-    } catch (err) {
-      console.warn('map.destroy() failed', err);
-    }
-    map = null;
-  }
+  releaseMap();
 }

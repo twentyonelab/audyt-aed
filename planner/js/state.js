@@ -290,8 +290,64 @@ export async function save({ silent = false } = {}) {
   if (!silent) notify();
 }
 
+/* ------------------------------------------------------------------ *
+ * Undo
+ * ------------------------------------------------------------------ */
+
+/**
+ * One entry per discrete operator action — adding a point on the map, moving a
+ * pin, accepting a proposal. Field-level edits inside a card are not stacked;
+ * they would bury the map actions the button is there for.
+ *
+ * Photo blobs are not rolled back: undoing a photo upload drops its metadata
+ * and leaves an orphan blob in IndexedDB, which nothing reads.
+ */
+const undoStack = [];
+const UNDO_LIMIT = 30;
+
+const UNDO_SLICES = ['project', 'points', 'photos', 'recommendations', 'candidates', 'pendingProposals'];
+
+function cloneUndoSlice() {
+  const raw = {};
+  for (const key of UNDO_SLICES) raw[key] = state[key];
+  return typeof structuredClone === 'function' ? structuredClone(raw) : JSON.parse(JSON.stringify(raw));
+}
+
+/** Record the state as it is *before* a mutation. Call it, then mutate, then save(). */
+export function checkpoint(label) {
+  undoStack.push({ label: label || 'ostatnią zmianę', data: cloneUndoSlice() });
+  if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+}
+
+/** Discard the last checkpoint without restoring it — for an action that turned out to be a no-op. */
+export function dropCheckpoint() {
+  undoStack.pop();
+}
+
+export function canUndo() {
+  return undoStack.length > 0;
+}
+
+/** Label of the action the next undo would reverse. */
+export function undoLabel() {
+  return undoStack.length ? undoStack[undoStack.length - 1].label : '';
+}
+
+/** Roll back the last checkpointed action. Returns its label, or null. */
+export async function undo() {
+  const entry = undoStack.pop();
+  if (!entry) return null;
+  for (const key of UNDO_SLICES) state[key] = entry.data[key];
+  if (state.ui.selectedPointId && !getPoint(state.ui.selectedPointId)) {
+    state.ui.selectedPointId = null;
+  }
+  await save();
+  return entry.label;
+}
+
 /** Wipe persisted data and reload the demo project. */
 export async function resetToDemo() {
+  undoStack.length = 0;
   await idbDelete('kv', STORAGE_KEY).catch(() => {});
   for (const ph of state.photos) {
     await deletePhotoBlob(ph.blobKey);

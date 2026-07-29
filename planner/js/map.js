@@ -17,6 +17,9 @@ import { metresPerDegLon } from './model.js';
 
 const TOKEN_IS_REAL = typeof MAPBOX_TOKEN === 'string' && MAPBOX_TOKEN.startsWith('pk.');
 
+/** Ile klik na mapie czeka na ewentualny dblclick, zanim zostanie wysłany. */
+const CLICK_DELAY_MS = 260;
+
 export function mapboxAvailable() {
   return TOKEN_IS_REAL && typeof window !== 'undefined' && typeof window.mapboxgl !== 'undefined';
 }
@@ -118,7 +121,9 @@ export function renderSceneSvg(scene, opts = {}) {
   const width = opts.width || 600;
   const height = opts.height || 400;
   const bbox = scene.boundary ? bboxOf(scene.boundary) : [18.92, 50.07, 19.1, 50.18];
-  const { project, metres } = makeProjection(bbox, width, height, opts.pad ?? 10);
+  // A caller may supply its own projection (the interactive fallback does, so
+  // that panning and zooming reuse this exact renderer).
+  const { project, metres } = opts.projection || makeProjection(bbox, width, height, opts.pad ?? 10);
   const parts = [];
 
   parts.push(`<rect width="${width}" height="${height}" fill="#f2f2ef"/>`);
@@ -236,6 +241,8 @@ function createMapboxMap(container, opts) {
   let scene = {};
   let ready = false;
   let addMode = false;
+  // A click that terminates a pin drag must not open anything.
+  let dragged = false;
 
   const src = (id, data) => {
     if (map.getSource(id)) map.getSource(id).setData(data);
@@ -291,8 +298,21 @@ function createMapboxMap(container, opts) {
     if (scene.boundary) applyScene(scene);
   });
 
+  // Podwójny klik przybliża mapę i po drodze wysyła dwa zwykłe kliknięcia.
+  // Skoro klik dokłada punkt, emisja czeka na ewentualny dblclick.
+  let clickTimer = null;
   map.on('click', (e) => {
-    bus.emit('mapclick', { lat: e.lngLat.lat, lon: e.lngLat.lng, addMode });
+    if (clickTimer) clearTimeout(clickTimer);
+    const payload = { lat: e.lngLat.lat, lon: e.lngLat.lng, addMode };
+    clickTimer = setTimeout(() => {
+      clickTimer = null;
+      bus.emit('mapclick', payload);
+    }, CLICK_DELAY_MS);
+  });
+  map.on('dblclick', () => {
+    if (!clickTimer) return;
+    clearTimeout(clickTimer);
+    clickTimer = null;
   });
 
   function applyScene(next) {
@@ -328,14 +348,24 @@ function createMapboxMap(container, opts) {
       const node = document.createElement('div');
       node.className = `pin pin--${p.level}${p.id === scene.selectedId ? ' is-selected' : ''}`;
       node.title = p.name || '';
+      node.addEventListener('pointerdown', () => {
+        dragged = false;
+      });
       node.addEventListener('click', (ev) => {
         ev.stopPropagation();
+        if (dragged) {
+          dragged = false;
+          return;
+        }
         bus.emit('pointclick', p);
       });
       const marker = new window.mapboxgl.Marker({ element: node, draggable: !!p.draggable })
         .setLngLat([p.lon, p.lat])
         .addTo(map);
       if (p.draggable) {
+        marker.on('dragstart', () => {
+          dragged = true;
+        });
         marker.on('drag', () => {
           const ll = marker.getLngLat();
           bus.emit('pointdrag', { ...p, lat: ll.lat, lon: ll.lng });
@@ -365,6 +395,21 @@ function createMapboxMap(container, opts) {
       addMode = value;
       canvas.style.cursor = value ? 'crosshair' : '';
     },
+    /** Camera so a view can restore the framing after a re-render. */
+    getCamera() {
+      const c = map.getCenter();
+      return { center: [c.lng, c.lat], zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch() };
+    },
+    setCamera(cam) {
+      // Shapes differ per renderer; ignore a camera saved by the other one.
+      if (!cam || !Array.isArray(cam.center)) return;
+      map.jumpTo({
+        center: cam.center,
+        zoom: cam.zoom,
+        bearing: cam.bearing || 0,
+        pitch: cam.pitch || 0,
+      });
+    },
     fit(geojson) {
       const [w, s, e, n] = bboxOf(geojson || scene.boundary);
       map.fitBounds([[w, s], [e, n]], { padding: 40, duration: 0 });
@@ -373,6 +418,7 @@ function createMapboxMap(container, opts) {
       map.flyTo({ center: [lon, lat], zoom, duration: 400 });
     },
     destroy() {
+      if (clickTimer) clearTimeout(clickTimer);
       markers.forEach((m) => m.remove());
       labelMarkers.forEach((m) => m.remove());
       map.remove();
@@ -383,6 +429,12 @@ function createMapboxMap(container, opts) {
 
 /* --------------------------- Fallback ----------------------------- */
 
+
+/**
+ * Schematic renderer used when Mapbox is unavailable. It is a real map, not a
+ * placeholder: pan with the mouse, zoom with the wheel, drag pins — so the
+ * makieta stays usable offline and on a pendrive.
+ */
 function createFallbackMap(container, opts) {
   const bus = emitterMixin();
   const holder = document.createElement('div');
@@ -398,55 +450,91 @@ function createFallbackMap(container, opts) {
 
   let scene = {};
   let size = { w: container.clientWidth || 900, h: container.clientHeight || 600 };
-  let projection = null;
+  let base = null;      // projection fitted to the boundary
+  let projection = null; // base + pan/zoom
   let addMode = false;
-  let dragging = null;
+
+  /** Pan/zoom applied on top of the fitted projection. */
+  const view = { scale: opts.viewScale || 1, tx: opts.viewTx || 0, ty: opts.viewTy || 0 };
+
+  let dragging = null;   // { point, node, moved }
+  let panning = null;    // { x, y, tx, ty }
+  let clickBlocked = false; // set after any drag so the trailing click is ignored
+  let clickTimer = null;    // pending mapclick, cancelled by a dblclick
+
+  let rafId = 0;
+  /** Coalesce redraws so a wheel or resize burst costs one repaint, not twenty. */
+  function scheduleDraw() {
+    if (rafId) return;
+    rafId = requestAnimationFrame(() => {
+      rafId = 0;
+      draw();
+    });
+  }
 
   const ro = new ResizeObserver(() => {
     size = { w: container.clientWidth || size.w, h: container.clientHeight || size.h };
-    draw();
+    scheduleDraw();
   });
   ro.observe(container);
 
+  function buildProjection() {
+    const bbox = bboxOf(scene.boundary);
+    base = makeProjection(bbox, size.w, size.h, 24);
+    projection = {
+      project: (lon, lat) => {
+        const [x, y] = base.project(lon, lat);
+        return [x * view.scale + view.tx, y * view.scale + view.ty];
+      },
+      unproject: (px, py) => base.unproject((px - view.tx) / view.scale, (py - view.ty) / view.scale),
+      metres: (m) => base.metres(m) * view.scale,
+      scale: base.scale * view.scale,
+    };
+  }
+
   function draw() {
     if (!scene.boundary) return;
-    const bbox = bboxOf(scene.boundary);
-    projection = makeProjection(bbox, size.w, size.h, 24);
+    buildProjection();
+
     // Points are appended below as interactive nodes, so the static pass must
-    // not draw them too — otherwise every pin renders twice and the selection
-    // outline sits on top of a slightly smaller duplicate.
+    // not draw them too — otherwise every pin renders twice.
     holder.innerHTML = renderSceneSvg(
       { ...scene, points: [] },
       {
         width: size.w,
         height: size.h,
+        projection,
         showDemand: scene.showDemand !== false,
         showCoverage: scene.showCoverage !== false,
         showDistricts: scene.showDistricts !== false,
-        pad: 24,
       }
     );
 
     const svg = holder.querySelector('svg');
     if (!svg) return;
-    svg.style.cursor = addMode ? 'crosshair' : 'default';
+    svg.style.cursor = addMode ? 'crosshair' : 'grab';
+    svg.style.touchAction = 'none';
 
-    // labels
     for (const l of scene.labels || []) {
       const [x, y] = projection.project(l.lon, l.lat);
       const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       t.setAttribute('x', x.toFixed(1));
-      t.setAttribute('y', y.toFixed(1));
+      // Bez obrysów dzielnic podpis siada dokładnie tam, gdzie bywa pin —
+      // 14 px niżej mija się z nim, a biała otoczka trzyma go czytelnym.
+      t.setAttribute('y', (y + 14).toFixed(1));
       t.setAttribute('text-anchor', 'middle');
-      t.setAttribute('class', l.kind === 'gap' ? 'gap-label' : 'pin--district-label');
       t.setAttribute('font-size', l.kind === 'gap' ? '10.5' : '10');
       t.setAttribute('fill', l.kind === 'gap' ? '#a5322e' : '#8d8d8d');
       t.setAttribute('font-weight', '600');
+      t.setAttribute('stroke', '#ffffff');
+      t.setAttribute('stroke-width', '2.6');
+      t.setAttribute('paint-order', 'stroke');
+      t.setAttribute('stroke-linejoin', 'round');
+      t.setAttribute('pointer-events', 'none');
       t.textContent = l.text;
       svg.appendChild(t);
     }
 
-    // interactive pins drawn on top
     for (const p of scene.points || []) {
       const [x, y] = projection.project(p.lon, p.lat);
       const isProposed = p.level === 'proposed';
@@ -467,58 +555,159 @@ function createFallbackMap(container, opts) {
       node.setAttribute('stroke', p.id === scene.selectedId ? '#1e1e1e' : '#ffffff');
       node.setAttribute('stroke-width', p.id === scene.selectedId ? '2.4' : '2');
       node.style.cursor = p.draggable ? 'grab' : 'pointer';
+
       node.addEventListener('click', (ev) => {
         ev.stopPropagation();
-        if (!dragging) bus.emit('pointclick', p);
+        // A click that closes a drag must not also open anything.
+        if (clickBlocked) {
+          clickBlocked = false;
+          return;
+        }
+        bus.emit('pointclick', p);
       });
+
       if (p.draggable) {
         node.addEventListener('pointerdown', (ev) => {
           ev.stopPropagation();
-          node.setPointerCapture(ev.pointerId);
+          ev.preventDefault();
+          try {
+            svg.setPointerCapture(ev.pointerId);
+          } catch {
+            /* capture is best-effort */
+          }
           dragging = { point: p, node, moved: false };
         });
       }
+
       const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
       title.textContent = p.name || p.id;
       node.appendChild(title);
       svg.appendChild(node);
     }
 
-    svg.addEventListener('pointermove', (ev) => {
-      if (!dragging || !projection) return;
-      const rect = svg.getBoundingClientRect();
-      const [lon, lat] = projection.unproject(ev.clientX - rect.left, ev.clientY - rect.top);
-      dragging.moved = true;
-      if (dragging.node.tagName === 'rect') {
-        dragging.node.setAttribute('x', (ev.clientX - rect.left - 6).toFixed(1));
-        dragging.node.setAttribute('y', (ev.clientY - rect.top - 6).toFixed(1));
-      } else {
-        dragging.node.setAttribute('cx', (ev.clientX - rect.left).toFixed(1));
-        dragging.node.setAttribute('cy', (ev.clientY - rect.top).toFixed(1));
+    /* ---- panning the background ---- */
+    // Any fresh gesture clears a pending suppression, so a drag whose trailing
+    // click never arrives cannot swallow the next real click.
+    svg.addEventListener('pointerdown', () => { clickBlocked = false; }, true);
+
+    svg.addEventListener('pointerdown', (ev) => {
+      if (dragging || addMode) return;
+      try {
+        svg.setPointerCapture(ev.pointerId);
+      } catch {
+        /* best-effort */
       }
-      bus.emit('pointdrag', { ...dragging.point, lat, lon });
+      panning = { x: ev.clientX, y: ev.clientY, dx: 0, dy: 0, moved: false };
+      svg.style.cursor = 'grabbing';
     });
 
-    const endDrag = (ev) => {
-      if (!dragging || !projection) return;
+    svg.addEventListener('pointermove', (ev) => {
       const rect = svg.getBoundingClientRect();
-      const [lon, lat] = projection.unproject(ev.clientX - rect.left, ev.clientY - rect.top);
-      const payload = { ...dragging.point, lat, lon };
-      const moved = dragging.moved;
-      dragging = null;
-      if (moved) bus.emit('pointdragend', payload);
+
+      if (dragging && projection) {
+        const [lon, lat] = projection.unproject(ev.clientX - rect.left, ev.clientY - rect.top);
+        dragging.moved = true;
+        const px = ev.clientX - rect.left;
+        const py = ev.clientY - rect.top;
+        if (dragging.node.tagName === 'rect') {
+          dragging.node.setAttribute('x', (px - 6).toFixed(1));
+          dragging.node.setAttribute('y', (py - 6).toFixed(1));
+        } else {
+          dragging.node.setAttribute('cx', px.toFixed(1));
+          dragging.node.setAttribute('cy', py.toFixed(1));
+        }
+        bus.emit('pointdrag', { ...dragging.point, lat, lon });
+        return;
+      }
+
+      if (panning) {
+        // Move the whole SVG with a transform and commit the offset on release
+        // — redrawing a thousand demand dots per pointermove would stutter.
+        panning.dx = ev.clientX - panning.x;
+        panning.dy = ev.clientY - panning.y;
+        if (Math.abs(panning.dx) > 2 || Math.abs(panning.dy) > 2) panning.moved = true;
+        svg.style.transform = `translate(${panning.dx}px, ${panning.dy}px)`;
+      }
+    });
+
+    const finish = (ev) => {
+      if (dragging) {
+        const rect = svg.getBoundingClientRect();
+        const [lon, lat] = projection.unproject(ev.clientX - rect.left, ev.clientY - rect.top);
+        const payload = { ...dragging.point, lat, lon };
+        const moved = dragging.moved;
+        dragging = null;
+        if (moved) {
+          clickBlocked = true;
+          bus.emit('pointdragend', payload);
+        }
+        return;
+      }
+      if (panning) {
+        const { dx, dy, moved } = panning;
+        panning = null;
+        svg.style.transform = '';
+        svg.style.cursor = addMode ? 'crosshair' : 'grab';
+        if (moved) {
+          clickBlocked = true;
+          view.tx += dx;
+          view.ty += dy;
+          draw();
+        }
+      }
     };
-    svg.addEventListener('pointerup', endDrag);
-    svg.addEventListener('pointerleave', () => {
+    svg.addEventListener('pointerup', finish);
+    svg.addEventListener('pointercancel', () => {
       dragging = null;
+      panning = null;
+      svg.style.transform = '';
+    });
+
+    /* ---- zoom: wheel and double click, both around the cursor ---- */
+    const zoomAt = (px, py, factor) => {
+      const next = Math.min(12, Math.max(0.9, view.scale * factor));
+      const applied = next / view.scale;
+      view.tx = px - (px - view.tx) * applied;
+      view.ty = py - (py - view.ty) * applied;
+      view.scale = next;
+      scheduleDraw();
+    };
+
+    svg.addEventListener(
+      'wheel',
+      (ev) => {
+        ev.preventDefault();
+        const rect = svg.getBoundingClientRect();
+        zoomAt(ev.clientX - rect.left, ev.clientY - rect.top, Math.exp(-ev.deltaY * 0.0015));
+      },
+      { passive: false }
+    );
+
+    // Podwójny klik przybliża — tak samo jak w Mapboksie. Anuluje przy tym
+    // pojedynczy klik, żeby przybliżenie nie dołożyło przy okazji punktu.
+    svg.addEventListener('dblclick', (ev) => {
+      ev.preventDefault();
+      if (clickTimer) {
+        clearTimeout(clickTimer);
+        clickTimer = null;
+      }
+      const rect = svg.getBoundingClientRect();
+      zoomAt(ev.clientX - rect.left, ev.clientY - rect.top, 1.7);
     });
 
     svg.addEventListener('click', (ev) => {
-      if (ev.target !== svg && ev.target.tagName !== 'path' && ev.target.tagName !== 'rect') return;
+      if (clickBlocked) {
+        clickBlocked = false;
+        return;
+      }
       if (!projection) return;
       const rect = svg.getBoundingClientRect();
       const [lon, lat] = projection.unproject(ev.clientX - rect.left, ev.clientY - rect.top);
-      bus.emit('mapclick', { lat, lon, addMode });
+      if (clickTimer) clearTimeout(clickTimer);
+      clickTimer = setTimeout(() => {
+        clickTimer = null;
+        bus.emit('mapclick', { lat, lon, addMode });
+      }, CLICK_DELAY_MS);
     });
   }
 
@@ -532,15 +721,31 @@ function createFallbackMap(container, opts) {
     setAddMode(value) {
       addMode = value;
       const svg = holder.querySelector('svg');
-      if (svg) svg.style.cursor = value ? 'crosshair' : 'default';
+      if (svg) svg.style.cursor = value ? 'crosshair' : 'grab';
+    },
+    /** Camera so a view can restore the framing after a re-render. */
+    getCamera() {
+      return { viewScale: view.scale, viewTx: view.tx, viewTy: view.ty };
+    },
+    setCamera(cam) {
+      if (!cam) return;
+      if (typeof cam.viewScale === 'number') view.scale = cam.viewScale;
+      if (typeof cam.viewTx === 'number') view.tx = cam.viewTx;
+      if (typeof cam.viewTy === 'number') view.ty = cam.viewTy;
+      draw();
     },
     fit() {
+      view.scale = 1;
+      view.tx = 0;
+      view.ty = 0;
       draw();
     },
     flyTo() {
-      /* schematic view always shows the whole city */
+      /* the schematic view keeps whatever framing the operator set */
     },
     destroy() {
+      if (clickTimer) clearTimeout(clickTimer);
+      if (rafId) cancelAnimationFrame(rafId);
       ro.disconnect();
       holder.remove();
       notice.remove();
