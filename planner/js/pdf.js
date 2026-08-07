@@ -10,10 +10,12 @@
  *     z ogonkami i kreskami (kody jak w CP1250, glify nazwane wg Adobe),
  *   • tekst z łamaniem wierszy (metryki Helvetiki wpisane niżej), linie,
  *     prostokąty z wypełnieniem i obrysem,
+ *   • obrazy JPEG (XObject /DCTDecode) — dokładnie tyle, ile trzeba, żeby
+ *     karta punktu niosła zdjęcia z audytu; konwersję WebP/SVG→JPEG robi
+ *     wołający (canvas w przeglądarce),
  *   • wielostronicowość; współrzędne API idą OD GÓRY (jak w CSS) i są
  *     przeliczane na PDF-owe od dołu przy zapisie.
- * Świadomie nie ma: obrazków, kerningu, fontów osadzonych. Do kart audytu
- * to wystarcza; zdjęcia w karcie reprezentuje lista plików, nie miniatury.
+ * Świadomie nie ma: kerningu i fontów osadzonych.
  */
 
 /* ------------------------------------------------------------------ *
@@ -147,6 +149,9 @@ export function createPdf(opts = {}) {
   const pages = [];
   let ops = null;
 
+  /** Zarejestrowane obrazy JPEG: {bytes, w, h}; nazwa = Im1, Im2, … */
+  const images = [];
+
   const num = (v) => (Math.round(v * 100) / 100).toString();
   const toY = (y) => height - y; // API liczy od góry, PDF od dołu
 
@@ -238,7 +243,27 @@ export function createPdf(opts = {}) {
     );
   }
 
+  /** Rejestruje JPEG; zwraca nazwę zasobu do drawImage(). */
+  function addImage(jpegBytes, pxWidth, pxHeight) {
+    images.push({ bytes: jpegBytes, w: pxWidth, h: pxHeight });
+    return `Im${images.length}`;
+  }
+
+  /** Rysuje zarejestrowany obraz w prostokącie (x, y od góry, w×h w punktach). */
+  function drawImage(name, x, y, w, hgt) {
+    ops.push(`q ${num(w)} 0 0 ${num(hgt)} ${num(x)} ${num(toY(y + hgt))} cm /${name} Do Q`);
+  }
+
   /* ---------------- składanie pliku ---------------- */
+
+  /** Bajty binarne → łańcuch latin1 (1 znak = 1 bajt), porcjami. */
+  function binToLatin1(bytes) {
+    let out = '';
+    for (let i = 0; i < bytes.length; i += 8192) {
+      out += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
+    }
+    return out;
+  }
 
   function output() {
     const objects = []; // 1-indeksowane treści obiektów (bez nagłówka "N 0 obj")
@@ -248,15 +273,29 @@ export function createPdf(opts = {}) {
       .map(([code, glyph]) => `${code} /${glyph}`)
       .join(' ');
 
+    // Numeracja: 1-5 stałe, potem N obrazów, słownik zasobów, pary stron.
+    const imgBase = 6; // pierwszy obraz = 6
+    const resId = imgBase + images.length;
+    const pageObjIds = pages.map((_, i) => resId + 2 + i * 2);
+
     objects.push('<< /Type /Catalog /Pages 2 0 R >>'); // 1
-    // Po sześciu obiektach stałych każda strona to para (treść, strona):
-    // treść = 7 + 2i, strona = 8 + 2i.
-    const pageObjIds = pages.map((_, i) => 8 + i * 2);
     objects.push(`<< /Type /Pages /Kids [${pageObjIds.map((id) => `${id} 0 R`).join(' ')}] /Count ${pages.length} >>`); // 2
     objects.push(`<< /Type /Encoding /BaseEncoding /WinAnsiEncoding /Differences [${diffs}] >>`); // 3
     objects.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding 3 0 R >>'); // 4
     objects.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding 3 0 R >>'); // 5
-    objects.push('<< /F1 4 0 R /F2 5 0 R >>'); // 6 — słownik fontów wspólny dla stron
+
+    images.forEach((img) => {
+      objects.push(
+        `<< /Type /XObject /Subtype /Image /Width ${img.w} /Height ${img.h} ` +
+          `/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${img.bytes.length} >>\n` +
+          `stream\n${binToLatin1(img.bytes)}\nendstream`
+      );
+    });
+
+    const xobjDict = images.length
+      ? ` /XObject << ${images.map((_, i) => `/Im${i + 1} ${imgBase + i} 0 R`).join(' ')} >>`
+      : '';
+    objects.push(`<< /Font << /F1 4 0 R /F2 5 0 R >>${xobjDict} >>`); // słownik zasobów
 
     for (const pageOps of pages) {
       const stream = pageOps.join('\n');
@@ -264,7 +303,7 @@ export function createPdf(opts = {}) {
       const contentId = objects.length;
       objects.push(
         `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${num(width)} ${num(height)}] ` +
-          `/Resources << /Font 6 0 R >> /Contents ${contentId} 0 R >>`
+          `/Resources ${resId} 0 R /Contents ${contentId} 0 R >>`
       );
     }
 
@@ -287,5 +326,18 @@ export function createPdf(opts = {}) {
   }
 
   addPage();
-  return { width, height, addPage, text, rect, line, measure, wrap, output, pageCount: () => pages.length };
+  return {
+    width,
+    height,
+    addPage,
+    text,
+    rect,
+    line,
+    measure,
+    wrap,
+    addImage,
+    drawImage,
+    output,
+    pageCount: () => pages.length,
+  };
 }

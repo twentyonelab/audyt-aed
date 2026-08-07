@@ -134,8 +134,14 @@ const spread = () =>
   });
 
 const spreadFitted = await spread();
+// Zoom wokół pierwszego fioletowego kwadratu — zoom celowany w kursor trzyma
+// ten punkt w miejscu, więc kwadrat nie ucieknie poza kadr przed przeciąganiem.
+const zoomAnchor = await page.locator('.map-fallback svg rect[fill="#8a6fc7"]').first().boundingBox();
 box = await mapBox();
-await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+await page.mouse.move(
+  zoomAnchor ? zoomAnchor.x + zoomAnchor.width / 2 : box.x + box.width / 2,
+  zoomAnchor ? zoomAnchor.y + zoomAnchor.height / 2 : box.y + box.height / 2
+);
 await page.mouse.wheel(0, -600);
 await page.waitForTimeout(400);
 
@@ -275,9 +281,15 @@ const pdfBtn = page.locator('tbody button', { hasText: 'POBIERZ PDF' }).first();
 check('raport: lista kart z przyciskami PDF', (await pdfBtn.count()) > 0);
 
 const [pdfDl] = await Promise.all([page.waitForEvent('download'), pdfBtn.click()]);
-const pdfPath = await pdfDl.path();
-const pdfHead = readFileSync(pdfPath).subarray(0, 5).toString('latin1');
+const pdfBytes = readFileSync(await pdfDl.path());
+const pdfHead = pdfBytes.subarray(0, 5).toString('latin1');
 check('pojedyncza karta pobiera się jako PDF', pdfHead === '%PDF-', `${pdfDl.suggestedFilename()} · ${pdfHead}`);
+// AED-001 (pierwszy wiersz) ma dwa zdjęcia demo — w PDF muszą być osadzone JPEG-i.
+check(
+  'zdjęcia karty są osadzone w PDF (DCTDecode)',
+  pdfBytes.includes('/DCTDecode'),
+  `${Math.round(pdfBytes.length / 1024)} KB`
+);
 
 const zipBtn = page.locator('button', { hasText: /POBIERZ WSZYSTKIE/ }).first();
 const [zipDl] = await Promise.all([page.waitForEvent('download'), zipBtn.click()]);

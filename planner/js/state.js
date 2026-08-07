@@ -215,7 +215,7 @@ async function seedDemoPhotos() {
 
 function placeholderSvg(color, text, caption) {
   const safe = String(caption).replace(/[<>&]/g, '');
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
   <rect width="400" height="300" fill="#ededea"/>
   <rect x="0" y="0" width="400" height="300" fill="none" stroke="#d0d0d0" stroke-width="2"/>
   <rect x="150" y="105" width="100" height="70" rx="4" fill="${color}"/>
@@ -245,6 +245,8 @@ export async function initState({ reset = false } = {}) {
   state.districtsGeo = districtsGeo;
   state.presets = presets;
 
+  const demo = await fetchJson(DEMO_PROJECT_FILE);
+
   if (stored) {
     Object.assign(state, {
       project: stored.project,
@@ -256,7 +258,6 @@ export async function initState({ reset = false } = {}) {
       ui: { ...state.ui, ...(stored.ui || {}) },
     });
   } else {
-    const demo = await fetchJson(DEMO_PROJECT_FILE);
     state.project = demo.project;
     state.points = demo.points;
     state.recommendations = demo.recommendations || [];
@@ -269,7 +270,14 @@ export async function initState({ reset = false } = {}) {
     }
   }
 
-  state.demandPoints = buildDemandPoints(districtsGeo.features);
+  // Siatka popytu jest częścią danych projektu (w produkcji: siatka GUS 1 km),
+  // a nie pochodną granic dzielnic — dzielnice z OSM to warstwa administracyjna,
+  // a rozkład ludności modelują osobne rdzenie gęstości zabudowy. Fallback dla
+  // projektów bez własnej siatki: spirala z wielokątów dzielnic, jak dawniej.
+  state.demandPoints =
+    Array.isArray(demo.demandPoints) && demo.demandPoints.length
+      ? demo.demandPoints
+      : buildDemandPoints(districtsGeo.features);
   state.ready = true;
   if (!stored) await save({ silent: true });
   return state;
@@ -487,17 +495,46 @@ export function makePoint({ id, name, lat, lon, presetId = 'P1', districtId = nu
  * Which district polygon contains a coordinate — used when the operator drops
  * a pin on the map so the point lands in the right gap statistics.
  */
+function pointInRing(lat, lon, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    if (yi > lat !== yj > lat && lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
 export function districtAt(lat, lon) {
   const features = state.districtsGeo?.features || [];
   for (const f of features) {
-    const ring = f.geometry.coordinates[0];
-    let inside = false;
-    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-      const [xi, yi] = ring[i];
-      const [xj, yj] = ring[j];
-      if (yi > lat !== yj > lat && lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) inside = !inside;
-    }
-    if (inside) return f.properties.id;
+    if (pointInRing(lat, lon, f.geometry.coordinates[0])) return f.properties.id;
   }
-  return null;
+
+  // Realne granice z OSM miewają szczeliny (cztery relacje Tychów są w źródle
+  // niedomknięte). Punkt wewnątrz miasta, który nie trafił w żaden wielokąt,
+  // dostaje najbliższą dzielnicę po centroidzie — zamiast null, które
+  // blokowałoby dodawanie punktów.
+  const boundary = state.boundary?.geometry?.coordinates?.[0];
+  if (!boundary || !pointInRing(lat, lon, boundary)) return null;
+
+  let best = null;
+  let bestD = Infinity;
+  for (const f of features) {
+    const ring = f.geometry.coordinates[0];
+    let cx = 0;
+    let cy = 0;
+    for (const [x, y] of ring) {
+      cx += x;
+      cy += y;
+    }
+    cx /= ring.length;
+    cy /= ring.length;
+    const d = (cx - lon) * (cx - lon) + (cy - lat) * (cy - lat);
+    if (d < bestD) {
+      bestD = d;
+      best = f.properties.id;
+    }
+  }
+  return best;
 }

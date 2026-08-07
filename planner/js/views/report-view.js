@@ -662,9 +662,9 @@ function renderCardsSection(root, ctx, tabSeg) {
   // Odrzucone propozycje nie idą do gminy — reszta punktów dostaje kartę.
   const points = state.points.filter((p) => p.status !== 'rejected');
 
-  const downloadOne = (point) => {
+  const downloadOne = async (point) => {
     try {
-      download(cardPdfFilename(point), buildCardPdf(point), 'application/pdf');
+      download(cardPdfFilename(point), await buildCardPdf(point), 'application/pdf');
       toast(`Pobrano kartę ${point.id}.`);
     } catch (err) {
       console.error(err);
@@ -672,9 +672,13 @@ function renderCardsSection(root, ctx, tabSeg) {
     }
   };
 
-  const downloadAll = () => {
+  const downloadAll = async () => {
     try {
-      const files = points.map((point) => ({ name: cardPdfFilename(point), data: buildCardPdf(point) }));
+      toast('Generuję karty… (zdjęcia są konwertowane do JPEG)');
+      const files = [];
+      for (const point of points) {
+        files.push({ name: cardPdfFilename(point), data: await buildCardPdf(point) });
+      }
       const archive = zipStore(files, docMeta.date);
       download(`karty-punktow_${project.id}_${docMeta.date}.zip`, archive, 'application/zip');
       toast(`Spakowano ${fmtNum(files.length)} ${plural(files.length, ['kartę', 'karty', 'kart'])} PDF do jednego ZIP.`);

@@ -6,13 +6,13 @@
  * siedzi w jednym miejscu, liczby biorą się wyłącznie z model.js, a data na
  * stopce to TODAY z config.js (data odniesienia audytu, nie zegar komputera).
  *
- * Zdjęcia są w PDF-ie reprezentowane liczbą i rolami (generator nie osadza
- * bitmap — patrz nagłówek pdf.js); dowody fotograficzne żyją w aplikacji
- * i w eksporcie ZIP projektu.
+ * Zdjęcia z audytu są osadzane w sekcji 1 jako miniatury JPEG (konwersja
+ * WebP/SVG→JPEG przez canvas; wymaga przeglądarki — w Node karta powstaje
+ * bez zdjęć, z samą listą plików).
  */
 
 import { createPdf } from './pdf.js';
-import { state, getPreset, districtName, recommendationsForPoint } from './state.js';
+import { state, getPreset, districtName, recommendationsForPoint, getPhotoUrl } from './state.js';
 import { completeness, expertScore, EXPERT_CRITERIA, EXPERT_FORMULA, PHASE_META, fmtPct, fmtNum, fmtCost } from './model.js';
 import { statusMeta, photoRoleLabel, PRIORITY_LABEL } from './ui.js';
 import { TODAY } from '../config.js';
@@ -46,7 +46,59 @@ export function cardPdfFilename(point) {
   return `${point.id}${slug ? `_${slug}` : ''}.pdf`;
 }
 
-export function buildCardPdf(point) {
+/**
+ * Blob zdjęcia (WebP/SVG/JPEG…) → JPEG do osadzenia w PDF.
+ * Wymaga DOM — w środowisku bez przeglądarki zwraca null i karta powstaje
+ * bez miniatur. Białe tło zamiast alfy, bo JPEG przezroczystości nie ma.
+ */
+async function blobToJpeg(blob, maxSide = 640) {
+  if (typeof document === 'undefined' || typeof Image === 'undefined') return null;
+  const url = URL.createObjectURL(blob);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    let w = img.naturalWidth || 800;
+    let h = img.naturalHeight || 600;
+    const scale = Math.min(1, maxSide / Math.max(w, h));
+    w = Math.max(1, Math.round(w * scale));
+    h = Math.max(1, Math.round(h * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(img, 0, 0, w, h);
+    const out = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.82));
+    if (!out) return null;
+    return { bytes: new Uint8Array(await out.arrayBuffer()), w, h };
+  } catch (err) {
+    console.warn('Nie udało się przekonwertować zdjęcia do JPEG', err);
+    return null;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+/** Zdjęcia punktu jako JPEG-i gotowe do osadzenia (te, które dały się przekonwertować). */
+async function loadPointJpegs(photos) {
+  const out = [];
+  for (const ph of photos) {
+    try {
+      const url = await getPhotoUrl(ph.blobKey);
+      if (!url) continue;
+      const blob = await (await fetch(url)).blob();
+      const jpeg = await blobToJpeg(blob);
+      if (jpeg) out.push({ ...jpeg, meta: ph });
+    } catch (err) {
+      console.warn(`Zdjęcie ${ph.id} pominięte w PDF`, err);
+    }
+  }
+  return out;
+}
+
+export async function buildCardPdf(point) {
   const project = state.project || {};
   const preset = getPreset(point.presetId);
   const comp = completeness(point, preset, state.photos);
@@ -54,6 +106,7 @@ export function buildCardPdf(point) {
   const score = expertScore(point);
   const recs = recommendationsForPoint(point.id);
   const photos = state.photos.filter((ph) => ph.pointId === point.id);
+  const jpegs = await loadPointJpegs(photos);
   const isProposed = point.kind === 'proposed';
 
   const pdf = createPdf();
@@ -146,10 +199,32 @@ export function buildCardPdf(point) {
   row('Umiejscowienie', point.placement);
   row(
     'Dokumentacja foto',
-    photos.length
-      ? `${fmtNum(photos.length)} zdj. (${photos.map((ph) => photoRoleLabel(ph.role)).join(', ')}) — pliki w aplikacji / eksporcie projektu`
-      : 'brak zdjęć'
+    photos.length ? `${fmtNum(photos.length)} zdj. (${photos.map((ph) => photoRoleLabel(ph.role)).join(', ')})` : 'brak zdjęć'
   );
+
+  // Miniatury zdjęć: dwie kolumny, podpis (rola · opis) pod każdą.
+  if (jpegs.length) {
+    const cols = 2;
+    const gap = 12;
+    const cellW = (contentW - gap * (cols - 1)) / cols;
+    for (let i = 0; i < jpegs.length; i += cols) {
+      const rowImgs = jpegs.slice(i, i + cols);
+      const heights = rowImgs.map((im) => Math.min(150, (cellW * im.h) / im.w));
+      const rowH = Math.max(...heights);
+      breakIfNeeded(rowH + 26);
+      rowImgs.forEach((im, c) => {
+        const name = pdf.addImage(im.bytes, im.w, im.h);
+        const drawH = heights[c];
+        const drawW = Math.min(cellW, (drawH * im.w) / im.h);
+        const x = M + c * (cellW + gap);
+        pdf.drawImage(name, x, y, drawW, drawH);
+        pdf.rect(x, y, drawW, drawH, { stroke: LINE, lineWidth: 0.8 });
+        const caption = [photoRoleLabel(im.meta.role), im.meta.caption].filter(Boolean).join(' · ');
+        pdf.text(caption, x, y + drawH + 11, { size: 7.5, color: MUTED, maxWidth: cellW });
+      });
+      y += rowH + 26;
+    }
+  }
 
   section(2, 'Preset punktu', preset ? fmtCost(preset.cost) : 'BRAK', preset ? INK : CRIT);
   row('Preset', preset ? `${preset.id} — ${preset.name}` : 'nie przypisano');

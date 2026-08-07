@@ -10,44 +10,14 @@
     "districtsFile": "districts-tychy.geojson",
     "districts": [
       {
-        "id": "srodmiescie-wschod",
-        "name": "Śródmieście-Wschód",
-        "population": 20800
-      },
-      {
-        "id": "srodmiescie-zachod",
-        "name": "Śródmieście-Zachód",
-        "population": 17000
-      },
-      {
-        "id": "srodmiescie-polnoc",
-        "name": "Śródmieście-Północ",
-        "population": 17500
-      },
-      {
-        "id": "osiedle-no",
-        "name": "Osiedle N/O",
-        "population": 10500
-      },
-      {
-        "id": "osiedle-tu",
-        "name": "Osiedle T/U",
-        "population": 13500
-      },
-      {
-        "id": "osiedle-mp",
-        "name": "Osiedle M/P",
-        "population": 11000
+        "id": "srodmiescie",
+        "name": "Śródmieście",
+        "population": 62000
       },
       {
         "id": "stare-tychy",
         "name": "Stare Tychy",
-        "population": 7500
-      },
-      {
-        "id": "paprocany",
-        "name": "Paprocany",
-        "population": 8200
+        "population": 9000
       },
       {
         "id": "zwakow",
@@ -55,9 +25,24 @@
         "population": 9500
       },
       {
-        "id": "wilkowyje",
-        "name": "Wilkowyje",
-        "population": 3600
+        "id": "paprocany",
+        "name": "Paprocany",
+        "population": 7500
+      },
+      {
+        "id": "suble",
+        "name": "Suble",
+        "population": 6500
+      },
+      {
+        "id": "glinka",
+        "name": "Glinka",
+        "population": 5500
+      },
+      {
+        "id": "zawisc",
+        "name": "Zawiść",
+        "population": 4000
       },
       {
         "id": "czulow",
@@ -65,9 +50,44 @@
         "population": 4500
       },
       {
+        "id": "makolowiec",
+        "name": "Mąkołowiec",
+        "population": 3500
+      },
+      {
+        "id": "wilkowyje",
+        "name": "Wilkowyje",
+        "population": 4000
+      },
+      {
+        "id": "zwierzyniec",
+        "name": "Zwierzyniec",
+        "population": 2500
+      },
+      {
+        "id": "wartoglowiec",
+        "name": "Wartogłowiec",
+        "population": 2000
+      },
+      {
+        "id": "wygorzele",
+        "name": "Wygorzele",
+        "population": 1500
+      },
+      {
+        "id": "jaroszowice",
+        "name": "Jaroszowice",
+        "population": 1500
+      },
+      {
+        "id": "cielmice",
+        "name": "Cielmice",
+        "population": 2000
+      },
+      {
         "id": "urbanowice",
-        "name": "Urbanowice-Cielmice",
-        "population": 3900
+        "name": "Urbanowice",
+        "population": 2000
       }
     ],
     "stepsDone": [
@@ -89,9 +109,9 @@
       "status": "verified_ok",
       "name": "MOSiR, ul. Piłsudskiego 12",
       "address": "ul. Piłsudskiego 12",
-      "districtId": "srodmiescie-wschod",
-      "lat": 50.129042,
-      "lon": 19.004965,
+      "districtId": "srodmiescie",
+      "lat": 50.119842,
+      "lon": 18.994466,
       "presetId": "P2",
       "placement": "hol główny, przy portierni",
       "access": {
@@ -138,9 +158,9 @@
       "status": "verified_ok",
       "name": "UM Tychy, wejście A",
       "address": "al. Niepodległości 49",
-      "districtId": "srodmiescie-polnoc",
-      "lat": 50.134534,
-      "lon": 18.999435,
+      "districtId": "srodmiescie",
+      "lat": 50.125134,
+      "lon": 18.981236,
       "presetId": "P1",
       "placement": "hol główny, przy portierni",
       "access": {
@@ -196,8 +216,8 @@
       "name": "SP nr 7 — hol główny",
       "address": "ul. Szkolna 3",
       "districtId": "zwakow",
-      "lat": 50.106446,
-      "lon": 18.976052,
+      "lat": 50.108946,
+      "lon": 18.964152,
       "presetId": "P1",
       "placement": "hol główny, przy portierni",
       "access": {
@@ -253,8 +273,8 @@
       "name": "Basen „Paprocany”",
       "address": "ul. Parkowa 17",
       "districtId": "paprocany",
-      "lat": 50.093564,
-      "lon": 19.0046,
+      "lat": 50.096964,
+      "lon": 18.987799,
       "presetId": "P5",
       "placement": "kasa główna, sezonowo maj–wrzesień",
       "access": {
@@ -302,8 +322,8 @@
       "name": "OSP Wilkowyje",
       "address": "ul. Wilkowyjska 64",
       "districtId": "wilkowyje",
-      "lat": 50.12991,
-      "lon": 18.95348,
+      "lat": 50.14791,
+      "lon": 18.95228,
       "presetId": null,
       "placement": null,
       "access": {
@@ -350,9 +370,9 @@
       "status": "unverified",
       "name": "Galeria „Azet”",
       "address": "ul. Budowlanych 71",
-      "districtId": "srodmiescie-zachod",
-      "lat": 50.117419,
-      "lon": 18.994613,
+      "districtId": "srodmiescie",
+      "lat": 50.116119,
+      "lon": 18.979913,
       "presetId": null,
       "placement": null,
       "access": {
@@ -407,9 +427,9 @@
       "status": "verified_ok",
       "name": "Dworzec PKP Tychy",
       "address": "pl. Dworcowy 1",
-      "districtId": "srodmiescie-zachod",
-      "lat": 50.121821,
-      "lon": 18.985927,
+      "districtId": "srodmiescie",
+      "lat": 50.120521,
+      "lon": 18.971227,
       "presetId": "P2",
       "placement": "hol główny, przy portierni",
       "access": {
@@ -456,9 +476,9 @@
       "status": "verified_ok",
       "name": "Szpital Wojewódzki (SOR)",
       "address": "ul. Edukacji 102",
-      "districtId": "srodmiescie-wschod",
-      "lat": 50.124325,
-      "lon": 19.016105,
+      "districtId": "srodmiescie",
+      "lat": 50.115125,
+      "lon": 19.005604,
       "presetId": "P2",
       "placement": "hol główny, przy portierni",
       "access": {
@@ -505,9 +525,9 @@
       "status": "verified_gaps",
       "name": "Kryta Pływalnia",
       "address": "ul. Edukacji 9",
-      "districtId": "osiedle-mp",
-      "lat": 50.133559,
-      "lon": 19.01848,
+      "districtId": "srodmiescie",
+      "lat": 50.124359,
+      "lon": 18.99978,
       "presetId": "P1",
       "placement": "hol główny, przy portierni",
       "access": {
@@ -555,8 +575,8 @@
       "name": "Mediateka",
       "address": "al. Piłsudskiego 16",
       "districtId": "stare-tychy",
-      "lat": 50.12378,
-      "lon": 18.98616,
+      "lat": 50.12918,
+      "lon": 18.981061,
       "presetId": "P1",
       "placement": "hol główny, przy portierni",
       "access": {
@@ -603,9 +623,9 @@
       "status": "verified_ok",
       "name": "Komenda Miejska Policji",
       "address": "al. Bielska 46",
-      "districtId": "srodmiescie-polnoc",
-      "lat": 50.139205,
-      "lon": 19.008825,
+      "districtId": "stare-tychy",
+      "lat": 50.129805,
+      "lon": 18.990624,
       "presetId": "P2",
       "placement": "hol główny, przy portierni",
       "access": {
@@ -653,8 +673,8 @@
       "name": "SP nr 10 — szafka zewn.",
       "address": "ul. Borowa 123",
       "districtId": "czulow",
-      "lat": 50.153159,
-      "lon": 18.988579,
+      "lat": 50.146559,
+      "lon": 19.004079,
       "presetId": "P3",
       "placement": "szafka zewnętrzna na elewacji, od strony ulicy",
       "access": {
@@ -701,9 +721,9 @@
       "status": "verified_gaps",
       "name": "Przychodnia os. N",
       "address": "ul. Elfów 6",
-      "districtId": "osiedle-no",
-      "lat": 50.11342,
-      "lon": 19.00122,
+      "districtId": "srodmiescie",
+      "lat": 50.11062,
+      "lon": 18.98462,
       "presetId": "P1",
       "placement": "hol główny, przy portierni",
       "access": {
@@ -750,9 +770,9 @@
       "status": "unverified",
       "name": "Market — Osiedle U",
       "address": "ul. Damrota 62",
-      "districtId": "osiedle-tu",
-      "lat": 50.098469,
-      "lon": 18.99364,
+      "districtId": "suble",
+      "lat": 50.118269,
+      "lon": 18.95794,
       "presetId": null,
       "placement": null,
       "access": {
@@ -797,13 +817,13 @@
       "id": "NEW-001",
       "kind": "proposed",
       "status": "accepted",
-      "name": "ZS nr 1",
+      "name": "Hala sportowa",
       "address": null,
-      "districtId": "srodmiescie-wschod",
-      "lat": 50.130614,
-      "lon": 19.012181,
+      "districtId": "srodmiescie",
+      "lat": 50.118269,
+      "lon": 19.00028,
       "presetId": "P1",
-      "candidateId": "C-11",
+      "candidateId": "C-15",
       "placement": null,
       "access": {
         "always": false,
@@ -842,23 +862,75 @@
       "recommendations": [],
       "notes": "",
       "phase": 2,
-      "gainPct": 4.7,
-      "gainWeight": 5998
+      "gainPct": 3.9,
+      "gainWeight": 5000
     },
     {
       "id": "NEW-002",
       "kind": "proposed",
       "status": "accepted",
-      "name": "Market — Urbanowice",
+      "name": "SP nr 5",
       "address": null,
-      "districtId": "urbanowice",
-      "lat": 50.109531,
-      "lon": 19.04536,
+      "districtId": "srodmiescie",
+      "lat": 50.124685,
+      "lon": 18.990484,
       "presetId": "P1",
-      "candidateId": "C-29",
+      "candidateId": "C-03",
       "placement": null,
       "access": {
         "always": false,
+        "hours": null,
+        "weekend": null,
+        "barriers": null
+      },
+      "keeper": {
+        "org": null,
+        "person": null,
+        "contact": null
+      },
+      "signage": {
+        "atDevice": null,
+        "route": null
+      },
+      "device": {
+        "model": null,
+        "inspectionDue": null,
+        "padsDue": null
+      },
+      "dispatcherRegistered": null,
+      "technical": {
+        "power": null,
+        "distanceToSource": null,
+        "works": null,
+        "connectionCost": null,
+        "monitoring": false
+      },
+      "photos": [],
+      "verification": {
+        "date": null,
+        "by": null,
+        "source": null
+      },
+      "recommendations": [],
+      "notes": "",
+      "phase": 2,
+      "gainPct": 3.3,
+      "gainWeight": 4181
+    },
+    {
+      "id": "NEW-003",
+      "kind": "proposed",
+      "status": "accepted",
+      "name": "Market — Urbanowice",
+      "address": null,
+      "districtId": "urbanowice",
+      "lat": 50.110531,
+      "lon": 19.03736,
+      "presetId": "P2",
+      "candidateId": "C-29",
+      "placement": null,
+      "access": {
+        "always": true,
         "hours": null,
         "weekend": null,
         "barriers": null
@@ -898,66 +970,14 @@
       "gainWeight": 3510
     },
     {
-      "id": "NEW-003",
-      "kind": "proposed",
-      "status": "accepted",
-      "name": "SP nr 5",
-      "address": null,
-      "districtId": "srodmiescie-polnoc",
-      "lat": 50.134085,
-      "lon": 19.008685,
-      "presetId": "P2",
-      "candidateId": "C-03",
-      "placement": null,
-      "access": {
-        "always": true,
-        "hours": null,
-        "weekend": null,
-        "barriers": null
-      },
-      "keeper": {
-        "org": null,
-        "person": null,
-        "contact": null
-      },
-      "signage": {
-        "atDevice": null,
-        "route": null
-      },
-      "device": {
-        "model": null,
-        "inspectionDue": null,
-        "padsDue": null
-      },
-      "dispatcherRegistered": null,
-      "technical": {
-        "power": null,
-        "distanceToSource": null,
-        "works": null,
-        "connectionCost": null,
-        "monitoring": false
-      },
-      "photos": [],
-      "verification": {
-        "date": null,
-        "by": null,
-        "source": null
-      },
-      "recommendations": [],
-      "notes": "",
-      "phase": 2,
-      "gainPct": 2.7,
-      "gainWeight": 3383
-    },
-    {
       "id": "NEW-004",
       "kind": "proposed",
       "status": "accepted",
       "name": "Totem wolnostojący — Paprocany",
       "address": null,
       "districtId": "paprocany",
-      "lat": 50.089342,
-      "lon": 19.01048,
+      "lat": 50.092742,
+      "lon": 18.99368,
       "presetId": "P4",
       "candidateId": "C-19",
       "placement": null,
@@ -1008,8 +1028,8 @@
       "name": "Szafka zewnętrzna — Żwaków",
       "address": null,
       "districtId": "zwakow",
-      "lat": 50.102763,
-      "lon": 18.970659,
+      "lat": 50.105263,
+      "lon": 18.958759,
       "presetId": "P3",
       "candidateId": "C-26",
       "placement": null,
@@ -1058,47 +1078,47 @@
     {
       "id": "C-01",
       "name": "SP nr 1 — wejście główne",
-      "districtId": "osiedle-tu",
+      "districtId": "suble",
       "presetId": "P1",
       "category": "szkoła",
-      "lat": 50.096044,
-      "lon": 18.997841
+      "lat": 50.115844,
+      "lon": 18.962143
     },
     {
       "id": "C-02",
       "name": "SP nr 3",
-      "districtId": "srodmiescie-zachod",
+      "districtId": "srodmiescie",
       "presetId": "P1",
       "category": "szkoła",
-      "lat": 50.121956,
-      "lon": 18.994403
+      "lat": 50.120656,
+      "lon": 18.979703
     },
     {
       "id": "C-03",
       "name": "SP nr 5",
-      "districtId": "srodmiescie-polnoc",
+      "districtId": "srodmiescie",
       "presetId": "P1",
       "category": "szkoła",
-      "lat": 50.134085,
-      "lon": 19.008685
+      "lat": 50.124685,
+      "lon": 18.990484
     },
     {
       "id": "C-04",
       "name": "SP nr 11",
-      "districtId": "osiedle-no",
+      "districtId": "srodmiescie",
       "presetId": "P1",
       "category": "szkoła",
-      "lat": 50.115397,
-      "lon": 18.997298
+      "lat": 50.112597,
+      "lon": 18.980698
     },
     {
       "id": "C-05",
       "name": "SP nr 18",
-      "districtId": "osiedle-mp",
+      "districtId": "srodmiescie",
       "presetId": "P1",
       "category": "szkoła",
-      "lat": 50.131134,
-      "lon": 19.022124
+      "lat": 50.121934,
+      "lon": 19.003423
     },
     {
       "id": "C-06",
@@ -1106,8 +1126,8 @@
       "districtId": "paprocany",
       "presetId": "P1",
       "category": "szkoła",
-      "lat": 50.092217,
-      "lon": 19.013
+      "lat": 50.095617,
+      "lon": 18.996201
     },
     {
       "id": "C-07",
@@ -1115,8 +1135,8 @@
       "districtId": "zwakow",
       "presetId": "P1",
       "category": "szkoła",
-      "lat": 50.105008,
-      "lon": 18.968699
+      "lat": 50.107508,
+      "lon": 18.956798
     },
     {
       "id": "C-08",
@@ -1124,8 +1144,8 @@
       "districtId": "wilkowyje",
       "presetId": "P1",
       "category": "szkoła",
-      "lat": 50.132515,
-      "lon": 18.948996
+      "lat": 50.150515,
+      "lon": 18.947794
     },
     {
       "id": "C-09",
@@ -1133,8 +1153,8 @@
       "districtId": "czulow",
       "presetId": "P1",
       "category": "szkoła",
-      "lat": 50.150464,
-      "lon": 18.993066
+      "lat": 50.143864,
+      "lon": 19.008565
     },
     {
       "id": "C-10",
@@ -1142,71 +1162,71 @@
       "districtId": "urbanowice",
       "presetId": "P1",
       "category": "szkoła",
-      "lat": 50.112046,
-      "lon": 19.040878
+      "lat": 50.113046,
+      "lon": 19.032878
     },
     {
       "id": "C-11",
       "name": "ZS nr 1",
-      "districtId": "srodmiescie-wschod",
+      "districtId": "srodmiescie",
       "presetId": "P1",
       "category": "szkoła",
-      "lat": 50.130614,
-      "lon": 19.012181
+      "lat": 50.113329,
+      "lon": 19.008686
     },
     {
       "id": "C-12",
       "name": "ZS nr 6",
-      "districtId": "stare-tychy",
+      "districtId": "srodmiescie",
       "presetId": "P1",
       "category": "szkoła",
-      "lat": 50.121893,
-      "lon": 18.982518
+      "lat": 50.127293,
+      "lon": 18.977417
     },
     {
       "id": "C-13",
       "name": "Przedszkole nr 12",
-      "districtId": "srodmiescie-zachod",
+      "districtId": "srodmiescie",
       "presetId": "P1",
       "category": "szkoła",
-      "lat": 50.123034,
-      "lon": 18.991041
+      "lat": 50.121734,
+      "lon": 18.976341
     },
     {
       "id": "C-14",
       "name": "Zespół Szkół Sportowych",
-      "districtId": "osiedle-tu",
+      "districtId": "glinka",
       "presetId": "P1",
       "category": "szkoła",
-      "lat": 50.100895,
-      "lon": 18.998821
+      "lat": 50.120695,
+      "lon": 18.963123
     },
     {
       "id": "C-15",
       "name": "Hala sportowa",
-      "districtId": "srodmiescie-wschod",
+      "districtId": "srodmiescie",
       "presetId": "P2",
       "category": "sport",
-      "lat": 50.127469,
-      "lon": 19.01078
+      "lat": 50.118269,
+      "lon": 19.00028
     },
     {
       "id": "C-16",
       "name": "Stadion Miejski",
-      "districtId": "osiedle-mp",
+      "districtId": "srodmiescie",
       "presetId": "P2",
       "category": "sport",
-      "lat": 50.130864,
-      "lon": 19.013996
+      "lat": 50.121664,
+      "lon": 18.995297
     },
     {
       "id": "C-17",
       "name": "Orlik — Czułów",
-      "districtId": "czulow",
+      "districtId": "zwierzyniec",
       "presetId": "P3",
       "category": "sport",
-      "lat": 50.150375,
-      "lon": 18.984794
+      "lat": 50.143775,
+      "lon": 19.000295
     },
     {
       "id": "C-18",
@@ -1214,8 +1234,8 @@
       "districtId": "paprocany",
       "presetId": "P3",
       "category": "sport",
-      "lat": 50.092397,
-      "lon": 19.014121
+      "lat": 50.095797,
+      "lon": 18.997321
     },
     {
       "id": "C-19",
@@ -1223,8 +1243,8 @@
       "districtId": "paprocany",
       "presetId": "P4",
       "category": "sport",
-      "lat": 50.089342,
-      "lon": 19.01048
+      "lat": 50.092742,
+      "lon": 18.99368
     },
     {
       "id": "C-20",
@@ -1232,35 +1252,35 @@
       "districtId": "wilkowyje",
       "presetId": "P3",
       "category": "sport",
-      "lat": 50.127575,
-      "lon": 18.957404
+      "lat": 50.145575,
+      "lon": 18.956206
     },
     {
       "id": "C-21",
       "name": "Biblioteka miejska",
-      "districtId": "srodmiescie-polnoc",
+      "districtId": "stare-tychy",
       "presetId": "P1",
       "category": "instytucja",
-      "lat": 50.13678,
-      "lon": 19.00378
+      "lat": 50.12738,
+      "lon": 18.98558
     },
     {
       "id": "C-22",
       "name": "Urząd Skarbowy",
-      "districtId": "srodmiescie-polnoc",
+      "districtId": "stare-tychy",
       "presetId": "P1",
       "category": "instytucja",
-      "lat": 50.139564,
-      "lon": 19.005882
+      "lat": 50.130164,
+      "lon": 18.987681
     },
     {
       "id": "C-23",
       "name": "MOPS",
-      "districtId": "srodmiescie-zachod",
+      "districtId": "srodmiescie",
       "presetId": "P1",
       "category": "instytucja",
-      "lat": 50.118183,
-      "lon": 18.985577
+      "lat": 50.116883,
+      "lon": 18.970877
     },
     {
       "id": "C-24",
@@ -1268,8 +1288,8 @@
       "districtId": "wilkowyje",
       "presetId": "P1",
       "category": "instytucja",
-      "lat": 50.132964,
-      "lon": 18.954041
+      "lat": 50.150964,
+      "lon": 18.952841
     },
     {
       "id": "C-25",
@@ -1277,8 +1297,8 @@
       "districtId": "stare-tychy",
       "presetId": "P1",
       "category": "instytucja",
-      "lat": 50.125217,
-      "lon": 18.988823
+      "lat": 50.130617,
+      "lon": 18.983723
     },
     {
       "id": "C-26",
@@ -1286,17 +1306,17 @@
       "districtId": "zwakow",
       "presetId": "P3",
       "category": "inne",
-      "lat": 50.102763,
-      "lon": 18.970659
+      "lat": 50.105263,
+      "lon": 18.958759
     },
     {
       "id": "C-27",
       "name": "Węzeł przesiadkowy",
-      "districtId": "srodmiescie-zachod",
+      "districtId": "srodmiescie",
       "presetId": "P3",
       "category": "inne",
-      "lat": 50.11962,
-      "lon": 18.99055
+      "lat": 50.11832,
+      "lon": 18.97585
     },
     {
       "id": "C-28",
@@ -1304,8 +1324,8 @@
       "districtId": "stare-tychy",
       "presetId": "P3",
       "category": "inne",
-      "lat": 50.126295,
-      "lon": 18.984759
+      "lat": 50.131695,
+      "lon": 18.979659
     },
     {
       "id": "C-29",
@@ -1313,8 +1333,8 @@
       "districtId": "urbanowice",
       "presetId": "P3",
       "category": "inne",
-      "lat": 50.109531,
-      "lon": 19.04536
+      "lat": 50.110531,
+      "lon": 19.03736
     },
     {
       "id": "C-30",
@@ -1322,17 +1342,17 @@
       "districtId": "urbanowice",
       "presetId": "P3",
       "category": "inne",
-      "lat": 50.107105,
-      "lon": 19.040318
+      "lat": 50.108105,
+      "lon": 19.032318
     },
     {
       "id": "C-31",
       "name": "Pawilony os. M",
-      "districtId": "osiedle-mp",
+      "districtId": "stare-tychy",
       "presetId": "P3",
       "category": "inne",
-      "lat": 50.135625,
-      "lon": 19.022404
+      "lat": 50.126425,
+      "lon": 19.003703
     },
     {
       "id": "C-32",
@@ -1340,8 +1360,8 @@
       "districtId": "czulow",
       "presetId": "P1",
       "category": "inne",
-      "lat": 50.155675,
-      "lon": 18.989841
+      "lat": 50.149075,
+      "lon": 19.005341
     }
   ],
   "photos": [],
@@ -1588,7 +1608,7 @@
       "id": "plan-NEW-001",
       "pointId": "NEW-001",
       "rule": "install",
-      "text": "Montaż AED — ZS nr 1 (Wewnętrzny — budynek publiczny)",
+      "text": "Montaż AED — Hala sportowa (Wewnętrzny — budynek publiczny)",
       "priority": "high",
       "cost": 8500,
       "owner": "wykonawca",
@@ -1602,7 +1622,7 @@
       "id": "plan-NEW-002",
       "pointId": "NEW-002",
       "rule": "install",
-      "text": "Montaż AED — Market — Urbanowice (Wewnętrzny — budynek publiczny)",
+      "text": "Montaż AED — SP nr 5 (Wewnętrzny — budynek publiczny)",
       "priority": "high",
       "cost": 8500,
       "owner": "wykonawca",
@@ -1616,7 +1636,7 @@
       "id": "plan-NEW-003",
       "pointId": "NEW-003",
       "rule": "install",
-      "text": "Montaż AED — SP nr 5 (Wewnętrzny — obiekt 24/7)",
+      "text": "Montaż AED — Market — Urbanowice (Wewnętrzny — obiekt 24/7)",
       "priority": "high",
       "cost": 9000,
       "owner": "wykonawca",
@@ -1695,6 +1715,3866 @@
       "done": false,
       "startMonth": 22,
       "lengthMonths": 4
+    }
+  ],
+  "demandPoints": [
+    {
+      "lat": 50.118149,
+      "lon": 19.000449,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.118407,
+      "lon": 18.999727,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.117615,
+      "lon": 19.00024,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.118697,
+      "lon": 19.000823,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.118005,
+      "lon": 18.998896,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.117651,
+      "lon": 19.001387,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.119116,
+      "lon": 18.999761,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.117172,
+      "lon": 18.999375,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.118567,
+      "lon": 19.001955,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.118676,
+      "lon": 18.998176,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.116883,
+      "lon": 19.00109,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.119536,
+      "lon": 19.000845,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.117375,
+      "lon": 18.998085,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.117777,
+      "lon": 19.002806,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.119586,
+      "lon": 18.998591,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.116297,
+      "lon": 18.999792,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.119417,
+      "lon": 19.002514,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.118235,
+      "lon": 18.996902,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.116655,
+      "lon": 19.002507,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.120189,
+      "lon": 19.000019,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.116509,
+      "lon": 18.998032,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.118456,
+      "lon": 19.003729,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.119543,
+      "lon": 18.997041,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.115792,
+      "lon": 19.000993,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.12036,
+      "lon": 19.002143,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.117345,
+      "lon": 18.996237,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.11701,
+      "lon": 19.004009,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.120674,
+      "lon": 18.998518,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.115538,
+      "lon": 18.998702,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.119487,
+      "lon": 19.004137,
+      "weight": 200,
+      "districtId": "zawisc"
+    },
+    {
+      "lat": 50.118924,
+      "lon": 18.99558,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.115615,
+      "lon": 19.002707,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.120966,
+      "lon": 19.000922,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.116334,
+      "lon": 18.996513,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.117881,
+      "lon": 19.005203,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.120534,
+      "lon": 18.996726,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.114843,
+      "lon": 19.000192,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.1207,
+      "lon": 19.003777,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.117818,
+      "lon": 18.994611,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.11601,
+      "lon": 19.004562,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.121538,
+      "lon": 18.999205,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.115181,
+      "lon": 18.997254,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.119113,
+      "lon": 19.005657,
+      "weight": 200,
+      "districtId": "zawisc"
+    },
+    {
+      "lat": 50.119931,
+      "lon": 18.99475,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.114665,
+      "lon": 19.002181,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.12165,
+      "lon": 19.00239,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.116508,
+      "lon": 18.994768,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.116944,
+      "lon": 19.006261,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.121586,
+      "lon": 18.997025,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.114174,
+      "lon": 18.998836,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.120559,
+      "lon": 19.005459,
+      "weight": 200,
+      "districtId": "zawisc"
+    },
+    {
+      "lat": 50.118686,
+      "lon": 18.993446,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.114899,
+      "lon": 19.004481,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.12215,
+      "lon": 19.000394,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.115213,
+      "lon": 18.995655,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.118375,
+      "lon": 19.007058,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.121045,
+      "lon": 18.994699,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.113704,
+      "lon": 19.001134,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.122043,
+      "lon": 19.004348,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.117074,
+      "lon": 18.992886,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.115803,
+      "lon": 19.006623,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.122581,
+      "lon": 18.997924,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.113886,
+      "lon": 18.997134,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.120026,
+      "lon": 19.007067,
+      "weight": 200,
+      "districtId": "zawisc"
+    },
+    {
+      "lat": 50.119838,
+      "lon": 18.992726,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.11384,
+      "lon": 19.00374,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.122728,
+      "lon": 19.002012,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.115526,
+      "lon": 18.993872,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.117294,
+      "lon": 19.008157,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.122171,
+      "lon": 18.99526,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.112968,
+      "lon": 18.999537,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.121796,
+      "lon": 19.006256,
+      "weight": 200,
+      "districtId": "zawisc"
+    },
+    {
+      "lat": 50.118095,
+      "lon": 18.991519,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.114524,
+      "lon": 19.00646,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.123267,
+      "lon": 18.999388,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.113971,
+      "lon": 18.995271,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.119151,
+      "lon": 19.008531,
+      "weight": 200,
+      "districtId": "zawisc"
+    },
+    {
+      "lat": 50.121158,
+      "lon": 18.992628,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.112883,
+      "lon": 19.00246,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.123148,
+      "lon": 19.00412,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.116147,
+      "lon": 18.991871,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.115972,
+      "lon": 19.008624,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.123326,
+      "lon": 18.996291,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.112631,
+      "lon": 18.99756,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.121146,
+      "lon": 19.008055,
+      "weight": 200,
+      "districtId": "zawisc"
+    },
+    {
+      "lat": 50.119408,
+      "lon": 18.990794,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.113286,
+      "lon": 19.005609,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.123679,
+      "lon": 19.001199,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.114417,
+      "lon": 18.993396,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.117953,
+      "lon": 19.009827,
+      "weight": 200,
+      "districtId": "zawisc"
+    },
+    {
+      "lat": 50.122463,
+      "lon": 18.993271,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.111978,
+      "lon": 19.000706,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.123093,
+      "lon": 19.006474,
+      "weight": 200,
+      "districtId": "zawisc"
+    },
+    {
+      "lat": 50.117217,
+      "lon": 18.990108,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.114542,
+      "lon": 19.008421,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.124186,
+      "lon": 18.997952,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.112706,
+      "lon": 18.995412,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.120157,
+      "lon": 19.009663,
+      "weight": 200,
+      "districtId": "zawisc"
+    },
+    {
+      "lat": 50.120939,
+      "lon": 18.9905,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.11224,
+      "lon": 19.004129,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.124204,
+      "lon": 19.00346,
+      "weight": 200,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.115091,
+      "lon": 18.991305,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.116451,
+      "lon": 19.010623,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.123728,
+      "lon": 18.994451,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.118431,
+      "lon": 18.9754,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.118685,
+      "lon": 18.974691,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.117895,
+      "lon": 18.975197,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.118977,
+      "lon": 18.975778,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.118288,
+      "lon": 18.973865,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.117938,
+      "lon": 18.976332,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.119487,
+      "lon": 18.974681,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.117349,
+      "lon": 18.974248,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.118869,
+      "lon": 18.976996,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.118941,
+      "lon": 18.973197,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.117054,
+      "lon": 18.976128,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.119877,
+      "lon": 18.975832,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.117601,
+      "lon": 18.972893,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.118074,
+      "lon": 18.977655,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.119903,
+      "lon": 18.97351,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.116566,
+      "lon": 18.974747,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.119823,
+      "lon": 18.9777,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.118514,
+      "lon": 18.971987,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.116914,
+      "lon": 18.977501,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.120755,
+      "lon": 18.974956,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.116618,
+      "lon": 18.972766,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.118737,
+      "lon": 18.978674,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.119799,
+      "lon": 18.972057,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.11598,
+      "lon": 18.975984,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.120608,
+      "lon": 18.97707,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.117613,
+      "lon": 18.97113,
+      "weight": 200,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.117318,
+      "lon": 18.978879,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.12108,
+      "lon": 18.973395,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.115569,
+      "lon": 18.973519,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.119887,
+      "lon": 18.979447,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.119183,
+      "lon": 18.97067,
+      "weight": 200,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.115764,
+      "lon": 18.977798,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.121607,
+      "lon": 18.975975,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.116459,
+      "lon": 18.971155,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.118172,
+      "lon": 18.979993,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.120813,
+      "lon": 18.971687,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.115112,
+      "lon": 18.975149,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.121068,
+      "lon": 18.978856,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.118109,
+      "lon": 18.969722,
+      "weight": 200,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.116285,
+      "lon": 18.979532,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.122176,
+      "lon": 18.974061,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.115112,
+      "lon": 18.971867,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.119416,
+      "lon": 18.980731,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.120163,
+      "lon": 18.96986,
+      "weight": 200,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.114667,
+      "lon": 18.9773,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.121939,
+      "lon": 18.977351,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.1167,
+      "lon": 18.96943,
+      "weight": 200,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.117281,
+      "lon": 18.98094,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.122007,
+      "lon": 18.971856,
+      "weight": 200,
+      "districtId": "glinka"
+    },
+    {
+      "lat": 50.114291,
+      "lon": 18.973738,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.121068,
+      "lon": 18.980915,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.118947,
+      "lon": 18.968656,
+      "weight": 200,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.11506,
+      "lon": 18.979599,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.122997,
+      "lon": 18.975384,
+      "weight": 200,
+      "districtId": "glinka"
+    },
+    {
+      "lat": 50.115204,
+      "lon": 18.970165,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.118653,
+      "lon": 18.981916,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.121262,
+      "lon": 18.96978,
+      "weight": 200,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.113917,
+      "lon": 18.976106,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.122229,
+      "lon": 18.979203,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.117354,
+      "lon": 18.967826,
+      "weight": 200,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.116129,
+      "lon": 18.98146,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.123237,
+      "lon": 18.972692,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.11374,
+      "lon": 18.971788,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.120425,
+      "lon": 18.982457,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.120069,
+      "lon": 18.967909,
+      "weight": 200,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.113803,
+      "lon": 18.978962,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.123349,
+      "lon": 18.977106,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.115604,
+      "lon": 18.968342,
+      "weight": 200,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.117608,
+      "lon": 18.98281,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.122506,
+      "lon": 18.970152,
+      "weight": 200,
+      "districtId": "glinka"
+    },
+    {
+      "lat": 50.113233,
+      "lon": 18.974492,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.122345,
+      "lon": 18.981659,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.118379,
+      "lon": 18.966841,
+      "weight": 200,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.114777,
+      "lon": 18.981467,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.124221,
+      "lon": 18.974243,
+      "weight": 200,
+      "districtId": "glinka"
+    },
+    {
+      "lat": 50.113799,
+      "lon": 18.969697,
+      "weight": 200,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.119437,
+      "lon": 18.983518,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.12139,
+      "lon": 18.967709,
+      "weight": 200,
+      "districtId": "glinka"
+    },
+    {
+      "lat": 50.112877,
+      "lon": 18.977543,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.123382,
+      "lon": 18.97904,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.116367,
+      "lon": 18.966571,
+      "weight": 200,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.116323,
+      "lon": 18.983313,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.123845,
+      "lon": 18.971072,
+      "weight": 200,
+      "districtId": "glinka"
+    },
+    {
+      "lat": 50.112472,
+      "lon": 18.972309,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.1217,
+      "lon": 18.983729,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.127083,
+      "lon": 18.986002,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.127359,
+      "lon": 18.985238,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.126543,
+      "lon": 18.985782,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.127577,
+      "lon": 18.9863,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.126949,
+      "lon": 18.984536,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.126586,
+      "lon": 18.986926,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.128109,
+      "lon": 18.985278,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.126109,
+      "lon": 18.98492,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.127499,
+      "lon": 18.987486,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.127587,
+      "lon": 18.983802,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.125774,
+      "lon": 18.986664,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.128417,
+      "lon": 18.986362,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.126296,
+      "lon": 18.983591,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.126698,
+      "lon": 18.988436,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.128659,
+      "lon": 18.98398,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.125272,
+      "lon": 18.985343,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.128246,
+      "lon": 18.987863,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.12716,
+      "lon": 18.982767,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.125637,
+      "lon": 18.987975,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.129211,
+      "lon": 18.985555,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.125386,
+      "lon": 18.9835,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.127399,
+      "lon": 18.98938,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.128516,
+      "lon": 18.982495,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.124638,
+      "lon": 18.986566,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.129099,
+      "lon": 18.987511,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.12632,
+      "lon": 18.98198,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.125913,
+      "lon": 18.989656,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.129765,
+      "lon": 18.983957,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.124543,
+      "lon": 18.984284,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.128364,
+      "lon": 18.989511,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.127804,
+      "lon": 18.98144,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.124575,
+      "lon": 18.988224,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.129928,
+      "lon": 18.986472,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.125188,
+      "lon": 18.981893,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.126806,
+      "lon": 18.99091,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.129666,
+      "lon": 18.98198,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.123771,
+      "lon": 18.985734,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.129394,
+      "lon": 18.98898,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.126783,
+      "lon": 18.980667,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.124982,
+      "lon": 18.990026,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.130631,
+      "lon": 18.984702,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.124072,
+      "lon": 18.982754,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.128065,
+      "lon": 18.9913,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.128832,
+      "lon": 18.98039,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.123446,
+      "lon": 18.987812,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.130377,
+      "lon": 18.9878,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.125449,
+      "lon": 18.980333,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.125856,
+      "lon": 18.991915,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.130847,
+      "lon": 18.982267,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.123208,
+      "lon": 18.984411,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.129331,
+      "lon": 18.990646,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.127571,
+      "lon": 18.979593,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.123904,
+      "lon": 18.989929,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.131223,
+      "lon": 18.985944,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.124004,
+      "lon": 18.980977,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.127317,
+      "lon": 18.99287,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.130116,
+      "lon": 18.979981,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.122514,
+      "lon": 18.986703,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.130563,
+      "lon": 18.989447,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.12608,
+      "lon": 18.978913,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.124722,
+      "lon": 18.992209,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.131823,
+      "lon": 18.98331,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.122885,
+      "lon": 18.982722,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.128919,
+      "lon": 18.992462,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.128684,
+      "lon": 18.978657,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.122702,
+      "lon": 18.989343,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.131571,
+      "lon": 18.987518,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.124388,
+      "lon": 18.979242,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.1262,
+      "lon": 18.993962,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.131469,
+      "lon": 18.980356,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.12194,
+      "lon": 18.985084,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.130409,
+      "lon": 18.991263,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.127034,
+      "lon": 18.977968,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.123574,
+      "lon": 18.9918,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.132437,
+      "lon": 18.984893,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.122796,
+      "lon": 18.980685,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.128111,
+      "lon": 18.994288,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.130141,
+      "lon": 18.978046,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.121609,
+      "lon": 18.988094,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.131696,
+      "lon": 18.989357,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.125148,
+      "lon": 18.97769,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.124854,
+      "lon": 18.994368,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.132647,
+      "lon": 18.981543,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.121711,
+      "lon": 18.98317,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.129925,
+      "lon": 18.993189,
+      "weight": 198.9,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.12824,
+      "lon": 18.977093,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.122287,
+      "lon": 18.991077,
+      "weight": 198.9,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.132749,
+      "lon": 18.986766,
+      "weight": 198.9,
+      "districtId": "czulow"
+    },
+    {
+      "lat": 50.110751,
+      "lon": 18.984655,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.111006,
+      "lon": 18.983947,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.110235,
+      "lon": 18.984453,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.111243,
+      "lon": 18.984971,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.110623,
+      "lon": 18.983253,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.110246,
+      "lon": 18.98562,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.111751,
+      "lon": 18.983963,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.109769,
+      "lon": 18.983586,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.11115,
+      "lon": 18.986088,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.111241,
+      "lon": 18.982529,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.109489,
+      "lon": 18.985303,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.112148,
+      "lon": 18.985065,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.109977,
+      "lon": 18.982299,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.110383,
+      "lon": 18.986991,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.112321,
+      "lon": 18.982661,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.109001,
+      "lon": 18.984028,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.111915,
+      "lon": 18.986535,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.110829,
+      "lon": 18.98142,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.109255,
+      "lon": 18.986725,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.112854,
+      "lon": 18.98423,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.109012,
+      "lon": 18.982119,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.111046,
+      "lon": 18.987803,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.112077,
+      "lon": 18.981409,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.10843,
+      "lon": 18.985196,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.112791,
+      "lon": 18.986205,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.110019,
+      "lon": 18.980804,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.109598,
+      "lon": 18.988271,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.113427,
+      "lon": 18.982635,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.108219,
+      "lon": 18.982962,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.112022,
+      "lon": 18.988155,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.111489,
+      "lon": 18.980016,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.10824,
+      "lon": 18.986899,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.113685,
+      "lon": 18.985168,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.108843,
+      "lon": 18.98054,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.110491,
+      "lon": 18.989275,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.113202,
+      "lon": 18.980846,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.10758,
+      "lon": 18.984406,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.113066,
+      "lon": 18.987657,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.110457,
+      "lon": 18.979438,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.108587,
+      "lon": 18.988827,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.1142,
+      "lon": 18.983404,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.107697,
+      "lon": 18.981385,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.111675,
+      "lon": 18.989639,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.112397,
+      "lon": 18.979379,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.107263,
+      "lon": 18.986398,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.114156,
+      "lon": 18.986544,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.109158,
+      "lon": 18.97914,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.109558,
+      "lon": 18.990415,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.114462,
+      "lon": 18.98099,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.106956,
+      "lon": 18.983111,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.113,
+      "lon": 18.989319,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.111247,
+      "lon": 18.978173,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.107508,
+      "lon": 18.988686,
+      "weight": 198.1,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.117948,
+      "lon": 18.958671,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.118174,
+      "lon": 18.958044,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.117468,
+      "lon": 18.958495,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.11843,
+      "lon": 18.959006,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.117826,
+      "lon": 18.957354,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.11753,
+      "lon": 18.959455,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.118806,
+      "lon": 18.958069,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.116956,
+      "lon": 18.957626,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.118327,
+      "lon": 18.960049,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.118378,
+      "lon": 18.956802,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.11686,
+      "lon": 18.959223,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.119343,
+      "lon": 18.959111,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.117274,
+      "lon": 18.956615,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.117636,
+      "lon": 18.960639,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.119211,
+      "lon": 18.957044,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.11615,
+      "lon": 18.958066,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.119073,
+      "lon": 18.960511,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.118022,
+      "lon": 18.955649,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.116697,
+      "lon": 18.96039,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.119943,
+      "lon": 18.958285,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.116358,
+      "lon": 18.95636,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.118219,
+      "lon": 18.961567,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.119123,
+      "lon": 18.955794,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.115867,
+      "lon": 18.959159,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.119971,
+      "lon": 18.960236,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.11727,
+      "lon": 18.955114,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.116989,
+      "lon": 18.961666,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.1201,
+      "lon": 18.957024,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.115265,
+      "lon": 18.956924,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.119166,
+      "lon": 18.962043,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.118589,
+      "lon": 18.954637,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.1158,
+      "lon": 18.960582,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.12091,
+      "lon": 18.959223,
+      "weight": 198.5,
+      "districtId": "glinka"
+    },
+    {
+      "lat": 50.116305,
+      "lon": 18.955121,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.117721,
+      "lon": 18.962695,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.120039,
+      "lon": 18.955412,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.114877,
+      "lon": 18.958452,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.120199,
+      "lon": 18.961613,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.117669,
+      "lon": 18.953728,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.116149,
+      "lon": 18.962125,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.121047,
+      "lon": 18.95755,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.114962,
+      "lon": 18.955498,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.118821,
+      "lon": 18.963394,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.119404,
+      "lon": 18.954005,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.114926,
+      "lon": 18.960176,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.121372,
+      "lon": 18.960603,
+      "weight": 198.5,
+      "districtId": "glinka"
+    },
+    {
+      "lat": 50.116542,
+      "lon": 18.953802,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.116948,
+      "lon": 18.963488,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.120946,
+      "lon": 18.955688,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.114008,
+      "lon": 18.957109,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.120109,
+      "lon": 18.963174,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.118399,
+      "lon": 18.952785,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.1152,
+      "lon": 18.962077,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.122027,
+      "lon": 18.958661,
+      "weight": 198.5,
+      "districtId": "glinka"
+    },
+    {
+      "lat": 50.11518,
+      "lon": 18.954174,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.118144,
+      "lon": 18.964408,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.120434,
+      "lon": 18.953736,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.113978,
+      "lon": 18.959293,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.121365,
+      "lon": 18.962098,
+      "weight": 198.5,
+      "districtId": "glinka"
+    },
+    {
+      "lat": 50.117039,
+      "lon": 18.95227,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.115977,
+      "lon": 18.963853,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.121803,
+      "lon": 18.956478,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.113598,
+      "lon": 18.955335,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.11965,
+      "lon": 18.964685,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.119335,
+      "lon": 18.952322,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.114263,
+      "lon": 18.961485,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.122632,
+      "lon": 18.960316,
+      "weight": 198.5,
+      "districtId": "glinka"
+    },
+    {
+      "lat": 50.115629,
+      "lon": 18.952864,
+      "weight": 198.5,
+      "districtId": "suble"
+    },
+    {
+      "lat": 50.123934,
+      "lon": 18.999808,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.124187,
+      "lon": 18.999106,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.123424,
+      "lon": 18.999606,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.124436,
+      "lon": 19.000136,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.123795,
+      "lon": 18.99831,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.123447,
+      "lon": 19.00073,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.124915,
+      "lon": 18.999125,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.122954,
+      "lon": 18.998742,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.124341,
+      "lon": 19.001275,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.124394,
+      "lon": 18.997798,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.122686,
+      "lon": 19.000447,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.125318,
+      "lon": 19.000213,
+      "weight": 200,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.123127,
+      "lon": 18.997363,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.123579,
+      "lon": 19.002057,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.125426,
+      "lon": 18.9979,
+      "weight": 200,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.122169,
+      "lon": 18.99918,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.125153,
+      "lon": 19.001791,
+      "weight": 200,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.124014,
+      "lon": 18.996527,
+      "weight": 200,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.122456,
+      "lon": 19.001854,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.126116,
+      "lon": 18.999379,
+      "weight": 200,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.122267,
+      "lon": 18.997367,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.12423,
+      "lon": 19.002967,
+      "weight": 200,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.125213,
+      "lon": 18.996671,
+      "weight": 200,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.121641,
+      "lon": 19.000341,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.125975,
+      "lon": 19.001361,
+      "weight": 200,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.123136,
+      "lon": 18.995632,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.122835,
+      "lon": 19.003249,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.126434,
+      "lon": 18.997905,
+      "weight": 200,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.121339,
+      "lon": 18.99808,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.125249,
+      "lon": 19.003439,
+      "weight": 200,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.124624,
+      "lon": 18.995457,
+      "weight": 200,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.121444,
+      "lon": 19.002033,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.12696,
+      "lon": 19.000347,
+      "weight": 200,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.122058,
+      "lon": 18.995758,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.123679,
+      "lon": 19.004347,
+      "weight": 200,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.126319,
+      "lon": 18.996096,
+      "weight": 200,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.120773,
+      "lon": 18.99956,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.126321,
+      "lon": 19.002913,
+      "weight": 200,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.123623,
+      "lon": 18.994297,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.121817,
+      "lon": 19.003888,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.127434,
+      "lon": 18.998543,
+      "weight": 200,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.12095,
+      "lon": 18.996608,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.124867,
+      "lon": 19.004847,
+      "weight": 200,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.125483,
+      "lon": 18.994829,
+      "weight": 200,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.120497,
+      "lon": 19.001524,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.127299,
+      "lon": 19.001673,
+      "weight": 200,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.122226,
+      "lon": 18.993915,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.122791,
+      "lon": 19.005321,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.127454,
+      "lon": 18.996319,
+      "weight": 200,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.120088,
+      "lon": 18.998248,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.126276,
+      "lon": 19.004678,
+      "weight": 200,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.124421,
+      "lon": 18.993441,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.120716,
+      "lon": 19.003809,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.128295,
+      "lon": 18.999784,
+      "weight": 200,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.12093,
+      "lon": 18.994919,
+      "weight": 200,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.128944,
+      "lon": 18.980658,
+      "weight": 197.4,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.129208,
+      "lon": 18.979931,
+      "weight": 197.4,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.128404,
+      "lon": 18.980454,
+      "weight": 197.4,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.129456,
+      "lon": 18.980994,
+      "weight": 197.4,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.128809,
+      "lon": 18.979191,
+      "weight": 197.4,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.128485,
+      "lon": 18.981504,
+      "weight": 197.4,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.129919,
+      "lon": 18.979971,
+      "weight": 197.4,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.127956,
+      "lon": 18.97958,
+      "weight": 197.4,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.129361,
+      "lon": 18.982163,
+      "weight": 197.4,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.129416,
+      "lon": 18.978597,
+      "weight": 197.4,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.127641,
+      "lon": 18.981331,
+      "weight": 197.4,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.1304,
+      "lon": 18.981093,
+      "weight": 197.4,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.12815,
+      "lon": 18.978243,
+      "weight": 197.4,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.128603,
+      "lon": 18.982797,
+      "weight": 197.4,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.130434,
+      "lon": 18.978746,
+      "weight": 197.4,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.12707,
+      "lon": 18.980002,
+      "weight": 197.4,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.130135,
+      "lon": 18.982586,
+      "weight": 197.4,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.12902,
+      "lon": 18.977485,
+      "weight": 197.4,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.127504,
+      "lon": 18.982637,
+      "weight": 197.4,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.131084,
+      "lon": 18.980226,
+      "weight": 197.4,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.127292,
+      "lon": 18.978231,
+      "weight": 197.4,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.129249,
+      "lon": 18.983925,
+      "weight": 197.4,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.130287,
+      "lon": 18.977368,
+      "weight": 197.4,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.126522,
+      "lon": 18.98123,
+      "weight": 197.4,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.131091,
+      "lon": 18.9823,
+      "weight": 197.4,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.128164,
+      "lon": 18.976569,
+      "weight": 197.4,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.127919,
+      "lon": 18.98384,
+      "weight": 197.4,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.131456,
+      "lon": 18.97874,
+      "weight": 197.4,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.126266,
+      "lon": 18.978878,
+      "weight": 197.4,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.130263,
+      "lon": 18.984296,
+      "weight": 197.4,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.129626,
+      "lon": 18.976344,
+      "weight": 197.4,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.126401,
+      "lon": 18.98293,
+      "weight": 197.4,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.131992,
+      "lon": 18.981198,
+      "weight": 197.4,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.127094,
+      "lon": 18.976655,
+      "weight": 197.4,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.128689,
+      "lon": 18.985172,
+      "weight": 197.4,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.131402,
+      "lon": 18.976833,
+      "weight": 197.4,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.125586,
+      "lon": 18.980406,
+      "weight": 197.4,
+      "districtId": "srodmiescie"
+    },
+    {
+      "lat": 50.131329,
+      "lon": 18.983756,
+      "weight": 197.4,
+      "districtId": "stare-tychy"
+    },
+    {
+      "lat": 50.093915,
+      "lon": 18.992411,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.094264,
+      "lon": 18.991438,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.093226,
+      "lon": 18.992127,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.094656,
+      "lon": 18.992919,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.093728,
+      "lon": 18.990389,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.093256,
+      "lon": 18.993645,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.095199,
+      "lon": 18.991494,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.092474,
+      "lon": 18.990867,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.094489,
+      "lon": 18.994483,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.094584,
+      "lon": 18.989503,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.092205,
+      "lon": 18.993279,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.095971,
+      "lon": 18.993038,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.092835,
+      "lon": 18.989128,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.093432,
+      "lon": 18.995457,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.09587,
+      "lon": 18.98989,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.091457,
+      "lon": 18.991536,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.09559,
+      "lon": 18.995132,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.094026,
+      "lon": 18.987829,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.091918,
+      "lon": 18.99516,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.096806,
+      "lon": 18.991824,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.091441,
+      "lon": 18.988815,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.094333,
+      "lon": 18.996885,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.095749,
+      "lon": 18.987924,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.090807,
+      "lon": 18.993122,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.097014,
+      "lon": 18.994801,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.092862,
+      "lon": 18.986888,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.092424,
+      "lon": 18.997061,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.097195,
+      "lon": 18.989892,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.090176,
+      "lon": 18.989937,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.095724,
+      "lon": 18.997398,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.094899,
+      "lon": 18.986208,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.090519,
+      "lon": 18.995436,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.098157,
+      "lon": 18.993169,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.091249,
+      "lon": 18.986668,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.093562,
+      "lon": 18.998672,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.097147,
+      "lon": 18.987371,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.089599,
+      "lon": 18.992065,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.097328,
+      "lon": 18.996859,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.09349,
+      "lon": 18.984893,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.091058,
+      "lon": 18.997899,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.098491,
+      "lon": 18.990735,
+      "weight": 200,
+      "districtId": "paprocany"
+    },
+    {
+      "lat": 50.106833,
+      "lon": 18.960551,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.107113,
+      "lon": 18.959777,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.106195,
+      "lon": 18.960341,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.107483,
+      "lon": 18.961031,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.106676,
+      "lon": 18.95887,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.106276,
+      "lon": 18.961618,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.107965,
+      "lon": 18.959779,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.105635,
+      "lon": 18.959285,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.107303,
+      "lon": 18.962264,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.107396,
+      "lon": 18.958125,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.105436,
+      "lon": 18.961273,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.108479,
+      "lon": 18.961059,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.105972,
+      "lon": 18.957939,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.106436,
+      "lon": 18.963067,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.108497,
+      "lon": 18.958429,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.104526,
+      "lon": 18.959788,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.108351,
+      "lon": 18.963063,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.106927,
+      "lon": 18.956682,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.105225,
+      "lon": 18.962774,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.109288,
+      "lon": 18.960077,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.104917,
+      "lon": 18.957762,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.107164,
+      "lon": 18.964096,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.10832,
+      "lon": 18.95692,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.104087,
+      "lon": 18.961217,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.109426,
+      "lon": 18.962571,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.105951,
+      "lon": 18.955945,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.105566,
+      "lon": 18.964528,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.109743,
+      "lon": 18.958355,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.10354,
+      "lon": 18.958408,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.108372,
+      "lon": 18.96482,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.107682,
+      "lon": 18.955232,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.104138,
+      "lon": 18.962956,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.110265,
+      "lon": 18.961174,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.104787,
+      "lon": 18.956137,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.106551,
+      "lon": 18.965552,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.109485,
+      "lon": 18.956428,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.102804,
+      "lon": 18.960285,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.109861,
+      "lon": 18.964538,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.106472,
+      "lon": 18.95419,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.104478,
+      "lon": 18.965092,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.110828,
+      "lon": 18.959121,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.103247,
+      "lon": 18.956736,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.107899,
+      "lon": 18.966323,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.10872,
+      "lon": 18.954519,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.102899,
+      "lon": 18.962528,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.11095,
+      "lon": 18.962867,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.105019,
+      "lon": 18.954289,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.105531,
+      "lon": 18.966835,
+      "weight": 197.9,
+      "districtId": "zwakow"
+    },
+    {
+      "lat": 50.148042,
+      "lon": 18.952599,
+      "weight": 180,
+      "districtId": "wilkowyje"
+    },
+    {
+      "lat": 50.148417,
+      "lon": 18.951543,
+      "weight": 180,
+      "districtId": "wilkowyje"
+    },
+    {
+      "lat": 50.147316,
+      "lon": 18.952281,
+      "weight": 180,
+      "districtId": "wilkowyje"
+    },
+    {
+      "lat": 50.148764,
+      "lon": 18.953046,
+      "weight": 180,
+      "districtId": "wilkowyje"
+    },
+    {
+      "lat": 50.147841,
+      "lon": 18.950408,
+      "weight": 180,
+      "districtId": "wilkowyje"
+    },
+    {
+      "lat": 50.147264,
+      "lon": 18.954091,
+      "weight": 180,
+      "districtId": "wilkowyje"
+    },
+    {
+      "lat": 50.149558,
+      "lon": 18.951546,
+      "weight": 180,
+      "districtId": "wilkowyje"
+    },
+    {
+      "lat": 50.146619,
+      "lon": 18.951028,
+      "weight": 180,
+      "districtId": "wilkowyje"
+    },
+    {
+      "lat": 50.148634,
+      "lon": 18.954711,
+      "weight": 180,
+      "districtId": "wilkowyje"
+    },
+    {
+      "lat": 50.148749,
+      "lon": 18.94951,
+      "weight": 180,
+      "districtId": "wilkowyje"
+    },
+    {
+      "lat": 50.146239,
+      "lon": 18.953499,
+      "weight": 180,
+      "districtId": "wilkowyje"
+    },
+    {
+      "lat": 50.150051,
+      "lon": 18.953165,
+      "weight": 180,
+      "districtId": "wilkowyje"
+    },
+    {
+      "lat": 50.146844,
+      "lon": 18.948956,
+      "weight": 180,
+      "districtId": "wilkowyje"
+    },
+    {
+      "lat": 50.147481,
+      "lon": 18.95617,
+      "weight": 180,
+      "districtId": "wilkowyje"
+    },
+    {
+      "lat": 50.15027,
+      "lon": 18.949738,
+      "weight": 180,
+      "districtId": "wilkowyje"
+    },
+    {
+      "lat": 50.145517,
+      "lon": 18.951671,
+      "weight": 180,
+      "districtId": "wilkowyje"
+    },
+    {
+      "lat": 50.149752,
+      "lon": 18.955348,
+      "weight": 180,
+      "districtId": "wilkowyje"
+    },
+    {
+      "lat": 50.148164,
+      "lon": 18.947589,
+      "weight": 180,
+      "districtId": "wilkowyje"
+    },
+    {
+      "lat": 50.14577,
+      "lon": 18.955746,
+      "weight": 180,
+      "districtId": "wilkowyje"
+    },
+    {
+      "lat": 50.15131,
+      "lon": 18.951946,
+      "weight": 180,
+      "districtId": "wilkowyje"
+    },
+    {
+      "lat": 50.146266,
+      "lon": 19.004887,
+      "weight": 195.7,
+      "districtId": "czulow"
+    },
+    {
+      "lat": 50.146609,
+      "lon": 19.00391,
+      "weight": 195.7,
+      "districtId": "czulow"
+    },
+    {
+      "lat": 50.14554,
+      "lon": 19.004595,
+      "weight": 195.7,
+      "districtId": "czulow"
+    },
+    {
+      "lat": 50.147011,
+      "lon": 19.005386,
+      "weight": 195.7,
+      "districtId": "czulow"
+    },
+    {
+      "lat": 50.146078,
+      "lon": 19.002842,
+      "weight": 195.7,
+      "districtId": "czulow"
+    },
+    {
+      "lat": 50.145599,
+      "lon": 19.006131,
+      "weight": 195.7,
+      "districtId": "czulow"
+    },
+    {
+      "lat": 50.147626,
+      "lon": 19.003924,
+      "weight": 195.7,
+      "districtId": "czulow"
+    },
+    {
+      "lat": 50.14482,
+      "lon": 19.003323,
+      "weight": 195.7,
+      "districtId": "czulow"
+    },
+    {
+      "lat": 50.146832,
+      "lon": 19.006915,
+      "weight": 195.7,
+      "districtId": "czulow"
+    },
+    {
+      "lat": 50.14695,
+      "lon": 19.001909,
+      "weight": 195.7,
+      "districtId": "czulow"
+    },
+    {
+      "lat": 50.144482,
+      "lon": 19.005798,
+      "weight": 195.7,
+      "districtId": "czulow"
+    },
+    {
+      "lat": 50.148404,
+      "lon": 19.005542,
+      "weight": 195.7,
+      "districtId": "czulow"
+    },
+    {
+      "lat": 50.14512,
+      "lon": 19.00141,
+      "weight": 195.7,
+      "districtId": "czulow"
+    },
+    {
+      "lat": 50.145759,
+      "lon": 19.00809,
+      "weight": 195.7,
+      "districtId": "czulow"
+    },
+    {
+      "lat": 50.148299,
+      "lon": 19.002264,
+      "weight": 195.7,
+      "districtId": "czulow"
+    },
+    {
+      "lat": 50.14373,
+      "lon": 19.003982,
+      "weight": 195.7,
+      "districtId": "czulow"
+    },
+    {
+      "lat": 50.147939,
+      "lon": 19.007594,
+      "weight": 195.7,
+      "districtId": "czulow"
+    },
+    {
+      "lat": 50.146378,
+      "lon": 19.000257,
+      "weight": 195.7,
+      "districtId": "czulow"
+    },
+    {
+      "lat": 50.144224,
+      "lon": 19.007697,
+      "weight": 195.7,
+      "districtId": "czulow"
+    },
+    {
+      "lat": 50.149298,
+      "lon": 19.004276,
+      "weight": 195.7,
+      "districtId": "czulow"
+    },
+    {
+      "lat": 50.143821,
+      "lon": 19.001311,
+      "weight": 195.7,
+      "districtId": "zwierzyniec"
+    },
+    {
+      "lat": 50.146689,
+      "lon": 19.009405,
+      "weight": 195.7,
+      "districtId": "czulow"
+    },
+    {
+      "lat": 50.148082,
+      "lon": 19.000422,
+      "weight": 195.7,
+      "districtId": "czulow"
+    },
+    {
+      "lat": 50.110755,
+      "lon": 19.037263,
+      "weight": 195,
+      "districtId": "urbanowice"
+    },
+    {
+      "lat": 50.111155,
+      "lon": 19.036109,
+      "weight": 195,
+      "districtId": "urbanowice"
+    },
+    {
+      "lat": 50.109807,
+      "lon": 19.03692,
+      "weight": 195,
+      "districtId": "urbanowice"
+    },
+    {
+      "lat": 50.111672,
+      "lon": 19.037887,
+      "weight": 195,
+      "districtId": "urbanowice"
+    },
+    {
+      "lat": 50.110524,
+      "lon": 19.034755,
+      "weight": 195,
+      "districtId": "urbanowice"
+    },
+    {
+      "lat": 50.109971,
+      "lon": 19.038711,
+      "weight": 195,
+      "districtId": "urbanowice"
+    },
+    {
+      "lat": 50.112537,
+      "lon": 19.036043,
+      "weight": 195,
+      "districtId": "urbanowice"
+    },
+    {
+      "lat": 50.108969,
+      "lon": 19.035345,
+      "weight": 195,
+      "districtId": "urbanowice"
+    },
+    {
+      "lat": 50.11145,
+      "lon": 19.039759,
+      "weight": 195,
+      "districtId": "urbanowice"
+    },
+    {
+      "lat": 50.111562,
+      "lon": 19.033741,
+      "weight": 195,
+      "districtId": "urbanowice"
+    },
+    {
+      "lat": 50.10858,
+      "lon": 19.038377,
+      "weight": 195,
+      "districtId": "urbanowice"
+    },
+    {
+      "lat": 50.113401,
+      "lon": 19.038085,
+      "weight": 195,
+      "districtId": "urbanowice"
+    },
+    {
+      "lat": 50.109414,
+      "lon": 19.033183,
+      "weight": 195,
+      "districtId": "urbanowice"
+    },
+    {
+      "lat": 50.110176,
+      "lon": 19.040892,
+      "weight": 195,
+      "districtId": "urbanowice"
+    },
+    {
+      "lat": 50.113106,
+      "lon": 19.034212,
+      "weight": 195,
+      "districtId": "urbanowice"
+    },
+    {
+      "lat": 50.107375,
+      "lon": 19.036108,
+      "weight": 195,
+      "districtId": "urbanowice"
+    },
+    {
+      "lat": 50.112796,
+      "lon": 19.040567,
+      "weight": 195,
+      "districtId": "urbanowice"
+    },
+    {
+      "lat": 50.110893,
+      "lon": 19.03159,
+      "weight": 195,
+      "districtId": "urbanowice"
+    },
+    {
+      "lat": 50.108275,
+      "lon": 19.040676,
+      "weight": 195,
+      "districtId": "urbanowice"
+    },
+    {
+      "lat": 50.114704,
+      "lon": 19.036506,
+      "weight": 195,
+      "districtId": "urbanowice"
     }
   ]
 }

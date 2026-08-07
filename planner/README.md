@@ -82,9 +82,11 @@ Krok 5 ma przełącznik **Raport ogólny | Karty punktów (załączniki)**:
   konwencji, plus „POBIERZ WSZYSTKIE" pakujące je w jeden ZIP.
 
 PDF-y generuje własny writer (`js/pdf.js`, zero zależności; Helvetica Base14
-z kodowaniem `/Differences` dla polskich znaków), układ karty trzyma
-`js/cardpdf.js`, archiwum składa `js/zip.js` (ZIP bez kompresji). Zdjęcia są
-w PDF-ie wymienione liczbą i rolami — writer świadomie nie osadza bitmap.
+z kodowaniem `/Differences` dla polskich znaków, obrazy JPEG przez XObject
+/DCTDecode), układ karty trzyma `js/cardpdf.js`, archiwum składa `js/zip.js`
+(ZIP bez kompresji). **Zdjęcia dodane do karty są osadzane w PDF-ie** jako
+miniatury z podpisami (rola · opis) — konwersję WebP/SVG→JPEG robi canvas
+w przeglądarce, więc eksport z Node powstaje bez miniatur (z listą plików).
 
 ### Cofnij
 
@@ -142,9 +144,25 @@ Generator importuje `js/model.js`, więc **strojenie danych liczy się dokładni
 tym samym kodem co interfejs** — nie da się „dorysować" liczby, która nie
 wychodzi z modelu.
 
-Granica gminy pochodzi z Państwowego Rejestru Granic. Dzielnice, punkty AED,
-kandydaci i ludność są danymi demonstracyjnymi dostrojonymi tak, aby model
-zwracał liczby z materiałów dla klienta.
+### Skąd są dane
+
+- **Granica gminy** — Państwowy Rejestr Granic (prawdziwa).
+- **Dzielnice** — 16 realnych jednostek pomocniczych Tychów z OpenStreetMap
+  (`admin_level=9`, © autorzy OpenStreetMap, ODbL). Cztery relacje
+  (Śródmieście, Cielmice, Paprocany, Urbanowice) są w OSM niedomknięte —
+  luki domknięto najkrótszym odcinkiem (odnotowane w properties pliku).
+  `data/districts-tychy.geojson` to dane źródłowe: generator ich NIE nadpisuje.
+- **Siatka popytu** — model demo: syntetyczne rdzenie gęstości zabudowy
+  (spirala złotego kąta, `DISTRICTS` w generatorze), zamrożona w
+  `demo-tychy.json` jako `demandPoints`, z przypisaniem każdego punktu do
+  realnej dzielnicy. W produkcji zastąpi ją siatka ludności GUS 1 km.
+  Ludność per dzielnica to szacunki (suma = 127 500).
+- **Punkty AED, adresy, terminy, opiekunowie** — fikcyjne dane demo dostrojone
+  tak, aby model zwracał liczby z materiałów dla klienta (62% → 79%).
+
+Ponieważ realne granice miewają szczeliny, `districtAt()` ma fallback:
+punkt wewnątrz miasta, który nie trafia w żaden wielokąt, dostaje dzielnicę
+o najbliższym centroidzie.
 
 ### Zgodność z celami ze specyfikacji (§8)
 

@@ -33,23 +33,25 @@ const STANDARD_MINUTES = 5; // demo default; see report for 2 / 3 / 5 comparison
 const POPULATION = 127500;
 
 /**
- * Districts: compact built-up cores, not administrative outlines.
- * Populations follow the real shape of Tychy — dense letter-named estates in
- * the centre, small villages on the rim — and sum to POPULATION.
+ * Density cores: compact built-up cores used ONLY for the demand grid and as
+ * placement anchors — they are NOT the administrative districts (those come
+ * from OSM in data/districts-tychy.geojson). Coordinates sit inside the real
+ * units they model: the letter-named estates inside the real Śródmieście,
+ * villages on the rim inside their own units. Populations sum to POPULATION.
  */
 const DISTRICTS = [
-  { id: 'srodmiescie-wschod', name: 'Śródmieście-Wschód', population: 20800, lat: 50.1272, lon: 19.0105, r: 700, seed: 11 },
-  { id: 'srodmiescie-zachod', name: 'Śródmieście-Zachód', population: 17000, lat: 50.1198, lon: 18.9902, r: 620, seed: 12 },
-  { id: 'srodmiescie-polnoc', name: 'Śródmieście-Północ', population: 17500, lat: 50.1366, lon: 19.0042, r: 635, seed: 13 },
-  { id: 'osiedle-no',         name: 'Osiedle N/O',        population: 10500, lat: 50.1136, lon: 19.0008, r: 420, seed: 14 },
-  { id: 'osiedle-tu',         name: 'Osiedle T/U',        population: 13500, lat: 50.0982, lon: 18.9942, r: 470, seed: 15 },
-  { id: 'osiedle-mp',         name: 'Osiedle M/P',        population: 11000, lat: 50.1332, lon: 19.0182, r: 430, seed: 16 },
-  { id: 'stare-tychy',        name: 'Stare Tychy',        population: 7500,  lat: 50.1236, lon: 18.9856, r: 380, seed: 17 },
-  { id: 'paprocany',          name: 'Paprocany',          population: 8200,  lat: 50.0906, lon: 19.0088, r: 545, seed: 18 },
-  { id: 'zwakow',             name: 'Żwaków',             population: 9500,  lat: 50.1042, lon: 18.9722, r: 515, seed: 19 },
-  { id: 'wilkowyje',          name: 'Wilkowyje',          population: 3600,  lat: 50.1300, lon: 18.9532, r: 360, seed: 20 },
-  { id: 'czulow',             name: 'Czułów',             population: 4500,  lat: 50.1528, lon: 18.9890, r: 380, seed: 21 },
-  { id: 'urbanowice',         name: 'Urbanowice-Cielmice', population: 3900, lat: 50.1098, lon: 19.0448, r: 430, seed: 22 },
+  { id: 'srodmiescie-wschod', name: 'Śródmieście-Wschód', population: 20800, lat: 50.1180, lon: 19.0000, r: 755, seed: 11 },
+  { id: 'srodmiescie-zachod', name: 'Śródmieście-Zachód', population: 17000, lat: 50.1185, lon: 18.9755, r: 680, seed: 12 },
+  { id: 'srodmiescie-polnoc', name: 'Śródmieście-Północ', population: 17500, lat: 50.1272, lon: 18.9860, r: 690, seed: 13 },
+  { id: 'osiedle-no',         name: 'Osiedle N/O',        population: 10500, lat: 50.1108, lon: 18.9842, r: 470, seed: 14 },
+  { id: 'osiedle-tu',         name: 'Osiedle T/U',        population: 13500, lat: 50.1180, lon: 18.9585, r: 520, seed: 15 },
+  { id: 'osiedle-mp',         name: 'Osiedle M/P',        population: 11000, lat: 50.1240, lon: 18.9995, r: 480, seed: 16 },
+  { id: 'stare-tychy',        name: 'Stare Tychy',        population: 7500,  lat: 50.1290, lon: 18.9805, r: 380, seed: 17 },
+  { id: 'paprocany',          name: 'Paprocany',          population: 8200,  lat: 50.0940, lon: 18.9920, r: 545, seed: 18 },
+  { id: 'zwakow',             name: 'Żwaków',             population: 9500,  lat: 50.1067, lon: 18.9603, r: 515, seed: 19 },
+  { id: 'wilkowyje',          name: 'Wilkowyje',          population: 3600,  lat: 50.1480, lon: 18.9520, r: 360, seed: 20 },
+  { id: 'czulow',             name: 'Czułów',             population: 4500,  lat: 50.1462, lon: 19.0045, r: 380, seed: 21 },
+  { id: 'urbanowice',         name: 'Urbanowice-Cielmice', population: 3900, lat: 50.1108, lon: 19.0368, r: 430, seed: 22 },
 ];
 
 /**
@@ -101,7 +103,7 @@ const CANDIDATE_SPECS = [
   ['C-08', 'SP Wilkowyje',                     'wilkowyje',          'P1', -300, 280, 'szkoła'],
   ['C-09', 'SP Czułów',                        'czulow',             'P1', 290, -260, 'szkoła'],
   ['C-10', 'SP Urbanowice',                    'urbanowice',         'P1', -280, 250, 'szkoła'],
-  ['C-11', 'ZS nr 1',                          'srodmiescie-wschod', 'P1', 120, 380,  'szkoła'],
+  ['C-11', 'ZS nr 1',                          'srodmiescie-wschod', 'P1', 620, -520, 'szkoła'],
   ['C-12', 'ZS nr 6',                          'stare-tychy',        'P1', -220, -190, 'szkoła'],
   ['C-13', 'Przedszkole nr 12',                'srodmiescie-zachod', 'P1', 60, 360,   'szkoła'],
   ['C-14', 'Zespół Szkół Sportowych',          'osiedle-tu',         'P1', 330, 300,  'szkoła'],
@@ -510,9 +512,13 @@ function task(id, text, phase, owner, cost, startMonth, lengthMonths) {
  * Report
  * ================================================================== */
 
-function report(districtsGeo, points, candidates, recs) {
-  const demand = buildDemandPoints(districtsGeo.features);
-  const districts = DISTRICTS.map(({ id, name, population }) => ({ id, name, population }));
+function report(districtsGeo, demand, points, candidates, recs) {
+  // Ta sama siatka i te same dzielnice, które trafiają do demo-tychy.json.
+  const districts = districtsGeo.features.map((f) => ({
+    id: f.properties.id,
+    name: f.properties.name,
+    population: f.properties.population,
+  }));
 
   const line = (label, value, target) =>
     `  ${label.padEnd(34)} ${String(value).padStart(12)}   ${target ? `cel: ${target}` : ''}`;
@@ -540,7 +546,10 @@ function report(districtsGeo, points, candidates, recs) {
       for (const g of now.gaps.slice(0, 5)) {
         console.log(`      ${g.name.padEnd(22)} ${String(g.uncoveredPeople).padStart(6)} os. poza · max ${fmtMin(g.maxMin)}`);
       }
-      console.log('      cele: Paprocany 4 100 / 7 min · Żwaków 2 800 / 6 min · Stare Tychy 900 / 4 min');
+      // Cele luk z makiety W2 dotyczyły 12 dzielnic syntetycznych; po przejściu
+      // na 16 realnych jednostek OSM punktem odniesienia jest kolejność:
+      // Śródmieście > Paprocany > Żwaków (największe skupiska poza zasięgiem).
+      console.log('      cel: kolejność Śródmieście > Paprocany ~6,2 tys. > Żwaków ~6,1 tys.');
     }
   }
 
@@ -565,15 +574,78 @@ function report(districtsGeo, points, candidates, recs) {
 }
 
 /* ================================================================== *
+ * Real districts (OSM) + district assignment
+ * ================================================================== */
+
+/**
+ * data/districts-tychy.geojson to od tej iteracji DANE ŹRÓDŁOWE (16 realnych
+ * jednostek pomocniczych z OSM, admin_level=9), nie artefakt generatora —
+ * generator je czyta i nigdy nie nadpisuje. Rozkład ludności modelują nadal
+ * syntetyczne rdzenie gęstości (DISTRICTS wyżej): realne wielokąty obejmują
+ * też lasy i jezioro, więc spirala po całej dzielnicy rozmyłaby popyt.
+ */
+function loadRealDistricts() {
+  const raw = JSON.parse(readFileSync(join(DATA, 'districts-tychy.geojson'), 'utf8'));
+  if (!raw.features?.length || !raw.properties?.source?.includes('OpenStreetMap')) {
+    throw new Error('data/districts-tychy.geojson nie wygląda na plik z granicami OSM');
+  }
+  return raw;
+}
+
+function pointInRing(lat, lon, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    if (yi > lat !== yj > lat && lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+/** Dzielnica punktu: point-in-polygon, a dla szczelin w danych OSM — najbliższy centroid. */
+function realDistrictAt(lat, lon, features) {
+  for (const f of features) {
+    if (pointInRing(lat, lon, f.geometry.coordinates[0])) return f.properties.id;
+  }
+  let best = null;
+  let bestD = Infinity;
+  for (const f of features) {
+    const ring = f.geometry.coordinates[0];
+    let cx = 0, cy = 0;
+    for (const [x, y] of ring) { cx += x; cy += y; }
+    cx /= ring.length; cy /= ring.length;
+    const d = (cx - lon) ** 2 + (cy - lat) ** 2;
+    if (d < bestD) { bestD = d; best = f.properties.id; }
+  }
+  return best;
+}
+
+/* ================================================================== *
  * Main
  * ================================================================== */
 
-const districtsGeo = buildDistrictsGeoJSON();
+const districtsGeo = loadRealDistricts();
+const densityCores = buildDistrictsGeoJSON(); // rdzenie gęstości — tylko do siatki popytu
 const boundary = buildBoundaryGeoJSON();
 const candidates = buildCandidates();
-const demandPoints = buildDemandPoints(districtsGeo.features);
+
+// Siatka popytu z rdzeni gęstości, przypisana do REALNYCH dzielnic — luki
+// w kroku 2 raportują się per jednostka pomocnicza z OSM.
+const demandPoints = buildDemandPoints(densityCores.features).map((p) => ({
+  lat: round6(p.lat),
+  lon: round6(p.lon),
+  weight: Math.round(p.weight * 10) / 10,
+  districtId: realDistrictAt(p.lat, p.lon, districtsGeo.features),
+}));
+
 const existingPoints = buildExistingPoints();
 const points = [...existingPoints, ...buildProposedPoints(existingPoints, candidates, demandPoints)];
+
+// Piny i kandydaci też dostają realną dzielnicę (placeAt liczył je z rdzeni).
+for (const p of [...points, ...candidates]) {
+  p.districtId = realDistrictAt(p.lat, p.lon, districtsGeo.features);
+}
+
 const recommendations = buildRecommendations(points);
 
 const demo = {
@@ -586,7 +658,11 @@ const demo = {
     standardMinutes: STANDARD_MINUTES,
     boundary: 'boundary-tychy.geojson',
     districtsFile: 'districts-tychy.geojson',
-    districts: DISTRICTS.map(({ id, name, population }) => ({ id, name, population })),
+    districts: districtsGeo.features.map((f) => ({
+      id: f.properties.id,
+      name: f.properties.name,
+      population: f.properties.population,
+    })),
     stepsDone: [0, 1, 2],
     updatedAt: '2026-07-29',
     center: [19.0, 50.118],
@@ -596,15 +672,16 @@ const demo = {
   candidates,
   photos: [],
   recommendations,
+  demandPoints,
 };
 
 if (!REPORT_ONLY) {
   mkdirSync(DATA, { recursive: true });
-  writeFileSync(join(DATA, 'districts-tychy.geojson'), JSON.stringify(districtsGeo));
+  // districts-tychy.geojson NIE jest zapisywany — to dane źródłowe z OSM.
   writeFileSync(join(DATA, 'boundary-tychy.geojson'), JSON.stringify(boundary));
   writeFileSync(join(DATA, 'presets.json'), JSON.stringify(PRESETS, null, 2));
   writeFileSync(join(DATA, 'demo-tychy.json'), JSON.stringify(demo, null, 2));
-  console.log('zapisano: districts-tychy.geojson, boundary-tychy.geojson, presets.json, demo-tychy.json');
+  console.log('zapisano: boundary-tychy.geojson, presets.json, demo-tychy.json (districts-tychy.geojson = źródło OSM, nietykane)');
 }
 
-report(districtsGeo, points, candidates, recommendations);
+report(districtsGeo, demandPoints, points, candidates, recommendations);
