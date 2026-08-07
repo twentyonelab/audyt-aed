@@ -122,11 +122,33 @@ await shot('05-cards');
 /* ---------- 5. single card ---------- */
 await go('#/card/AED-003', 1600);
 const sections = await page.locator('.card-section').count();
-check('karta punktu: sekcje 1–8', sections >= 7, `${sections}`);
+check('karta punktu: sekcje 1–9', sections >= 9, `${sections}`);
+
+// Karta otwiera się zwinięta do przeglądu nagłówków — rozwijamy wszystko.
+const expandBtn = page.locator('button', { hasText: /ROZWIŃ WSZYSTKIE/i }).first();
+check('karta punktu: przycisk rozwiń wszystkie', (await expandBtn.count()) > 0);
+if (await expandBtn.count()) {
+  await expandBtn.click();
+  await page.waitForTimeout(400);
+}
+check(
+  'karta punktu: po rozwinięciu przycisk zmienia się na zwiń',
+  (await page.locator('button', { hasText: /ZWIŃ WSZYSTKIE/i }).count()) > 0
+);
 check('karta punktu: sloty zdjęć', (await page.locator('.photo-slot').count()) >= 2);
 check('karta punktu: pasek kompletności', (await page.locator('.panel .bar').count()) > 0);
-const recCount = await page.locator('.card-section').last().locator('input[type=checkbox]').count();
+check('karta punktu: sekcja oceny eksperckiej z suwakami', (await page.locator('.score-crit input[type=range]').count()) === 6);
+const recSection = page.locator('.card-section', { hasText: 'Checklist zgodności' }).first();
+const recCount = await recSection.locator('input[type=checkbox]').count();
 check('karta punktu: rekomendacje z checkboxami', recCount > 0, `${recCount}`);
+
+// Panel boczny nie może wyjeżdżać poza viewport (zgłoszony bug responsywności).
+const panelBox = await page.locator('.panel--card').boundingBox();
+check(
+  'karta punktu: prawy panel mieści się w oknie',
+  panelBox !== null && panelBox.x + panelBox.width <= 1560 + 1,
+  panelBox ? `prawa krawędź ${Math.round(panelBox.x + panelBox.width)}px` : 'brak panelu'
+);
 await shot('06-card');
 
 /* ---------- 6. roadmap ---------- */
@@ -135,17 +157,11 @@ check('roadmapa: trzy kolumny kanbanu', (await page.locator('.kanban__col').coun
 check('roadmapa: karty pozycji', (await page.locator('.kanban__card').count()) > 0);
 const totals = await page.locator('.workspace').innerText();
 check('roadmapa: suma kosztów widoczna', /68\s?200|zł/.test(totals));
+check(
+  'roadmapa: bez przełącznika osi czasu (usunięty na życzenie)',
+  (await page.locator('.subbar__controls .seg__btn', { hasText: /oś czasu/i }).count()) === 0
+);
 await shot('07-roadmap-kanban');
-
-const timelineBtn = page.locator('.subbar__controls .seg__btn', { hasText: /oś czasu/i }).first();
-if (await timelineBtn.count()) {
-  await timelineBtn.click();
-  await page.waitForTimeout(1200);
-  check('roadmapa: tryb osi czasu', (await page.locator('.gantt__bar').count()) > 0);
-  await shot('08-roadmap-gantt');
-} else {
-  check('roadmapa: przełącznik osi czasu', false, 'nie znaleziono');
-}
 
 /* ---------- 7. report ---------- */
 await go('#/report', 1800);

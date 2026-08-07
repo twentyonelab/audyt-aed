@@ -31,6 +31,9 @@ wyjaśniającą, co podstawić. Cała logika, KPI i interakcje pozostają te sam
 Pulpit → 0 Setup → 1 Inwentaryzacja → 2 Analiza → 3 Karty → 4 Roadmapa → 5 Raport.
 Kliknięcie w dowolny krok w stepperze przenosi do niego (makieta nie blokuje kolejności).
 
+Nawigacja: „Pulpit" stoi na górze steppera (wyjście do projektów, nie krok).
+Roadmapa to sam kanban — tryb „Oś czasu" usunięty na życzenie klienta.
+
 ### Praca na mapie
 
 | gest | inwentaryzacja | analiza dostępności |
@@ -49,6 +52,39 @@ Obrysy dzielnic są w obu tych widokach wyłączone (`showDistricts: false`) —
 przy kilkunastu punktach zlewały się z pinami. Zostają nazwy dzielnic i granica
 miasta. Karta punktu, setup i raport rysują dzielnice dalej, bo tam są
 jedynym kontekstem.
+
+### Filtr dzielnicy (inwentaryzacja)
+
+Wybór w selekcie „**Dzielnica:**" podświetla jej granicę na mapie i wygasza
+punkty spoza niej do 20% krycia; kadr zostaje. Mini-mapa w karcie punktu
+podświetla dzielnicę punktu tym samym mechanizmem (`highlightDistrictId`
+w scenie mapy, działa w Mapboksie i w rendererze zapasowym).
+
+### Ocena ekspercka lokalizacji (sekcja 9 karty)
+
+Sześć kryteriów 0–10 z wagami: `S = 0,25·D + 0,20·W + 0,20·N + 0,15·Z + 0,10·O + 0,10·R`
+(D dostępność czasowa, W widoczność, N natężenie/ekspozycja, Z instalacja,
+O opieka, R odporność na wandalizm). Progi werdyktu: ≥ 7,5 dobra ·
+5,0–7,4 zadowalająca · < 5,0 niska. Wagi w tej iteracji stałe
+(`EXPERT_CRITERIA` w model.js). Ocena zapisuje się przy pierwszym ruchu
+suwakiem, ma pole notatki i jest widoczna w panelu karty oraz w kolumnie
+„Ocena" listy kart. Punkty bez oceny pokazują „—", nie zaniżoną liczbę.
+
+Sekcje karty są zwijalne (klik w nagłówek); karta otwiera się zwinięta do
+przeglądu nagłówków ze statusami, przycisk „ROZWIŃ/ZWIŃ WSZYSTKIE SEKCJE"
+przełącza całość. Stan zwinięcia przeżywa zapisy pól.
+
+### Raport: dwie sekcje
+
+Krok 5 ma przełącznik **Raport ogólny | Karty punktów (załączniki)**:
+- raport ogólny — podgląd, konfiguracja sekcji i wydruk jak dotąd,
+- karty punktów — każda karta do pobrania jako **osobny PDF** w zamrożonej
+  konwencji, plus „POBIERZ WSZYSTKIE" pakujące je w jeden ZIP.
+
+PDF-y generuje własny writer (`js/pdf.js`, zero zależności; Helvetica Base14
+z kodowaniem `/Differences` dla polskich znaków), układ karty trzyma
+`js/cardpdf.js`, archiwum składa `js/zip.js` (ZIP bez kompresji). Zdjęcia są
+w PDF-ie wymienione liczbą i rolami — writer świadomie nie osadza bitmap.
 
 ### Cofnij
 
@@ -73,6 +109,9 @@ js/map.js             Mapbox GL + fallback SVG + statyczny renderer sceny
 js/ui.js              pomocniki DOM, modal, toast, CSV
 js/photos.js          pipeline zdjęć: EXIF → skalowanie → WebP → miniatura → SHA-256
 js/report.js          budowa treści raportu
+js/pdf.js             własny writer PDF (Base14 + polskie znaki, zero zależności)
+js/cardpdf.js         układ karty punktu jako PDF (zamrożona konwencja)
+js/zip.js             ZIP bez kompresji — eksport wszystkich kart naraz
 js/views/*.js         osiem widoków
 data/                 dane demo Tychy + granice
 tools/generate-demo.mjs  generator danych z kontrolą KPI
@@ -85,8 +124,8 @@ ITERACJA2_SPEC.md     specyfikacja produktu
 ## Testy
 
 ```bash
-node tools/smoke.mjs          # 31 sprawdzeń: cała ścieżka 0→5, zero błędów konsoli
-node tools/interactions.mjs   # 18 sprawdzeń: klik, przeciąganie, cofnij, kadr mapy
+node tools/smoke.mjs          # 35 sprawdzeń: cała ścieżka 0→5, zero błędów konsoli
+node tools/interactions.mjs   # 31 sprawdzeń: interakcje mapy, filtr dzielnicy, ocena, PDF/ZIP
 ```
 
 Oba potrzebują Chromium (Playwright) i same podnoszą lokalny serwer.

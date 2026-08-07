@@ -19,7 +19,7 @@
 
 import { state, save, markStepDone, getPreset, districtName } from '../state.js';
 
-import { completeness, fmtNum } from '../model.js';
+import { completeness, expertScore, fmtNum, fmtPct } from '../model.js';
 
 import {
   h,
@@ -28,9 +28,14 @@ import {
   disabledControl,
   download,
   toCsv,
+  dotHtml,
+  pillHtml,
+  statusMeta,
 } from '../ui.js';
 
 import { REPORT_SECTIONS, buildReport, enabledSectionIds, isSectionOn } from '../report.js';
+import { buildCardPdf, cardPdfFilename } from '../cardpdf.js';
+import { zipStore } from '../zip.js';
 
 import { TODAY, OPERATOR } from '../../config.js';
 
@@ -87,6 +92,12 @@ const ACTIVE_PAGE_OFFSET = 60;
 const docMeta = { date: TODAY, contact: OPERATOR };
 
 let activeSectionId = REPORT_SECTIONS[0].id;
+
+/**
+ * Dwie sekcje widoku (życzenie klienta): raport ogólny i zgrupowane karty
+ * punktów z eksportem do osobnych PDF-ów. Przełączane w sub barze.
+ */
+let reportTab = 'report'; // 'report' | 'cards'
 
 /** Sekcja, do której trzeba przewinąć po przerysowaniu widoku przez save(). */
 let pendingScrollId = null;
@@ -167,6 +178,34 @@ export async function render(root, ctx) {
   if (!(project.stepsDone || []).includes(5)) {
     markStepDone(5);
     await save({ silent: true });
+  }
+
+  /* ---------------- dwie sekcje widoku: raport ogólny | karty punktów ---------------- */
+
+  const setTab = (value) => {
+    if (reportTab === value) return;
+    reportTab = value;
+    render(root, ctx);
+  };
+
+  const tabSeg = h(
+    'div',
+    { class: 'seg' },
+    h(
+      'button',
+      { class: `seg__btn${reportTab === 'report' ? ' is-on' : ''}`, onclick: () => setTab('report') },
+      'Raport ogólny'
+    ),
+    h(
+      'button',
+      { class: `seg__btn${reportTab === 'cards' ? ' is-on' : ''}`, onclick: () => setTab('cards') },
+      'Karty punktów (załączniki)'
+    )
+  );
+
+  if (reportTab === 'cards') {
+    renderCardsSection(root, ctx, tabSeg);
+    return;
   }
 
   const report = buildReport(state, docMeta);
@@ -587,7 +626,9 @@ export async function render(root, ctx) {
   }
 
   if (ctx.subbar && ctx.subbar.controls) {
-    ctx.subbar.controls.appendChild(
+    mount(
+      ctx.subbar.controls,
+      tabSeg,
       h(
         'button',
         { class: 'btn btn--sm btn--primary', onclick: () => window.print() },
@@ -610,6 +651,128 @@ export async function render(root, ctx) {
   } else {
     highlightThumb(activeSectionId);
   }
+}
+
+/* ------------------------------------------------------------------ *
+ * Sekcja druga: karty punktów jako załączniki (osobne PDF-y)
+ * ------------------------------------------------------------------ */
+
+function renderCardsSection(root, ctx, tabSeg) {
+  const project = state.project;
+  // Odrzucone propozycje nie idą do gminy — reszta punktów dostaje kartę.
+  const points = state.points.filter((p) => p.status !== 'rejected');
+
+  const downloadOne = (point) => {
+    try {
+      download(cardPdfFilename(point), buildCardPdf(point), 'application/pdf');
+      toast(`Pobrano kartę ${point.id}.`);
+    } catch (err) {
+      console.error(err);
+      toast('Nie udało się wygenerować PDF — szczegóły w konsoli.');
+    }
+  };
+
+  const downloadAll = () => {
+    try {
+      const files = points.map((point) => ({ name: cardPdfFilename(point), data: buildCardPdf(point) }));
+      const archive = zipStore(files, docMeta.date);
+      download(`karty-punktow_${project.id}_${docMeta.date}.zip`, archive, 'application/zip');
+      toast(`Spakowano ${fmtNum(files.length)} ${plural(files.length, ['kartę', 'karty', 'kart'])} PDF do jednego ZIP.`);
+    } catch (err) {
+      console.error(err);
+      toast('Nie udało się zbudować archiwum — szczegóły w konsoli.');
+    }
+  };
+
+  const rowFor = (point) => {
+    const preset = getPreset(point.presetId);
+    const comp = completeness(point, preset, state.photos);
+    const status = statusMeta(point, comp.pct);
+    const score = expertScore(point);
+    return h(
+      'tr',
+      {},
+      h('td', {}, h('div', {
+        class: 'row',
+        html: `${dotHtml(status.level)}<span class="table__main">${point.name || point.id}</span>`,
+      }), h('div', { class: 'table__sub', text: `${point.id} · ${districtName(point.districtId)}` })),
+      h('td', { text: preset ? preset.id : '—' }),
+      h('td', { class: 'num', text: comp.required ? fmtPct(comp.pct, 0) : '—' }),
+      h('td', {}, score
+        ? h('span', { class: `score-badge score-badge--${score.verdict.variant}`, text: fmtNum(score.value, 1) })
+        : h('span', { class: 'muted', text: '—' })),
+      h('td', { html: pillHtml(status.label, status.variant) }),
+      h(
+        'td',
+        { style: { textAlign: 'right' } },
+        h('button', { class: 'btn btn--sm', onclick: () => downloadOne(point) }, 'POBIERZ PDF')
+      )
+    );
+  };
+
+  const table = h(
+    'table',
+    { class: 'table' },
+    h(
+      'thead',
+      {},
+      h(
+        'tr',
+        {},
+        h('th', { text: 'Punkt' }),
+        h('th', { style: { width: '90px' }, text: 'Preset' }),
+        h('th', { style: { width: '110px' }, text: 'Kompletność' }),
+        h('th', { style: { width: '80px' }, text: 'Ocena' }),
+        h('th', { style: { width: '150px' }, text: 'Status' }),
+        h('th', { style: { width: '130px' } })
+      )
+    ),
+    h('tbody', {}, ...points.map(rowFor))
+  );
+
+  const holder = h(
+    'div',
+    { style: { flex: '1', minWidth: '0', overflowY: 'auto', padding: '16px' } },
+    h(
+      'div',
+      { class: 'card', style: { marginBottom: '14px' } },
+      h(
+        'div',
+        { class: 'row row--wrap' },
+        h(
+          'div',
+          null,
+          h('h2', { text: 'Karty punktów — załączniki do raportu' }),
+          h('p', {
+            class: 'note',
+            style: { marginTop: '4px', maxWidth: '640px' },
+            text:
+              'Każdy punkt ma kartę PDF w zamrożonej konwencji — układ jest stały, więc karta wysłana ' +
+              'do gminy wygląda tak samo niezależnie od tego, kto i kiedy ją wygenerował. Raport ogólny ' +
+              'opisuje działania zbiorczo, karty są jego załącznikami.',
+          })
+        ),
+        h('span', { class: 'spacer' }),
+        h(
+          'button',
+          { class: 'btn btn--primary', onclick: downloadAll },
+          `POBIERZ WSZYSTKIE — ${fmtNum(points.length)} PDF (ZIP)`
+        )
+      )
+    ),
+    table
+  );
+
+  mount(root, holder);
+
+  if (typeof ctx.setMeta === 'function') {
+    ctx.setMeta(`${fmtNum(points.length)} ${plural(points.length, ['karta', 'karty', 'kart'])} · osobny PDF na punkt`);
+  }
+  if (ctx.subbar && ctx.subbar.controls) {
+    mount(ctx.subbar.controls, tabSeg);
+  }
+
+  refs = null; // ta sekcja nie ma nasłuchu przewijania podglądu
 }
 
 export function destroy() {

@@ -9,7 +9,7 @@
 
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -215,6 +215,99 @@ await page.waitForTimeout(600);
 const promptVisible = await page.locator('text=Dodaj punkt tutaj').count();
 check('inwentaryzacja: klik w mapę proponuje dodanie punktu', promptVisible > 0);
 
+/* ---------------------------------------------------------------- *
+ * 7. Filtr dzielnicy: podświetlenie + wygaszenie punktów
+ * ---------------------------------------------------------------- */
+
+await go('#/inventory');
+const districtSelect = page.locator('.chips select').first();
+check('inwentaryzacja: pogrubiona etykieta Dzielnica:', (await page.locator('.chips b', { hasText: 'Dzielnica:' }).count()) > 0);
+await districtSelect.selectOption({ index: 1 });
+await page.waitForTimeout(600);
+
+const dimmedPins = await page.locator('.map-fallback svg [stroke][opacity="0.2"]').count();
+check('filtr dzielnicy wygasza punkty spoza niej do 20%', dimmedPins > 0, `${dimmedPins} wygaszonych`);
+const highlight = await page.locator('.map-fallback svg path[stroke="#4caf7d"]').count();
+check('wybrana dzielnica jest podświetlona na mapie', highlight > 0);
+await page.screenshot({ path: join(SHOTS, 'interactions-district-filter.png') });
+
+await page.locator('.chips .chip').first().click(); // powrót do „Wszystkie"
+await page.waitForTimeout(400);
+check(
+  'zdjęcie filtra gasi podświetlenie',
+  (await page.locator('.map-fallback svg path[stroke="#4caf7d"]').count()) === 0
+);
+
+check('legenda: kwadrat rekomendacji pod statusami', (await page.locator('.map-legend .dot--square').count()) > 0);
+
+/* ---------------------------------------------------------------- *
+ * 8. Ocena ekspercka: zapis i trwałość
+ * ---------------------------------------------------------------- */
+
+await go('#/card/AED-003', 1400);
+await page.locator('button', { hasText: /ROZWIŃ WSZYSTKIE/i }).first().click();
+await page.waitForTimeout(300);
+const slider = page.locator('.score-crit input[type=range]').first();
+await slider.evaluate((el) => {
+  el.value = '8';
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+});
+await page.waitForTimeout(900);
+const badge = await page.locator('.panel--card .score-badge').first().innerText();
+check('ocena ekspercka liczy się i pokazuje w panelu', /\d/.test(badge), badge);
+
+await go('#/cards', 1200);
+const listBadge = await page.locator('.table .score-badge').count();
+check('ocena widoczna w liście kart', listBadge > 0, `${listBadge} ocen`);
+
+/* ---------------------------------------------------------------- *
+ * 9. Raport: sekcja kart punktów + osobne PDF-y
+ * ---------------------------------------------------------------- */
+
+await go('#/report', 1600);
+const cardsTab = page.locator('.subbar__controls .seg__btn', { hasText: /karty punktów/i }).first();
+check('raport: przełącznik dwóch sekcji', (await cardsTab.count()) > 0);
+await cardsTab.click();
+await page.waitForTimeout(800);
+
+const pdfBtn = page.locator('tbody button', { hasText: 'POBIERZ PDF' }).first();
+check('raport: lista kart z przyciskami PDF', (await pdfBtn.count()) > 0);
+
+const [pdfDl] = await Promise.all([page.waitForEvent('download'), pdfBtn.click()]);
+const pdfPath = await pdfDl.path();
+const pdfHead = readFileSync(pdfPath).subarray(0, 5).toString('latin1');
+check('pojedyncza karta pobiera się jako PDF', pdfHead === '%PDF-', `${pdfDl.suggestedFilename()} · ${pdfHead}`);
+
+const zipBtn = page.locator('button', { hasText: /POBIERZ WSZYSTKIE/ }).first();
+const [zipDl] = await Promise.all([page.waitForEvent('download'), zipBtn.click()]);
+const zipBytes = readFileSync(await zipDl.path());
+check(
+  'eksport wszystkich kart to ZIP z osobnymi PDF-ami',
+  zipBytes[0] === 0x50 && zipBytes[1] === 0x4b && zipBytes.length > 10000,
+  `${zipDl.suggestedFilename()} · ${Math.round(zipBytes.length / 1024)} KB`
+);
+await page.screenshot({ path: join(SHOTS, 'interactions-report-cards.png') });
+
+/* ---------------------------------------------------------------- *
+ * 10. Karta punktu mieści się na węższym oknie (zgłoszony bug)
+ * ---------------------------------------------------------------- */
+
+await page.setViewportSize({ width: 1200, height: 900 });
+await go('#/card/AED-003', 1200);
+const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+check('karta punktu: brak poziomego przewijania przy 1200 px', overflow <= 1, `${overflow}px nadmiaru`);
+await page.setViewportSize({ width: 1560, height: 940 });
+
+/* ---------------------------------------------------------------- *
+ * 11. Nawigacja: Pulpit na górze steppera
+ * ---------------------------------------------------------------- */
+
+await go('#/inventory', 900);
+const firstStep = await page.locator('.stepper .stepper__item').first().innerText();
+check('Pulpit jest pierwszą pozycją nawigacji', /pulpit/i.test(firstStep), firstStep.replace(/\s+/g, ' '));
+
+await go('#/inventory');
 await page.screenshot({ path: join(SHOTS, 'interactions-inventory.png') });
 await go('#/analysis');
 await page.screenshot({ path: join(SHOTS, 'interactions-analysis.png') });

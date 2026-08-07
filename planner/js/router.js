@@ -123,6 +123,14 @@ function stepper(activeStep) {
   return h(
     'nav',
     { class: 'stepper', 'aria-label': 'Kroki audytu' },
+    // Pulpit na górze: to wyjście do wszystkich projektów, a nie ostatni krok.
+    h(
+      'button',
+      { class: 'stepper__item', onclick: () => navigate('#/') },
+      h('span', { class: 'stepper__circle', text: '⌂' }),
+      h('span', { class: 'stepper__label', html: 'Pulpit<small>wszystkie projekty</small>' })
+    ),
+    h('div', { class: 'stepper__sep' }),
     ...STEPS.map((s) =>
       h(
         'button',
@@ -135,13 +143,6 @@ function stepper(activeStep) {
         h('span', { class: 'stepper__circle', text: done.has(s.step) && s.step !== activeStep ? '✓' : String(s.step) }),
         h('span', { class: 'stepper__label', html: `${s.name}<small>${s.short}</small>` })
       )
-    ),
-    h('div', { class: 'stepper__sep' }),
-    h(
-      'button',
-      { class: 'stepper__item', onclick: () => navigate('#/') },
-      h('span', { class: 'stepper__circle', text: '⌂' }),
-      h('span', { class: 'stepper__label', html: 'Pulpit<small>wszystkie projekty</small>' })
     )
   );
 }

@@ -23,7 +23,7 @@ import {
   recommendationsForPoint,
 } from '../state.js';
 
-import { completeness, fmtNum, fmtPct } from '../model.js';
+import { completeness, expertScore, fmtNum, fmtPct } from '../model.js';
 
 import {
   h,
@@ -383,6 +383,7 @@ export async function render(root, ctx) {
         h('th', { style: { width: '190px' }, text: 'Preset' }),
         h('th', { style: { width: '176px' }, text: 'Kompletność' }),
         h('th', { style: { width: '150px' }, text: 'Rekomendacje' }),
+        h('th', { style: { width: '76px' }, text: 'Ocena', title: 'Ocena ekspercka lokalizacji (sekcja 9 karty)' }),
         h('th', { style: { width: '150px' }, text: 'Status' }),
         h('th', { style: { width: '104px' } })
       )
@@ -539,9 +540,20 @@ export async function render(root, ctx) {
         : h('td', { class: 'muted', text: '—' }),
       completenessCell(row),
       recommendationsCell(row),
+      expertCell(row),
       h('td', { html: pillHtml(row.status.label, row.status.variant) }),
       h('td', { style: { textAlign: 'right' } }, openBtn)
     );
+  }
+
+  function expertCell(row) {
+    const score = expertScore(row.point);
+    if (!score) return h('td', { class: 'muted', title: 'lokalizacja nieoceniona', text: '—' });
+    return h('td', {}, h('span', {
+      class: `score-badge score-badge--${score.verdict.variant}`,
+      title: score.verdict.label,
+      text: fmtNum(score.value, 1),
+    }));
   }
 
   function completenessCell(row) {

@@ -101,6 +101,8 @@ const COLORS = {
   covered: '#4caf7d',
   uncovered: '#d9534f',
   near: '#e8b33c',
+  highlight: 'rgba(76,175,125,0.12)',
+  highlightLine: '#4caf7d',
 };
 
 function ringPath(ring, project) {
@@ -143,6 +145,17 @@ export function renderSceneSvg(scene, opts = {}) {
     }
   }
 
+  // Podświetlenie jednej dzielnicy (np. wybranej w filtrze) — działa też przy
+  // showDistricts: false, bo wtedy jest jedynym rysowanym wielokątem dzielnicy.
+  if (scene.highlightDistrictId && scene.districts) {
+    const f = scene.districts.features.find((d) => d.properties.id === scene.highlightDistrictId);
+    if (f) {
+      parts.push(
+        `<path d="${ringPath(f.geometry.coordinates[0], project)}" fill="${COLORS.highlight}" stroke="${COLORS.highlightLine}" stroke-width="1.6"/>`
+      );
+    }
+  }
+
   if (scene.coverage && opts.showCoverage !== false) {
     for (const c of scene.coverage) {
       const [cx, cy] = project(c.lon, c.lat);
@@ -170,12 +183,13 @@ export function renderSceneSvg(scene, opts = {}) {
     const [x, y] = project(p.lon, p.lat);
     const fill =
       p.level === 'ok' ? COLORS.covered : p.level === 'warn' ? '#e8b33c' : p.level === 'proposed' ? '#8a6fc7' : COLORS.uncovered;
+    const dim = p.dimmed ? ' opacity="0.2"' : '';
     if (p.level === 'proposed') {
       parts.push(
-        `<rect x="${(x - 4.5).toFixed(1)}" y="${(y - 4.5).toFixed(1)}" width="9" height="9" fill="${fill}" stroke="#fff" stroke-width="1.6"/>`
+        `<rect x="${(x - 4.5).toFixed(1)}" y="${(y - 4.5).toFixed(1)}" width="9" height="9" fill="${fill}" stroke="#fff" stroke-width="1.6"${dim}/>`
       );
     } else {
-      parts.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4.5" fill="${fill}" stroke="#fff" stroke-width="1.6"/>`);
+      parts.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4.5" fill="${fill}" stroke="#fff" stroke-width="1.6"${dim}/>`);
     }
   }
 
@@ -253,11 +267,14 @@ function createMapboxMap(container, opts) {
   map.on('load', () => {
     src('boundary', emptyFc);
     src('districts', emptyFc);
+    src('district-hl', emptyFc);
     src('coverage', emptyFc);
     src('demand', emptyFc);
 
     map.addLayer({ id: 'districts-fill', type: 'fill', source: 'districts', paint: { 'fill-color': '#e8e8e4', 'fill-opacity': 0.55 } });
     map.addLayer({ id: 'districts-line', type: 'line', source: 'districts', paint: { 'line-color': '#c9c9c4', 'line-width': 1 } });
+    map.addLayer({ id: 'district-hl-fill', type: 'fill', source: 'district-hl', paint: { 'fill-color': '#4caf7d', 'fill-opacity': 0.1 } });
+    map.addLayer({ id: 'district-hl-line', type: 'line', source: 'district-hl', paint: { 'line-color': '#4caf7d', 'line-width': 1.8 } });
     map.addLayer({
       id: 'coverage-fill',
       type: 'fill',
@@ -322,6 +339,12 @@ function createMapboxMap(container, opts) {
     if (scene.boundary) src('boundary', scene.boundary);
     src('districts', scene.showDistricts === false ? emptyFc : scene.districts || emptyFc);
 
+    const hlFeature =
+      scene.highlightDistrictId && scene.districts
+        ? scene.districts.features.find((f) => f.properties.id === scene.highlightDistrictId)
+        : null;
+    src('district-hl', hlFeature ? { type: 'FeatureCollection', features: [hlFeature] } : emptyFc);
+
     src('coverage', {
       type: 'FeatureCollection',
       features: (scene.showCoverage === false ? [] : scene.coverage || []).map((c) => ({
@@ -348,6 +371,7 @@ function createMapboxMap(container, opts) {
       const node = document.createElement('div');
       node.className = `pin pin--${p.level}${p.id === scene.selectedId ? ' is-selected' : ''}`;
       node.title = p.name || '';
+      if (p.dimmed) node.style.opacity = '0.2';
       node.addEventListener('pointerdown', () => {
         dragged = false;
       });
@@ -554,6 +578,7 @@ function createFallbackMap(container, opts) {
       node.setAttribute('fill', fill);
       node.setAttribute('stroke', p.id === scene.selectedId ? '#1e1e1e' : '#ffffff');
       node.setAttribute('stroke-width', p.id === scene.selectedId ? '2.4' : '2');
+      if (p.dimmed) node.setAttribute('opacity', '0.2');
       node.style.cursor = p.draggable ? 'grab' : 'pointer';
 
       node.addEventListener('click', (ev) => {

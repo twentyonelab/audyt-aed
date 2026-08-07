@@ -715,7 +715,7 @@ export async function render(root, ctx) {
       h('div', { class: 'map-legend__row', html: `${dotHtml('ok')}<span>punkt popytu w zasięgu</span>` }),
       h('div', { class: 'map-legend__row', html: `${dotHtml('warn')}<span>blisko granicy standardu</span>` }),
       h('div', { class: 'map-legend__row', html: `${dotHtml('crit')}<span>poza zasięgiem</span>` }),
-      h('div', { class: 'map-legend__row', html: `${dotHtml('proposed')}<span>propozycja (przeciągalna)</span>` }),
+      h('div', { class: 'map-legend__row', html: `${dotHtml('square')}<span>propozycja (przeciągalna)</span>` }),
       h('div', {
         class: 'note',
         style: { marginTop: '4px' },

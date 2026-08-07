@@ -36,6 +36,9 @@ import {
   autoRecommendations,
   coverageRadiusM,
   PHASE_META,
+  EXPERT_CRITERIA,
+  EXPERT_FORMULA,
+  expertScore,
   fmtPct,
   fmtMin,
   fmtNum,
@@ -78,8 +81,6 @@ const TEXT_DEBOUNCE_MS = 400;
 /** Po tylu ms nie odtwarzamy już fokusu (użytkownik zdążył odejść od pola). */
 const FOCUS_TTL_MS = 4000;
 
-const CARD_WIDTH = '880px';
-const PANEL_WIDTH = '520px';
 const MINI_MAP_H = 200;
 
 /** Domyślne ramy czasowe pozycji wrzucanej do fazy 1 (jak w danych demo). */
@@ -153,6 +154,23 @@ let saveTimer = null;
 let focusMemo = null;
 let scrollMemo = null;
 let photosModulePromise = null;
+
+/** Numery wszystkich sekcji karty — do „rozwiń/zwiń wszystkie". */
+const ALL_SECTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+/**
+ * Które sekcje są zwinięte — pamiętane per punkt między przerysowaniami
+ * (zapis pola przerysowuje widok i nie może zamykać sekcji pod ręką).
+ * Karta otwiera się zwinięta do przeglądu nagłówków, jak w makiecie W3b.
+ */
+let collapseMemo = null;
+
+function collapsedSetFor(pointId) {
+  if (!collapseMemo || collapseMemo.pointId !== pointId) {
+    collapseMemo = { pointId, set: new Set(ALL_SECTIONS) };
+  }
+  return collapseMemo.set;
+}
 
 /**
  * js/photos.js powstaje równolegle. Import jest dynamiczny i buforowany, żeby
@@ -439,14 +457,33 @@ const SECTION_PILL = {
   '': { text: 'KOMPLET', variant: 'ok' },
 };
 
-function cardSection({ num, title, level = '', pills = [], children }) {
-  const badge = SECTION_PILL[level] || SECTION_PILL[''];
-  return h(
+/** Zwinięty zestaw bieżącej karty + odświeżacz etykiety przycisku — ustawiane w render(). */
+let currentCollapsed = new Set();
+let refreshToggleLabel = () => {};
+
+function cardSection({ num, title, level = '', pills = [], badge: customBadge = null, children }) {
+  const badge = customBadge || SECTION_PILL[level] || SECTION_PILL[''];
+  const collapsed = currentCollapsed.has(num);
+
+  const chev = h('span', { class: 'card-section__chev', text: collapsed ? '▸' : '▾' });
+  const section = h(
     'section',
-    { class: `card-section${level ? ` card-section--${level}` : ''}` },
+    { class: `card-section${level ? ` card-section--${level}` : ''}${collapsed ? ' is-collapsed' : ''}` },
     h(
       'div',
-      { class: 'card-section__head' },
+      {
+        class: 'card-section__head',
+        title: collapsed ? 'Rozwiń sekcję' : 'Zwiń sekcję',
+        onclick: () => {
+          const nowCollapsed = !currentCollapsed.has(num);
+          if (nowCollapsed) currentCollapsed.add(num);
+          else currentCollapsed.delete(num);
+          section.classList.toggle('is-collapsed', nowCollapsed);
+          chev.textContent = nowCollapsed ? '▸' : '▾';
+          refreshToggleLabel();
+        },
+      },
+      chev,
       h('span', { class: 'card-section__num', text: String(num) }),
       h('h3', { text: title }),
       ...pills.map((p) => h('span', { html: pillHtml(p.text, p.variant) })),
@@ -454,6 +491,7 @@ function cardSection({ num, title, level = '', pills = [], children }) {
     ),
     h('div', { class: 'card-section__body' }, ...children.filter(Boolean))
   );
+  return section;
 }
 
 function twoCols(...children) {
@@ -624,8 +662,10 @@ export async function render(root, ctx) {
   const merged = mergeRecommendations(point, preset);
   const openRecs = merged.filter((r) => !r.done);
   const pointPhotos = state.photos.filter((ph) => ph.pointId === point.id);
+  const score = expertScore(point);
 
   state.ui.selectedPointId = point.id;
+  currentCollapsed = collapsedSetFor(point.id);
 
   /* ---------------- Poziom paska statusu sekcji ---------------- */
 
@@ -1122,8 +1162,129 @@ export async function render(root, ctx) {
   });
 
   /* ================================================================ *
+   * SEKCJA 9 — ocena ekspercka lokalizacji
+   * ================================================================ */
+
+  /** Wartości suwaków przed pierwszym zapisem — start neutralny (5). */
+  const scoreDraft = {};
+  for (const c of EXPERT_CRITERIA) {
+    const saved = point.expert ? point.expert[c.key] : null;
+    scoreDraft[c.key] = typeof saved === 'number' ? saved : 5;
+  }
+
+  const scoreValueEl = h('span', { class: 'score-box__value num', text: score ? fmtNum(score.value, 1) : '—' });
+  const scoreVerdictEl = h('span', {
+    html: score ? pillHtml(score.verdict.label, score.verdict.variant) : pillHtml('NIEOCENIONA', 'warn'),
+  });
+
+  /** Podgląd wyniku na żywo w trakcie przesuwania — bez zapisu. */
+  const previewScore = () => {
+    let sum = 0;
+    for (const c of EXPERT_CRITERIA) sum += scoreDraft[c.key] * c.weight;
+    scoreValueEl.textContent = fmtNum(Math.round(sum * 10) / 10, 1);
+  };
+
+  /** Zapis oceny: pierwszy ruch suwakiem utrwala komplet sześciu kryteriów. */
+  const commitScore = async () => {
+    point.expert = { ...(point.expert || {}), ...scoreDraft };
+    upsertPoint(point);
+    await saveNow();
+  };
+
+  const criterionRow = (c) => {
+    const valEl = h('span', { class: 'score-crit__val num', text: String(scoreDraft[c.key]) });
+    const slider = h('input', {
+      type: 'range',
+      min: '0',
+      max: '10',
+      step: '1',
+      value: String(scoreDraft[c.key]),
+      dataset: { fkey: `expert.${c.key}` },
+      disabled: inert || null,
+    });
+    if (!inert) {
+      // input = podgląd na żywo; change (puszczenie suwaka) = zapis.
+      slider.addEventListener('input', () => {
+        scoreDraft[c.key] = Number(slider.value);
+        valEl.textContent = slider.value;
+        previewScore();
+      });
+      slider.addEventListener('change', commitScore);
+    }
+    return h(
+      'div',
+      { class: 'score-crit' },
+      h(
+        'div',
+        { class: 'score-crit__head' },
+        h('b', { text: `[${c.key}] ${c.label}` }),
+        h('span', { class: 'muted', text: `(${fmtNum(c.weight * 100, 0)}%)` }),
+        valEl
+      ),
+      slider
+    );
+  };
+
+  const section9 = cardSection({
+    num: 9,
+    title: 'Ocena ekspercka lokalizacji',
+    level: '',
+    badge: score
+      ? { text: `${fmtNum(score.value, 1)} / 10`, variant: score.verdict.variant }
+      : { text: 'NIEOCENIONA', variant: 'warn' },
+    children: [
+      inert
+        ? note('Punkt jest propozycją — lokalizację ocenia się po wizji lokalnej albo montażu.')
+        : null,
+      h(
+        'div',
+        { class: 'score-box' },
+        h(
+          'div',
+          null,
+          h('div', { class: 'label-caps', text: 'Wzór obliczeniowy' }),
+          h('div', { class: 'score-box__formula', text: EXPERT_FORMULA })
+        ),
+        scoreValueEl,
+        h('span', { class: 'muted', style: { fontSize: '12px' }, text: '/ 10' }),
+        scoreVerdictEl
+      ),
+      h('div', { class: 'score-grid' }, ...EXPERT_CRITERIA.map(criterionRow)),
+      score
+        ? null
+        : note('Ocena zapisze się przy pierwszym ruchu dowolnym suwakiem — wtedy utrwala się komplet sześciu kryteriów.'),
+      textField({
+        point,
+        path: 'expert.note',
+        label: 'Notatka eksperta',
+        textarea: true,
+        placeholder: 'np. dobra widoczność od parkingu; zasilanie wymaga przedłużenia z rozdzielni w piwnicy',
+        disabled: inert,
+      }),
+      note('Progi werdyktu: ≥ 7,5 dobra · 5,0–7,4 zadowalająca · < 5,0 niska. Wynik widać też na liście kart.'),
+    ],
+  });
+
+  /* ================================================================ *
    * Lewa kolumna
    * ================================================================ */
+
+  const toggleAllBtn = h('button', { class: 'btn btn--sm' });
+  refreshToggleLabel = () => {
+    toggleAllBtn.textContent = currentCollapsed.size > 0 ? 'ROZWIŃ WSZYSTKIE SEKCJE' : 'ZWIŃ WSZYSTKIE SEKCJE';
+  };
+  refreshToggleLabel();
+  toggleAllBtn.addEventListener('click', () => {
+    const expandAll = currentCollapsed.size > 0;
+    if (expandAll) currentCollapsed.clear();
+    else for (const n of ALL_SECTIONS) currentCollapsed.add(n);
+    for (const sec of column.querySelectorAll('.card-section')) {
+      sec.classList.toggle('is-collapsed', !expandAll);
+      const chev = sec.querySelector('.card-section__chev');
+      if (chev) chev.textContent = expandAll ? '▾' : '▸';
+    }
+    refreshToggleLabel();
+  });
 
   const header = h(
     'div',
@@ -1137,7 +1298,9 @@ export async function render(root, ctx) {
       // „ZAAKCEPTOWANY" dopowiadamy, że to wciąż punkt jeszcze niezamontowany.
       isProposed && point.status !== 'proposed'
         ? h('span', { html: pillHtml('PUNKT PROPONOWANY', 'phase3') })
-        : null
+        : null,
+      h('span', { class: 'spacer' }),
+      toggleAllBtn
     ),
     h('div', {
       class: 'muted',
@@ -1150,16 +1313,7 @@ export async function render(root, ctx) {
 
   const column = h(
     'div',
-    {
-      class: 'card-column',
-      style: {
-        width: CARD_WIDTH,
-        flex: `0 0 ${CARD_WIDTH}`,
-        maxWidth: '100%',
-        overflowY: 'auto',
-        padding: '20px',
-      },
-    },
+    { class: 'card-column' },
     header,
     section1,
     section2,
@@ -1168,7 +1322,8 @@ export async function render(root, ctx) {
     section5,
     section6,
     section7,
-    section8
+    section8,
+    section9
   );
 
   column.addEventListener('scroll', () => rememberScroll(column, point.id), { passive: true });
@@ -1181,6 +1336,8 @@ export async function render(root, ctx) {
     boundary: state.boundary,
     districts: state.districtsGeo,
     showDistricts: true,
+    // Dzielnica punktu podświetlona — mini-mapa mówi od razu „gdzie to jest".
+    highlightDistrictId: point.districtId || null,
     // Bez okręgu strefy — promień jest podany liczbowo pod mapką, a okrąg
     // przy tym kadrze zasłaniał sam punkt.
     coverage: [],
@@ -1292,7 +1449,7 @@ export async function render(root, ctx) {
 
   const panel = h(
     'aside',
-    { class: 'panel', style: { width: PANEL_WIDTH, flex: `0 0 ${PANEL_WIDTH}` } },
+    { class: 'panel panel--card' },
     h(
       'div',
       { class: 'panel__head' },
@@ -1353,6 +1510,22 @@ export async function render(root, ctx) {
       h(
         'div',
         { class: 'panel__section' },
+        h('span', { class: 'label-caps', text: 'Ocena ekspercka' }),
+        h(
+          'div',
+          { class: 'row' },
+          h('span', {
+            class: `score-badge${score ? ` score-badge--${score.verdict.variant}` : ''}`,
+            text: score ? fmtNum(score.value, 1) : '—',
+          }),
+          score
+            ? h('span', { html: pillHtml(score.verdict.label, score.verdict.variant) })
+            : h('span', { class: 'note', text: 'nieoceniona — sekcja 9 karty' })
+        )
+      ),
+      h(
+        'div',
+        { class: 'panel__section' },
         h('span', { class: 'label-caps', text: 'Rekomendacje punktu' }),
         h('div', {
           class: 'num',
@@ -1374,7 +1547,7 @@ export async function render(root, ctx) {
     )
   );
 
-  mount(root, column, h('div', { class: 'spacer' }), panel);
+  mount(root, column, panel);
 
   restoreScroll(column, point.id);
   restoreFocus(root, point.id);

@@ -552,6 +552,49 @@ export function autoRecommendations(point, preset, photos = [], today = TODAY_FA
 }
 
 /* ------------------------------------------------------------------ *
+ * Expert location score
+ * ------------------------------------------------------------------ */
+
+/**
+ * Ważona ocena lokalizacji 0–10 wystawiana ręcznie przez audytora.
+ * Wagi sumują się do 1 i są w tej iteracji stałe (per ustalenie z klientem);
+ * gdy staną się konfigurowalne per projekt, wystarczy podmienić to źródło.
+ */
+export const EXPERT_CRITERIA = [
+  { key: 'D', label: 'Dostępność czasowa', weight: 0.25 },
+  { key: 'W', label: 'Widoczność i oznakowanie', weight: 0.2 },
+  { key: 'N', label: 'Natężenie ruchu / ekspozycja', weight: 0.2 },
+  { key: 'Z', label: 'Instalacja / zasilanie', weight: 0.15 },
+  { key: 'O', label: 'Opieka nad punktem', weight: 0.1 },
+  { key: 'R', label: 'Odporność na wandalizm', weight: 0.1 },
+];
+
+export const EXPERT_FORMULA = 'S = 0,25·D + 0,20·W + 0,20·N + 0,15·Z + 0,10·O + 0,10·R';
+
+/**
+ * @returns {null | {value:number, verdict:{label:string, variant:string}}}
+ * null = punkt jeszcze nieoceniony (brak kompletu sześciu kryteriów).
+ */
+export function expertScore(point) {
+  const ex = point && point.expert;
+  if (!ex) return null;
+  let sum = 0;
+  for (const c of EXPERT_CRITERIA) {
+    const v = ex[c.key];
+    if (typeof v !== 'number' || Number.isNaN(v)) return null;
+    sum += Math.min(10, Math.max(0, v)) * c.weight;
+  }
+  const value = Math.round(sum * 10) / 10;
+  const verdict =
+    value >= 7.5
+      ? { label: 'Dobra', variant: 'ok' }
+      : value >= 5
+        ? { label: 'Zadowalająca', variant: 'warn' }
+        : { label: 'Niska', variant: 'crit' };
+  return { value, verdict };
+}
+
+/* ------------------------------------------------------------------ *
  * Roadmap aggregation
  * ------------------------------------------------------------------ */
 

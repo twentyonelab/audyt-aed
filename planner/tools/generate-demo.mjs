@@ -247,6 +247,18 @@ const NO_DEVICE_SIGN = new Set(['AED-004', 'AED-012']);
 const NO_KEEPER = new Set(['AED-003', 'AED-004', 'AED-005', 'AED-006', 'AED-013', 'AED-014']);
 const NOT_REGISTERED = new Set(['AED-003', 'AED-004', 'AED-009', 'AED-012', 'AED-013']);
 
+/**
+ * Przykładowe oceny eksperckie (sekcja 9 karty) — trzy punkty, po jednym na
+ * każdy próg werdyktu, żeby demo pokazywało wszystkie stany od wejścia:
+ * AED-002 dobra (UM, 24/7), AED-003 zadowalająca (szkoła), AED-006 niska
+ * (galeria bez danych i opiekuna).
+ */
+const EXPERT_DEMO = {
+  'AED-002': { D: 9, W: 8, N: 8, Z: 7, O: 9, R: 7, note: 'Wejście A czynne całodobowo, portiernia z obsadą — lokalizacja wzorcowa.' },
+  'AED-003': { D: 4, W: 8, N: 7, Z: 8, O: 6, R: 8, note: 'Poza godzinami lekcji budynek zamknięty — dostępność ogranicza wynik.' },
+  'AED-006': { D: 3, W: 4, N: 6, Z: 3, O: 2, R: 4, note: 'Prywatny właściciel, brak opiekuna i zgody na oznakowanie — do wyjaśnienia.' },
+};
+
 function buildExistingPoints() {
   const points = [];
 
@@ -286,6 +298,7 @@ function buildExistingPoints() {
           },
       dispatcherRegistered: unverified ? null : !NOT_REGISTERED.has(e.id),
       technical: { power: null, distanceToSource: null, works: null, connectionCost: null, monitoring: false },
+      expert: EXPERT_DEMO[e.id] || null,
       photos: [],
       verification: unverified
         ? { date: null, by: null, source: null }

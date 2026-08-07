@@ -626,6 +626,9 @@ export async function render(root, ctx) {
   const setFilter = (value) => {
     state.ui.inventoryFilter = value;
     refreshPanel();
+    // Mapa reaguje bez pełnego przerysowania: wybrana dzielnica dostaje
+    // podświetlenie, punkty spoza niej schodzą do 20% krycia, kadr zostaje.
+    repaintPins();
     // filtr to stan interfejsu — zapis bez przerysowania (mapa zostaje na miejscu)
     save({ silent: true });
   };
@@ -672,7 +675,12 @@ export async function render(root, ctx) {
           `${f.label} (${fmtNum(n)})`
         );
       }),
-      select
+      h(
+        'label',
+        { class: 'row', style: { gap: '6px', flex: 'none' } },
+        h('b', { style: { fontSize: '12px' }, text: 'Dzielnica:' }),
+        select
+      )
     );
   }
 
@@ -800,8 +808,18 @@ export async function render(root, ctx) {
 
   /* ---------------- scena mapy ---------------- */
 
-  /** Piny sceny. Przeciągalny jest wyłącznie punkt uzbrojony przez „Przesuń punkt". */
+  /** Dzielnica aktywna w filtrze — albo null. */
+  const filteredDistrictId = () => {
+    const current = filterOf();
+    return current.kind === 'district' ? current.districtId : null;
+  };
+
+  /**
+   * Piny sceny. Przeciągalny jest wyłącznie punkt uzbrojony przez „Przesuń punkt".
+   * Przy filtrze dzielnicy punkty spoza niej schodzą do 20% krycia.
+   */
   function buildPins() {
+    const districtId = filteredDistrictId();
     return [...registry, ...proposedRows].map((r) => ({
       id: r.point.id,
       lat: r.point.lat,
@@ -809,12 +827,13 @@ export async function render(root, ctx) {
       level: r.level,
       name: r.point.name,
       draggable: r.point.id === movingPointId,
+      dimmed: !!districtId && r.point.districtId !== districtId,
     }));
   }
 
-  /** Przerysowuje same piny — bez odtwarzania całej sceny i bez utraty kadru. */
+  /** Przerysowuje piny i podświetlenie dzielnicy — bez utraty kadru. */
   function repaintPins() {
-    if (map) map.setScene({ points: buildPins() });
+    if (map) map.setScene({ points: buildPins(), highlightDistrictId: filteredDistrictId() });
   }
 
   const pins = buildPins();
@@ -836,6 +855,7 @@ export async function render(root, ctx) {
     points: pins,
     labels,
     selectedId: state.ui.selectedPointId,
+    highlightDistrictId: filteredDistrictId(),
   });
   // Kadr przeżywa przerysowanie widoku — po przesunięciu pinu mapa zostaje tam,
   // gdzie ustawił ją operator, zamiast wracać do widoku całego miasta.
@@ -1143,17 +1163,14 @@ function legend(proposedCount) {
     h('b', { text: 'Status punktu' }),
     h('div', { class: 'map-legend__row', html: `${dotHtml('ok')}<span>zweryfikowany, komplet danych</span>` }),
     h('div', { class: 'map-legend__row', html: `${dotHtml('warn')}<span>braki w karcie</span>` }),
-    h('div', { class: 'map-legend__row', html: `${dotHtml('crit')}<span>niezweryfikowany</span>` })
+    h('div', { class: 'map-legend__row', html: `${dotHtml('crit')}<span>niezweryfikowany</span>` }),
+    h('div', {
+      class: 'map-legend__row',
+      html: `${dotHtml('square')}<span>rekomendacja — nowa lokalizacja${
+        proposedCount > 0 ? ` (${fmtNum(proposedCount)})` : ''
+      }</span>`,
+    })
   );
-  if (proposedCount > 0) {
-    node.appendChild(
-      h('div', {
-        class: 'note',
-        style: { marginTop: '4px' },
-        text: `fioletowe kwadraty — ${fmtNum(proposedCount)} rekomendacji (nowe lokalizacje)`,
-      })
-    );
-  }
   return node;
 }
 

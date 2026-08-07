@@ -475,6 +475,7 @@ export function makePoint({ id, name, lat, lon, presetId = 'P1', districtId = nu
     device: { model: null, inspectionDue: null, padsDue: null },
     dispatcherRegistered: null,
     technical: { power: null, distanceToSource: null, works: null, connectionCost: null, monitoring: false },
+    expert: null, // ocena ekspercka {D,W,N,Z,O,R, note} — null, dopóki audytor nie oceni
     photos: [],
     verification: { date: null, by: null, source: null },
     recommendations: [],
