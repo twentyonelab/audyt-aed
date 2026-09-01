@@ -902,3 +902,11 @@ a { color: var(--ink); }
   .report-kpis, .report-maps, .card-section, .kanban__col { break-inside: avoid; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* ---------- roadmapa: nowy montaż vs modernizacja ------------------------- */
+
+/* Kwadrat = nowe urządzenie, kółko = poprawa punktu, który już stoi.
+   Te same kształty co na mapie, żeby nie uczyć się drugiego alfabetu. */
+.rec-kind { width: 9px; height: 9px; flex: none; margin-top: 3px; }
+.rec-kind--new { background: var(--phase-3); }
+.rec-kind--update { background: var(--ink-2); border-radius: 50%; }

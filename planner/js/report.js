@@ -35,6 +35,7 @@ import {
 } from './model.js';
 
 import { renderSceneSvg } from './map.js';
+import { reachMapSync } from './reach.js';
 
 import {
   escapeHtml,
@@ -188,9 +189,10 @@ function buildContext(state, options = {}) {
     population: project.population || 0,
   };
 
-  const now = analyze({ ...base, scenario: 'now', mode: 'day' });
-  const plan = analyze({ ...base, scenario: 'plan', mode: 'day' });
-  const night = analyze({ ...base, scenario: 'now', mode: 'night' });
+  const reach = reachMapSync([...state.points, ...(state.candidates || [])]);
+  const now = analyze({ ...base, reach, scenario: 'now', mode: 'day' });
+  const plan = analyze({ ...base, reach, scenario: 'plan', mode: 'day' });
+  const night = analyze({ ...base, reach, scenario: 'now', mode: 'night' });
   const totals = roadmapTotals(state.recommendations || []);
 
   // Wiersze inwentarza — kompletność i status liczone raz, używane w kilku sekcjach.

@@ -6,6 +6,7 @@
  * nic nie jest wpisane na sztywno w HTML.
  */
 
+import { reachMapSync } from '../reach.js';
 import { analyze, fmtPct, fmtMin, fmtNum, fmtCost } from '../model.js';
 import { state, exportProject, resetToDemo } from '../state.js';
 import {
@@ -69,6 +70,9 @@ function analyzeCurrent() {
     population: project.population,
     scenario: 'now',
     mode: 'day',
+    // Ten sam zasięg co w kroku 2 — pulpit i setup nie mogą pokazywać
+    // innego pokrycia niż analiza.
+    reach: reachMapSync(state.points),
   });
 }
 

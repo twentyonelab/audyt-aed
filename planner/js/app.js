@@ -3,6 +3,7 @@
  */
 
 import { initState, state, subscribe } from './state.js';
+import { loadReach } from './reach.js';
 import { registerRoute, initRouter, render } from './router.js';
 import { h, mount, toast } from './ui.js';
 
@@ -19,7 +20,9 @@ registerRoute('#/field/:token', () => import('./views/field.js'));
 async function boot() {
   const root = document.getElementById('app');
   try {
-    await initState();
+    // Zasięgi dojścia wczytujemy razem ze stanem — każdy krok liczy pokrycie
+    // tym samym modelem, więc plik musi być na miejscu przed pierwszym renderem.
+    await Promise.all([initState(), loadReach()]);
   } catch (err) {
     console.error(err);
     mount(

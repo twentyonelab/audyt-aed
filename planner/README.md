@@ -53,6 +53,36 @@ przy kilkunastu punktach zlewały się z pinami. Zostają nazwy dzielnic i grani
 miasta. Karta punktu, setup i raport rysują dzielnice dalej, bo tam są
 jedynym kontekstem.
 
+### Zasięg dojścia liczony po sieci pieszej
+
+Od iteracji 3 „w zasięgu" nie znaczy już „w promieniu X metrów". Zasięg każdego
+AED to **izochrona z Mapbox Isochrone API** liczona po realnej sieci pieszej
+OSM, więc obrys jest nieregularny: tory, rzeka, ekran akustyczny czy ogrodzone
+osiedle odcinają teren, który w linii prostej leży blisko. Kliknięcie w punkt
+pokazuje **trasy dojścia, które ten obrys wyznaczyły** (Directions API,
+12 kierunków), drugie kliknięcie otwiera kartę.
+
+Różnica jest duża i to jest sedno: te same dane demo dają **62% pokrycia
+okręgiem i 51% po sieci pieszej**. Model kołowy zawyżał o 11 punktów
+procentowych, bo zakładał, że przez tory da się przejść.
+
+Trzy źródła zasięgu, w tej kolejności (`js/reach.js`):
+1. `data/reach-tychy.json` — cache projektu (46 izochron, 21 wiązek tras,
+   124 KB): powtarzalny, offline, bez zużywania limitu API,
+2. zapytanie do Mapboksa w locie — dla punktów dodanych lub przesuniętych
+   przez operatora; wynik żyje w pamięci sesji,
+3. okrąg — gdy nie ma ani cache, ani sieci; widok mówi wprost, że to
+   przybliżenie (`analysis.reachMode === 'radius'`).
+
+Cache odświeża `MAPBOX_TOKEN=pk.… node tools/fetch-reach.mjs` (pomija to,
+co już ma). Klucz cache to zaokrąglona współrzędna — `reachKey()` w model.js
+jest jedyną definicją, wspólną dla aplikacji i narzędzia.
+
+Kontury liczone są dla drabiny 2/3/5/8 min, więc jedno zapytanie obsługuje
+wszystkie standardy z setupu. Czas dojścia punktu popytu wypada w paśmie
+między konturami; wewnątrz pasma porządkuje go odległość w linii prostej —
+sieć daje pasmo, geometria kolejność w nim.
+
 ### Filtr dzielnicy (inwentaryzacja)
 
 Wybór w selekcie „**Dzielnica:**" podświetla jej granicę na mapie i wygasza
@@ -108,6 +138,7 @@ js/model.js           obliczenia: pokrycie, KPI, greedy, kompletność, reguły 
 js/state.js           stan + IndexedDB + blob store zdjęć
 js/router.js          hash routing + powłoka (top bar, sub bar, stepper)
 js/map.js             Mapbox GL + fallback SVG + statyczny renderer sceny
+js/reach.js           zasięgi dojścia po sieci pieszej (izochrony) + trasy
 js/ui.js              pomocniki DOM, modal, toast, CSV
 js/photos.js          pipeline zdjęć: EXIF → skalowanie → WebP → miniatura → SHA-256
 js/report.js          budowa treści raportu
@@ -117,6 +148,7 @@ js/zip.js             ZIP bez kompresji — eksport wszystkich kart naraz
 js/views/*.js         osiem widoków
 data/                 dane demo Tychy + granice
 tools/generate-demo.mjs  generator danych z kontrolą KPI
+tools/fetch-reach.mjs    pobiera izochrony i trasy z Mapboksa do cache projektu
 tools/smoke.mjs          test przeglądarkowy całej ścieżki
 tools/interactions.mjs   test interakcji mapy (klik, przeciąganie, cofnij, kadr)
 CONTRACT.md           interfejsy modułów (wiążące)

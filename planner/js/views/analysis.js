@@ -52,10 +52,10 @@ import {
   pillHtml,
   dotHtml,
   statusMeta,
-  disabledControl,
 } from '../ui.js';
 
 import { createMap } from '../map.js';
+import { reachMapFor, contoursFor, routesFor, reachCoverageOf } from '../reach.js';
 
 export const meta = {
   step: 2,
@@ -92,6 +92,8 @@ let map = null;
 let dragTimer = null;
 /** Ostatni kadr mapy — odtwarzany przy każdym przerysowaniu widoku. */
 let savedCamera = null;
+/** Punkt, którego zasięg i trasy dojścia są pokazane; przeżywa przerysowania. */
+let selectedReachId = null;
 
 /* ------------------------------------------------------------------ *
  * Pomocniki lokalne (rdzenia nie ruszamy)
@@ -216,6 +218,18 @@ export async function render(root, ctx) {
   const districts = project.districts || [];
   const defs = kpiDefs(standardMinutes);
 
+  /* ---------------- Zasięgi dojścia po sieci pieszej ---------------- */
+
+  // Izochrony dla wszystkiego, co może być czynnym AED albo kandydatem
+  // optymalizatora. Punkty spoza cache są dopytywane w Mapboksie; te, dla
+  // których się nie uda, model policzy okręgiem i widok o tym powie.
+  const reach = await reachMapFor(
+    [...state.points, ...(state.candidates || []), ...state.pendingProposals],
+    // Widok rysuje się od razu z tego, co jest w cache; brakujące izochrony
+    // dochodzą w tle i wtedy proszą o przerysowanie.
+    { onLater: () => render(root, ctx) }
+  );
+
   /* ---------------- Obliczenia (zawsze z model.js) ---------------- */
 
   /** Dwa przebiegi analyze() — „teraz" i „po planie" — dla podanej listy punktów. */
@@ -227,6 +241,7 @@ export async function render(root, ctx) {
       standardMinutes,
       population: project.population,
       mode,
+      reach,
     };
     return {
       now: analyze({ ...base, scenario: 'now' }),
@@ -241,6 +256,7 @@ export async function render(root, ctx) {
       standardMinutes,
       mode,
       excludeId,
+      reach,
     });
 
   /* ---------------- Sub bar: dwa przełączniki ---------------- */
@@ -322,6 +338,7 @@ export async function render(root, ctx) {
           standardMinutes,
           count,
           mode,
+          reach,
         });
 
         if (!picks.length) {
@@ -343,6 +360,113 @@ export async function render(root, ctx) {
     'ZAPROPONUJ NOWE PUNKTY'
   );
 
+  /* ---------------- „Jak czytać tę mapę" (uwaga klienta nr 5) ---------------- */
+
+  const legendRow = (dot, label, why) =>
+    h(
+      'div',
+      { style: { marginBottom: '5px' } },
+      h('div', { class: 'row', style: { gap: '6px' }, html: `${dot}<b style="font-size:12px">${label}</b>` }),
+      h('div', { class: 'note', style: { marginLeft: '14px' }, text: why })
+    );
+
+  const howToBox = h(
+    'div',
+    {},
+    h('p', {
+      class: 'note',
+      style: { marginTop: '0' },
+      text:
+        `Pytanie tej mapy brzmi: gdzie mieszkaniec NIE zdąży dobiec do AED w ${fmtMin(standardMinutes, 0)} ` +
+        'i wrócić. Każda kropka to skupisko ludności, obrys to realny zasięg jednego AED.',
+    }),
+    legendRow(dotHtml('ok'), 'zielona kropka', 'skupisko w zasięgu — ktoś zdąży przynieść AED na czas'),
+    legendRow(dotHtml('warn'), 'żółta kropka', 'na granicy standardu — wystarczy jedna zamknięta brama, żeby wypadło'),
+    legendRow(dotHtml('crit'), 'czerwona kropka', 'poza zasięgiem — to są ludzie, których nie obsługuje żadne AED'),
+    legendRow(dotHtml('square'), 'fioletowy kwadrat', 'propozycja nowej lokalizacji — przeciągnij, licznik przeliczy się na żywo'),
+    h('p', {
+      class: 'note',
+      text: 'Kliknij w punkt, żeby zobaczyć trasy dojścia, które wyznaczyły jego zasięg. Drugi klik otwiera kartę.',
+    })
+  );
+
+  /** Panel wybranego punktu — wypełniany po kliknięciu w pin. */
+  const selectedBox = h('div', {});
+
+  const paintSelected = () => {
+    if (!selectedReachId) {
+      mount(selectedBox);
+      return;
+    }
+    const point = (analysis.activePoints || []).find((p) => p.id === selectedReachId);
+    if (!point) {
+      mount(selectedBox);
+      return;
+    }
+    const routes = routesFor(point.lat, point.lon) || [];
+    const hasReach = !!(contoursFor(point.lat, point.lon) || {})[standardMinutes];
+    const longest = routes.reduce((best, r) => (r.distanceM > (best?.distanceM || 0) ? r : best), null);
+
+    mount(
+      selectedBox,
+      section(
+        'Wybrany punkt',
+        h('div', { style: { fontWeight: '600', fontSize: '12.5px' }, text: point.name || point.id }),
+        h('p', {
+          class: 'note',
+          text: hasReach
+            ? routes.length
+              ? `Obrys wyznaczyło ${fmtNum(routes.length)} tras dojścia po realnych chodnikach i ulicach; ` +
+                `najdłuższa ma ${fmtNum(longest.distanceM, 0)} m i ${fmtMin(longest.durationMin, 1)} marszu.`
+              : 'Zasięg policzony po sieci pieszej. Trasy poglądowe dla tego punktu nie są jeszcze w cache projektu.'
+            : 'Dla tego punktu nie udało się pobrać zasięgu z sieci — pokazany obszar jest przybliżeniem kołowym.',
+        }),
+        h(
+          'div',
+          { class: 'row', style: { gap: '6px' } },
+          h(
+            'button',
+            {
+              class: 'btn btn--sm btn--primary',
+              onclick: () => ctx.navigate(`#/card/${encodeURIComponent(point.id)}`),
+            },
+            'OTWÓRZ KARTĘ'
+          ),
+          h(
+            'button',
+            {
+              class: 'btn btn--sm',
+              onclick: () => {
+                selectedReachId = null;
+                paintScene();
+                paintSelected();
+              },
+            },
+            'Ukryj trasy'
+          )
+        )
+      )
+    );
+  };
+
+  /* ---------------- Metodyka (adaptuje się do źródła zasięgu) ---------------- */
+
+  const methodBox = h('p', { class: 'note' });
+
+  const paintMethod = (current) => {
+    const stats = current.reachStats || { network: 0, total: 0 };
+    methodBox.textContent =
+      current.reachMode === 'radius'
+        ? `Model przybliżony: prędkość marszu ${fmtNum(WALK_SPEED, 0)} m/min, współczynnik obejścia ` +
+          `${fmtNum(DETOUR, 2)}, promień ${fmtNum(coverageRadiusM(standardMinutes), 0)} m. ` +
+          'Nie udało się pobrać zasięgów po sieci pieszej — liczymy okręgami.'
+        : `Zasięg liczony po realnej sieci pieszej (izochrony ${fmtMin(standardMinutes, 0)} marszu): ` +
+          `${fmtNum(stats.network)} z ${fmtNum(stats.total)} czynnych AED ma obrys z sieci` +
+          (current.reachMode === 'mixed' ? ', pozostałe liczone są okręgiem.' : '. ') +
+          'Tory, rzeka czy ogrodzenie potrafią odciąć teren, który w linii prostej wygląda na bliski — ' +
+          'dlatego obrysy nie są kołami.';
+  };
+
   const panel = h(
     'aside',
     { class: 'panel panel--metrics' },
@@ -356,7 +480,9 @@ export async function render(root, ctx) {
     h(
       'div',
       { class: 'panel__body' },
+      section('Jak czytać tę mapę', howToBox),
       section('Wskaźniki — teraz → po planie', kpiBox),
+      selectedBox,
       section('Luki wg dzielnic', gapsBox),
       section('Propozycje nowych punktów', proposalsBox),
       section(
@@ -371,17 +497,7 @@ export async function render(root, ctx) {
         })
       ),
       h('div', { class: 'divider' }),
-      h('p', {
-        class: 'note',
-        text:
-          `Model uproszczony (SPEC §5): prędkość marszu ${fmtNum(WALK_SPEED, 0)} m/min, ` +
-          `współczynnik drogi ${fmtNum(DETOUR, 2)}, promień strefy ${fmtNum(
-            coverageRadiusM(standardMinutes),
-            0
-          )} m dla standardu ${fmtMin(standardMinutes, 0)} w jedną stronę. ` +
-          'Czas liczymy dla świadka, który biegnie po AED i wraca do poszkodowanego. ' +
-          'W iteracji 3 zastąpią to izochrony po sieci pieszej — wtedy strefy przestaną być okręgami.',
-      })
+      methodBox
     )
   );
 
@@ -682,6 +798,7 @@ export async function render(root, ctx) {
     paintKpis(now, plan, current);
     paintGaps(current);
     paintProposals(points, pending);
+    paintMethod(current);
     return current;
   };
 
@@ -690,7 +807,8 @@ export async function render(root, ctx) {
   if (ctx.setMeta) {
     ctx.setMeta(
       `${fmtNum(analysis.activeCount)} czynnych AED · pokrycie ${fmtPct(analysis.coveragePct, 0)} · ` +
-        `luki w ${fmtNum(analysis.gaps.length)} dzielnicach · promień ${fmtNum(analysis.radiusM, 0)} m`
+        `luki w ${fmtNum(analysis.gaps.length)} dzielnicach · ` +
+        (analysis.reachMode === 'radius' ? 'zasięg przybliżony okręgiem' : 'zasięg po sieci pieszej')
     );
   }
 
@@ -720,32 +838,29 @@ export async function render(root, ctx) {
         class: 'note',
         style: { marginTop: '4px' },
         text:
-          `Kryterium: ${fmtNum(analysis.radiusM, 0)} m od czynnego AED ` +
-          `(${fmtMin(standardMinutes, 0)} dojścia w jedną stronę).`,
+          analysis.reachMode === 'radius'
+            ? `Kryterium: ${fmtNum(analysis.radiusM, 0)} m w linii prostej od czynnego AED ` +
+              `(${fmtMin(standardMinutes, 0)} dojścia) — przybliżenie, brak danych o sieci pieszej.`
+            : `Kryterium: ${fmtMin(standardMinutes, 0)} marszu do AED po realnych chodnikach i ulicach. ` +
+              'Obrys to izochrona, nie okrąg.',
       })
     )
   );
+
+  const reachStats = reachCoverageOf(analysis.activePoints || [], reach);
 
   mapEl.appendChild(
     h(
       'div',
       { class: 'map-toolbar' },
-      disabledControl(
-        h('button', { class: 'btn btn--sm' }, 'IZOCHRONY — SIEĆ PIESZA'),
-        'poza zakresem iteracji 2'
-      )
-    )
-  );
-
-  // Prawy dolny róg, nie pasek narzędzi: tam etykieta nie nachodzi ani na
-  // podpowiedź na górze, ani na legendę po lewej.
-  mapEl.appendChild(
-    h(
-      'div',
-      { class: 'map-corner-note' },
       h('span', {
-        class: 'pill pill--warn',
-        text: 'DO OPRACOWANIA W ITERACJI 3 — izochrony po rzeczywistej sieci pieszej',
+        class: `pill ${reachStats.radius ? 'pill--warn' : 'pill--ok'}`,
+        title:
+          'Obrys zasięgu pochodzi z izochron Mapboksa liczonych po sieci pieszej OSM. ' +
+          'Punkty bez izochrony liczone są zapasowo okręgiem.',
+        text: reachStats.radius
+          ? `ZASIĘG PO SIECI PIESZEJ — ${fmtNum(reachStats.network)}/${fmtNum(reachStats.total)} AED`
+          : 'ZASIĘG PO REALNEJ SIECI PIESZEJ',
       })
     )
   );
@@ -803,25 +918,59 @@ export async function render(root, ctx) {
       .filter(Boolean);
   };
 
-  map.setScene({
-    boundary: state.boundary,
-    districts: state.districtsGeo,
-    // Obrysy dzielnic wyłączone: nakładały się na punkty popytu i utrudniały
-    // czytanie kolorów. Nazwy dzielnic zostają w panelu luk.
-    showDistricts: false,
-    // Okręgi stref wyłączone na życzenie: przy kilkunastu punktach zlewały się
-    // w plamę i zasłaniały punkty popytu, które niosą tę samą informację
-    // dokładniej (kolor = w zasięgu / blisko granicy / poza). Dane zostają —
-    // wystarczy przywrócić showCoverage: true, żeby wrócić do okręgów.
-    coverage: [],
-    showCoverage: false,
-    demand: analysis.demandStatus,
-    showDemand: true,
-    targetMinutes: standardMinutes,
-    points: buildPins(),
-    labels: buildGapLabels(analysis),
-    selectedId: state.ui.selectedPointId,
-  });
+  /**
+   * Obrysy realnego zasięgu dojścia dla czynnych AED bieżącego scenariusza.
+   * Wybrany punkt dostaje mocniejszy obrys — reszta zostaje tłem.
+   */
+  const buildReachShapes = () =>
+    (analysis.activePoints || [])
+      .map((p) => {
+        const contours = contoursFor(p.lat, p.lon);
+        const ring = contours && contours[standardMinutes];
+        if (!ring) return null;
+        return {
+          id: p.id,
+          kind: p.kind === 'proposed' ? 'proposed' : 'existing',
+          ring,
+          emphasis: p.id === selectedReachId,
+        };
+      })
+      .filter(Boolean);
+
+  /** Trasy dojścia wybranego punktu — pokazywane tylko dla niego. */
+  const buildRouteLines = () => {
+    if (!selectedReachId) return [];
+    const point = (analysis.activePoints || []).find((p) => p.id === selectedReachId);
+    if (!point) return [];
+    const routes = routesFor(point.lat, point.lon);
+    return routes ? routes.map((r) => r.line) : [];
+  };
+
+  const paintScene = () => {
+    map.setScene({
+      boundary: state.boundary,
+      districts: state.districtsGeo,
+      // Obrysy dzielnic wyłączone: nakładały się na punkty popytu i utrudniały
+      // czytanie kolorów. Nazwy dzielnic zostają w panelu luk.
+      showDistricts: false,
+      // Zamiast okręgów — realne izochrony po sieci pieszej (patrz reach.js).
+      coverage: [],
+      showCoverage: false,
+      reach: buildReachShapes(),
+      showReach: true,
+      routes: buildRouteLines(),
+      showRoutes: true,
+      demand: analysis.demandStatus,
+      showDemand: true,
+      targetMinutes: standardMinutes,
+      points: buildPins(),
+      labels: buildGapLabels(analysis),
+      selectedId: state.ui.selectedPointId,
+    });
+  };
+
+  paintScene();
+  paintSelected();
   // Widok przerysowuje się po każdej zmianie danych (przesunięcie pinu, nowa
   // rekomendacja). Kadr wraca taki, jaki był — bez odjeżdżania do całego miasta.
   if (savedCamera && typeof map.setCamera === 'function') map.setCamera(savedCamera);
@@ -829,12 +978,21 @@ export async function render(root, ctx) {
 
   /* ---------------- Interakcje mapy ---------------- */
 
+  // Klik w pin nie przerzuca już od razu do karty: najpierw pokazuje, SKĄD
+  // bierze się zasięg tego AED — obrys na mocno i trasy dojścia, które go
+  // narysowały. Do karty prowadzi przycisk w panelu i drugi klik w ten sam pin.
   map.on('pointclick', (pin) => {
     if (isPendingPin(pin.id)) {
       toast('Propozycja czeka na decyzję — po ✓ dostanie własną kartę punktu.');
       return;
     }
-    ctx.navigate(`#/card/${encodeURIComponent(pin.id)}`);
+    if (selectedReachId === pin.id) {
+      ctx.navigate(`#/card/${encodeURIComponent(pin.id)}`);
+      return;
+    }
+    selectedReachId = pin.id;
+    paintScene();
+    paintSelected();
   });
 
   // Klik w puste miejsce mapy dokłada rekomendację (fioletowy kwadrat) — to

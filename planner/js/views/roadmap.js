@@ -52,6 +52,7 @@ import {
 } from '../ui.js';
 
 import { renderSceneSvg } from '../map.js';
+import { reachMapSync } from '../reach.js';
 import { TODAY } from '../../config.js';
 
 export const meta = {
@@ -107,6 +108,10 @@ const CURVE = { height: 74, top: 26, bottom: 14, padPct: 4 };
 /* ------------------------------------------------------------------ *
  * Stan lokalny widoku (nie są to dane projektu)
  * ------------------------------------------------------------------ */
+
+/** Filtr priorytetu i klucz sortowania — stan widoku, nie dane projektu. */
+let prioFilter = 'all';
+let sortKey = 'priority';
 
 let resizeObserver = null;
 let releasePointer = null;
@@ -259,6 +264,26 @@ export async function render(root, ctx) {
   const { phases, total } = roadmapTotals(recommendations);
   const unassigned = recommendations.filter((rec) => phaseOf(rec) === null);
 
+  /**
+   * Filtr i sortowanie działają na tym, co widać w kolumnach — sumy kosztów
+   * i KPI zostają liczone z całości, bo plan nie zmienia się od tego, że
+   * operator zawęził widok.
+   */
+  const PRIO_RANK = { high: 0, medium: 1, low: 2 };
+  const arrange = (items) => {
+    const kept = prioFilter === 'all' ? items : items.filter((r) => r.priority === prioFilter);
+    const sorted = [...kept];
+    if (sortKey === 'cost') sorted.sort((a, b) => (b.cost || 0) - (a.cost || 0));
+    else if (sortKey === 'effect') sorted.sort((a, b) => pointGainPct(b.pointId) - pointGainPct(a.pointId));
+    else if (sortKey === 'point') sorted.sort((a, b) => recSource(a).localeCompare(recSource(b), 'pl'));
+    else sorted.sort((a, b) => (PRIO_RANK[a.priority] ?? 3) - (PRIO_RANK[b.priority] ?? 3) || (b.cost || 0) - (a.cost || 0));
+    return sorted;
+  };
+
+  // Ten sam zasięg co w kroku 2 — inaczej roadmapa obiecywałaby pokrycie,
+  // którego analiza nie potwierdza.
+  const reach = reachMapSync([...state.points, ...(state.candidates || [])]);
+
   const analysisBase = {
     demandPoints: state.demandPoints,
     districts: project.districts || [],
@@ -267,6 +292,7 @@ export async function render(root, ctx) {
     // Roadmapa raportuje pokrycie dzienne — to ono trafia do kamieni milowych
     // i na okładkę raportu. Tryb nocny zostaje w kroku 2.
     mode: 'day',
+    reach,
   };
 
   /** Scenariusz „plan" ograniczony do faz ≤ maxPhase (istniejące zawsze liczą się). */
@@ -406,6 +432,39 @@ export async function render(root, ctx) {
 
   /* ---------------- Nagłówek: KPI + kontrolki poza zakresem ---------------- */
 
+  /* ---------------- Filtr i sortowanie (uwaga klienta nr 6) ---------------- */
+
+  const prioChip = (id, label) =>
+    h(
+      'button',
+      {
+        class: `chip${prioFilter === id ? ' is-on' : ''}`,
+        onclick: () => {
+          prioFilter = id;
+          render(root, ctx);
+        },
+      },
+      `${label} (${fmtNum(id === 'all' ? recommendations.length : recommendations.filter((r) => r.priority === id).length)})`
+    );
+
+  const sortSelect = h(
+    'select',
+    {
+      class: 'select',
+      'aria-label': 'Sortowanie pozycji',
+      style: { width: 'auto', minWidth: '190px' },
+      onchange: (e) => {
+        sortKey = e.target.value;
+        render(root, ctx);
+      },
+    },
+    h('option', { value: 'priority' }, 'Sortuj: ważność'),
+    h('option', { value: 'cost' }, 'Sortuj: koszt malejąco'),
+    h('option', { value: 'effect' }, 'Sortuj: efekt na pokrycie'),
+    h('option', { value: 'point' }, 'Sortuj: punkt (A→Z)')
+  );
+  sortSelect.value = sortKey;
+
   const toolbar = h(
     'div',
     { class: 'row row--wrap', style: { marginBottom: '10px' } },
@@ -413,9 +472,64 @@ export async function render(root, ctx) {
       class: 'label-caps',
       text: `Plan wdrożenia — ${fmtNum(PHASES.length)} fazy · horyzont ${fmtNum(MONTHS)} mies.`,
     }),
+    h(
+      'div',
+      { class: 'chips', style: { margin: '0' } },
+      prioChip('all', 'Wszystkie'),
+      prioChip('high', 'Wysoki'),
+      prioChip('medium', 'Średni'),
+      prioChip('low', 'Niski')
+    ),
+    sortSelect,
     h('span', { class: 'spacer' }),
     disabledControl(h('button', { class: 'btn btn--sm' }, 'ZALEŻNOŚCI MIĘDZY ZADANIAMI')),
     disabledControl(h('button', { class: 'btn btn--sm' }, 'EKSPORT HARMONOGRAMU (MS PROJECT)'))
+  );
+
+  /* ---------------- Legenda: skąd się bierze to, co widać na ekranie ------- */
+
+  const legendItem = (title, body) =>
+    h(
+      'div',
+      {},
+      h('div', { style: { fontWeight: '600', fontSize: '12px' }, text: title }),
+      h('div', { class: 'note', text: body })
+    );
+
+  const legend = h(
+    'div',
+    { class: 'card', style: { marginBottom: '12px' } },
+    h('span', { class: 'label-caps', style: { display: 'block', marginBottom: '8px' }, text: 'Jak czytać ten plan' }),
+    h(
+      'div',
+      { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '10px 18px' } },
+      legendItem(
+        'Skąd biorą się pozycje',
+        'Etykieta „z reguły" — pozycja wygenerowana automatycznie z braku stwierdzonego w karcie punktu ' +
+          '(np. brak opiekuna, przeterminowany przegląd). „Ręczna" — dopisana przez audytora.'
+      ),
+      legendItem(
+        'Trzy fazy',
+        `${PHASE_META[1].title} (${PHASE_META[1].months}) to działania bezkosztowe i porządkowe; ` +
+          `${PHASE_META[2].title} (${PHASE_META[2].months}) to nowe urządzenia wewnętrzne; ` +
+          `${PHASE_META[3].title} (${PHASE_META[3].months}) to instalacje zewnętrzne wymagające przetargu.`
+      ),
+      legendItem(
+        'Kolory i znaczniki pozycji',
+        'Pigułka priorytetu (wysoki/średni/niski) pochodzi z reguły, która pozycję utworzyła. ' +
+          'Kwadrat = nowy punkt do montażu, kółko = modernizacja punktu już istniejącego.'
+      ),
+      legendItem(
+        '„+X% pokrycia"',
+        'O tyle wzrośnie odsetek mieszkańców mających AED w zasięgu standardu, jeśli ta pozycja zostanie ' +
+          'zrealizowana. Liczone tym samym modelem co krok 2 — po realnej sieci pieszej.'
+      ),
+      legendItem(
+        'Koszty',
+        'Kwota przy pozycji to koszt jednostkowy presetu (typu instalacji) albo koszt wpisany ręcznie. ' +
+          'Suma fazy i suma całości liczą się z tych pozycji — nic nie jest wpisane na sztywno.'
+      )
+    )
   );
 
   const kpis = h(
@@ -477,33 +591,35 @@ export async function render(root, ctx) {
   /* ---------------- Zawartość trybu ---------------- */
 
   const body = recommendations.length
-    ? buildKanban({ phases, unassigned, movePhase, addItem, deleteItem, afterPlan })
+    ? buildKanban({ phases, unassigned, movePhase, addItem, deleteItem, afterPlan, arrange })
     : emptyBox(
         'Roadmapa jest pusta — rekomendacje powstają w kartach punktów (krok 3), ' +
           'a zadania organizacyjne dodasz przyciskiem „+ pozycja" w kanbanie.'
       );
 
-  mount(root, toolbar, kpis, body, footer);
+  mount(root, toolbar, kpis, legend, body, footer);
 }
 
 /* ------------------------------------------------------------------ *
  * Tryb KANBAN
  * ------------------------------------------------------------------ */
 
-function buildKanban({ phases, unassigned, movePhase, addItem, deleteItem, afterPlan }) {
+function buildKanban({ phases, unassigned, movePhase, addItem, deleteItem, afterPlan, arrange }) {
   const columns = [
     ...PHASES.map((n) => ({
       phase: n,
       title: `${PHASE_META[n].label} — ${PHASE_META[n].title}`,
       months: PHASE_META[n].months,
-      items: phases[n].items,
+      items: arrange(phases[n].items),
+      totalItems: phases[n].items.length,
       cost: phases[n].cost,
     })),
     {
       phase: null,
       title: 'Nieprzypisane',
       months: 'bez terminu — przeciągnij do fazy',
-      items: unassigned,
+      items: arrange(unassigned),
+      totalItems: unassigned.length,
       cost: unassigned.reduce((sum, rec) => sum + (rec.cost || 0), 0),
     },
   ];
@@ -557,7 +673,9 @@ function kanbanColumn(column, actions) {
       h('div', {
         class: 'empty-state',
         style: { padding: '18px 8px' },
-        text: 'Pusto — przeciągnij tu pozycję.',
+        text: column.totalItems
+          ? `Filtr ukrył wszystkie ${fmtNum(column.totalItems)} pozycji tej fazy.`
+          : 'Pusto — przeciągnij tu pozycję.',
       })
     );
   }
@@ -588,7 +706,11 @@ function kanbanColumn(column, actions) {
         h('h3', { style: { flex: '1' }, text: column.title }),
         h('span', {
           html: pillHtml(
-            `${fmtNum(column.items.length)} poz.`,
+            // Przy aktywnym filtrze pokazujemy oba liczniki, żeby nikt nie
+            // wziął zawężonego widoku za rzeczywistą zawartość fazy.
+            column.totalItems !== column.items.length
+              ? `${fmtNum(column.items.length)} z ${fmtNum(column.totalItems)} poz.`
+              : `${fmtNum(column.items.length)} poz.`,
             column.phase ? PHASE_VARIANT[column.phase] : ''
           ),
         })
@@ -608,6 +730,12 @@ function kanbanColumn(column, actions) {
   );
 }
 
+/** Czy pozycja dotyczy montażu nowego AED, czy poprawy punktu, który już stoi. */
+function recKind(rec) {
+  const point = rec.pointId ? getPoint(rec.pointId) : null;
+  return point && point.kind === 'proposed' ? 'new' : 'update';
+}
+
 function kanbanCard(rec, onDelete) {
   const gain = pointGainPct(rec.pointId);
 
@@ -625,6 +753,11 @@ function kanbanCard(rec, onDelete) {
       h(
         'div',
         { class: 'row' },
+        h('span', {
+          class: `rec-kind rec-kind--${recKind(rec)}`,
+          title: recKind(rec) === 'new' ? 'Nowy punkt do montażu' : 'Modernizacja punktu istniejącego',
+          'aria-hidden': 'true',
+        }),
         h('h4', { style: { flex: '1' }, text: rec.text }),
         h('span', {
           html: pillHtml(PRIORITY_LABEL[rec.priority] || 'priorytet ?', PRIORITY_VARIANT[rec.priority] || ''),

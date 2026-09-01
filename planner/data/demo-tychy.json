@@ -862,20 +862,20 @@
       "recommendations": [],
       "notes": "",
       "phase": 2,
-      "gainPct": 3.9,
-      "gainWeight": 5000
+      "gainPct": 3.1,
+      "gainWeight": 4000
     },
     {
       "id": "NEW-002",
       "kind": "proposed",
       "status": "accepted",
-      "name": "SP nr 5",
+      "name": "MOPS",
       "address": null,
       "districtId": "srodmiescie",
-      "lat": 50.124685,
-      "lon": 18.990484,
+      "lat": 50.116883,
+      "lon": 18.970877,
       "presetId": "P1",
-      "candidateId": "C-03",
+      "candidateId": "C-23",
       "placement": null,
       "access": {
         "always": false,
@@ -914,20 +914,20 @@
       "recommendations": [],
       "notes": "",
       "phase": 2,
-      "gainPct": 3.3,
-      "gainWeight": 4181
+      "gainPct": 3,
+      "gainWeight": 3800
     },
     {
       "id": "NEW-003",
       "kind": "proposed",
       "status": "accepted",
-      "name": "Market — Urbanowice",
+      "name": "SP nr 3",
       "address": null,
-      "districtId": "urbanowice",
-      "lat": 50.110531,
-      "lon": 19.03736,
+      "districtId": "srodmiescie",
+      "lat": 50.120656,
+      "lon": 18.979703,
       "presetId": "P2",
-      "candidateId": "C-29",
+      "candidateId": "C-02",
       "placement": null,
       "access": {
         "always": true,
@@ -966,8 +966,8 @@
       "recommendations": [],
       "notes": "",
       "phase": 2,
-      "gainPct": 2.8,
-      "gainWeight": 3510
+      "gainPct": 2.7,
+      "gainWeight": 3399
     },
     {
       "id": "NEW-004",
@@ -1018,8 +1018,8 @@
       "recommendations": [],
       "notes": "",
       "phase": 3,
-      "gainPct": 3.5,
-      "gainWeight": 4400
+      "gainPct": 2.5,
+      "gainWeight": 3200
     },
     {
       "id": "NEW-005",
@@ -1070,8 +1070,8 @@
       "recommendations": [],
       "notes": "",
       "phase": 3,
-      "gainPct": 3.6,
-      "gainWeight": 4552
+      "gainPct": 2.2,
+      "gainWeight": 2771
     }
   ],
   "candidates": [
@@ -1622,7 +1622,7 @@
       "id": "plan-NEW-002",
       "pointId": "NEW-002",
       "rule": "install",
-      "text": "Montaż AED — SP nr 5 (Wewnętrzny — budynek publiczny)",
+      "text": "Montaż AED — MOPS (Wewnętrzny — budynek publiczny)",
       "priority": "high",
       "cost": 8500,
       "owner": "wykonawca",
@@ -1636,7 +1636,7 @@
       "id": "plan-NEW-003",
       "pointId": "NEW-003",
       "rule": "install",
-      "text": "Montaż AED — Market — Urbanowice (Wewnętrzny — obiekt 24/7)",
+      "text": "Montaż AED — SP nr 3 (Wewnętrzny — obiekt 24/7)",
       "priority": "high",
       "cost": 9000,
       "owner": "wykonawca",

@@ -192,6 +192,106 @@ export function activePoints(points, scenario = 'now', mode = 'day') {
 }
 
 /* ------------------------------------------------------------------ *
+ * Zasięg dojścia: wielokąt izochrony albo okrąg
+ * ------------------------------------------------------------------ */
+
+/**
+ * Klucz zasięgu w cache — zaokrąglona współrzędna, 5 miejsc ≈ 1 m.
+ * Ta jedna definicja obowiązuje model, moduł reach.js i narzędzie
+ * tools/fetch-reach.mjs; rozjazd oznaczałby cichy brak trafień w cache.
+ */
+export function reachKey(lat, lon) {
+  const r5 = (v) => (Math.round(v * 1e5) / 1e5).toFixed(5);
+  return `${r5(lat)},${r5(lon)}`;
+}
+
+function ringBbox(ring) {
+  let w = 180;
+  let s = 90;
+  let e = -180;
+  let n = -90;
+  for (const [lon, lat] of ring) {
+    if (lon < w) w = lon;
+    if (lon > e) e = lon;
+    if (lat < s) s = lat;
+    if (lat > n) n = lat;
+  }
+  return [w, s, e, n];
+}
+
+function inRing(lat, lon, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    if (yi > lat !== yj > lat && lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+/**
+ * Sonda zasięgu jednego AED.
+ *
+ * Z izochroną: „w zasięgu" znaczy „wewnątrz konturu standardu", a czas dojścia
+ * wypada w paśmie między sąsiednimi konturami. Wewnątrz pasma porządkuje punkty
+ * odległość w linii prostej — sieć daje pasmo, geometria kolejność w nim.
+ * Bez izochrony: stary okrąg, oznaczony jako przybliżenie.
+ *
+ * @param {{lat:number, lon:number}} site
+ * @param {object|null} contours {2: ring, 3: ring, …} — pierścienie [lon,lat]
+ */
+function makeProbe(site, contours, standardMinutes, radiusM) {
+  const ladder = contours
+    ? Object.keys(contours)
+        .map(Number)
+        .filter((m) => Number.isFinite(m) && Array.isArray(contours[m]) && contours[m].length > 2)
+        .sort((a, b) => a - b)
+    : [];
+
+  const standardRing = contours ? contours[standardMinutes] : null;
+  if (!ladder.length || !standardRing) {
+    return {
+      network: false,
+      covers: (dp) => distanceM(dp, site) <= radiusM,
+      minutes: (dp) => walkTimeMin(distanceM(dp, site)),
+    };
+  }
+
+  const bands = ladder.map((m) => ({ minutes: m, ring: contours[m], bbox: ringBbox(contours[m]) }));
+  const outerMinutes = ladder[ladder.length - 1];
+  const stdBand = bands.find((b) => b.minutes === standardMinutes);
+
+  const hit = (band, dp) => {
+    const [w, s, e, n] = band.bbox;
+    if (dp.lon < w || dp.lon > e || dp.lat < s || dp.lat > n) return false;
+    return inRing(dp.lat, dp.lon, band.ring);
+  };
+
+  return {
+    network: true,
+    covers: (dp) => hit(stdBand, dp),
+    minutes: (dp) => {
+      const straight = walkTimeMin(distanceM(dp, site));
+      let prev = 0;
+      for (const band of bands) {
+        if (hit(band, dp)) {
+          // czas mieści się w (prev, band.minutes]
+          return Math.min(band.minutes, Math.max(prev + 0.05, straight));
+        }
+        prev = band.minutes;
+      }
+      // poza całą drabiną — realny czas jest co najmniej tak duży jak ostatni kontur
+      return Math.max(straight, outerMinutes + 0.1);
+    },
+  };
+}
+
+/** Sondy dla listy AED; `reach` to mapa klucz → kontury (może być pusta). */
+function makeProbes(sites, reach, standardMinutes, radiusM) {
+  return sites.map((p) => makeProbe(p, reach ? reach[reachKey(p.lat, p.lon)] : null, standardMinutes, radiusM));
+}
+
+/* ------------------------------------------------------------------ *
  * Coverage + KPIs
  * ------------------------------------------------------------------ */
 
@@ -217,6 +317,8 @@ function median(sortedValues, weights) {
  * @param {number} args.population    project population (for per-10k)
  * @param {'now'|'plan'} args.scenario
  * @param {'day'|'night'} args.mode
+ * @param {object|null} args.reach  mapa reachKey → kontury izochron; brak wpisu
+ *                                  dla punktu = liczenie okręgiem
  */
 export function analyze({
   demandPoints,
@@ -226,9 +328,12 @@ export function analyze({
   population = 0,
   scenario = 'now',
   mode = 'day',
+  reach = null,
 }) {
   const radiusM = coverageRadiusM(standardMinutes);
   const active = activePoints(points, scenario, mode);
+  const probes = makeProbes(active, reach, standardMinutes, radiusM);
+  const networkCount = probes.filter((p) => p.network).length;
 
   const perDistrict = new Map();
   for (const d of districts) {
@@ -250,13 +355,13 @@ export function analyze({
 
   for (let i = 0; i < demandPoints.length; i++) {
     const dp = demandPoints[i];
-    let nearest = Infinity;
-    for (const p of active) {
-      const d = distanceM(dp, p);
-      if (d < nearest) nearest = d;
+    let nearestMin = Infinity;
+    let covered = false;
+    for (const probe of probes) {
+      if (!covered && probe.covers(dp)) covered = true;
+      const m = probe.minutes(dp);
+      if (m < nearestMin) nearestMin = m;
     }
-    const nearestMin = Number.isFinite(nearest) ? walkTimeMin(nearest) : Infinity;
-    const covered = Number.isFinite(nearest) && nearest <= radiusM;
 
     status[i] = {
       lat: dp.lat,
@@ -324,6 +429,9 @@ export function analyze({
     radiusM,
     scenario,
     mode,
+    /** 'network' — wszystkie czynne AED mają izochronę; 'mixed' / 'radius' — reszta liczona okręgiem. */
+    reachMode: networkCount === active.length && active.length ? 'network' : networkCount ? 'mixed' : 'radius',
+    reachStats: { network: networkCount, total: active.length },
     activeCount: active.length,
     activePoints: active,
     coveragePct: totalWeight ? (100 * coveredWeight) / totalWeight : 0,
@@ -354,6 +462,7 @@ export function proposeNewPoints({
   standardMinutes = 2,
   count = 2,
   mode = 'day',
+  reach = null,
 }) {
   const radiusM = coverageRadiusM(standardMinutes);
   const base = activePoints(points, 'plan', mode);
@@ -361,10 +470,15 @@ export function proposeNewPoints({
     points.filter((p) => p.candidateId).map((p) => p.candidateId)
   );
 
-  const covered = demandPoints.map((dp) =>
-    base.some((p) => distanceM(dp, p) <= radiusM)
-  );
+  const baseProbes = makeProbes(base, reach, standardMinutes, radiusM);
+  const covered = demandPoints.map((dp) => baseProbes.some((probe) => probe.covers(dp)));
   const totalWeight = demandPoints.reduce((s, dp) => s + dp.weight, 0) || 1;
+
+  // Sonda kandydata liczona raz — greedy przechodzi listę tyle razy, ile
+  // punktów wybiera, a budowa bboxów konturu nie jest darmowa.
+  const candProbes = new Map(
+    candidates.map((c) => [c.id, makeProbe(c, reach ? reach[reachKey(c.lat, c.lon)] : null, standardMinutes, radiusM)])
+  );
 
   const chosen = [];
   const taken = new Set(usedIds);
@@ -375,10 +489,11 @@ export function proposeNewPoints({
 
     for (const cand of candidates) {
       if (taken.has(cand.id)) continue;
+      const probe = candProbes.get(cand.id);
       let gain = 0;
       for (let i = 0; i < demandPoints.length; i++) {
         if (covered[i]) continue;
-        if (distanceM(demandPoints[i], cand) <= radiusM) gain += demandPoints[i].weight;
+        if (probe.covers(demandPoints[i])) gain += demandPoints[i].weight;
       }
       if (gain > bestGain) {
         bestGain = gain;
@@ -389,8 +504,9 @@ export function proposeNewPoints({
     if (!best || bestGain <= 0) break;
 
     taken.add(best.id);
+    const bestProbe = candProbes.get(best.id);
     for (let i = 0; i < demandPoints.length; i++) {
-      if (!covered[i] && distanceM(demandPoints[i], best) <= radiusM) covered[i] = true;
+      if (!covered[i] && bestProbe.covers(demandPoints[i])) covered[i] = true;
     }
 
     chosen.push({
@@ -412,17 +528,24 @@ export function proposeNewPoints({
  * Coverage gain of a single site given the current plan — used for live
  * recalculation while a proposed pin is being dragged.
  */
-export function coverageGainFor(site, { demandPoints, points, standardMinutes, mode = 'day', excludeId = null }) {
+export function coverageGainFor(
+  site,
+  { demandPoints, points, standardMinutes, mode = 'day', excludeId = null, reach = null }
+) {
   const radiusM = coverageRadiusM(standardMinutes);
   const base = activePoints(points, 'plan', mode).filter((p) => p.id !== excludeId);
   const totalWeight = demandPoints.reduce((s, dp) => s + dp.weight, 0) || 1;
+
+  const siteProbe = makeProbe(site, reach ? reach[reachKey(site.lat, site.lon)] : null, standardMinutes, radiusM);
+  const baseProbes = makeProbes(base, reach, standardMinutes, radiusM);
+
   let gain = 0;
   for (const dp of demandPoints) {
-    if (distanceM(dp, site) > radiusM) continue;
-    if (base.some((p) => distanceM(dp, p) <= radiusM)) continue;
+    if (!siteProbe.covers(dp)) continue;
+    if (baseProbes.some((probe) => probe.covers(dp))) continue;
     gain += dp.weight;
   }
-  return { gainWeight: Math.round(gain), gainPct: (100 * gain) / totalWeight };
+  return { gainWeight: Math.round(gain), gainPct: (100 * gain) / totalWeight, network: siteProbe.network };
 }
 
 /* ------------------------------------------------------------------ *

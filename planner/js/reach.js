@@ -1,0 +1,194 @@
+/**
+ * reach.js — zasięgi dojścia pieszego po realnej sieci ulic i chodników.
+ *
+ * Zastępuje okrąg „promień = czas × prędkość ÷ współczynnik obejścia" realnym
+ * obrysem izochrony z Mapboksa, policzonym po sieci pieszej OSM. Różnica jest
+ * merytoryczna, nie kosmetyczna: tory, rzeka, ekran akustyczny albo ogrodzone
+ * osiedle potrafią odciąć teren, który w linii prostej leży 200 m od AED,
+ * a pieszo jest 900 m. Okrąg pokazywał tam pokrycie, którego nie ma.
+ *
+ * Trzy źródła zasięgu, w tej kolejności:
+ *   1. cache projektu (data/reach-tychy.json) — powtarzalny, offline, bez API,
+ *   2. zapytanie do Mapboksa w locie — dla punktów dodanych lub przesuniętych
+ *      przez operatora; wynik zostaje w pamięci sesji,
+ *   3. okrąg — gdy nie ma ani cache, ani sieci. Analiza działa dalej, ale
+ *      widok mówi wprost, że to przybliżenie.
+ *
+ * Klucz cache to zaokrąglona współrzędna (5 miejsc ≈ 1 m) — identycznie jak
+ * w tools/fetch-reach.mjs. Przesunięcie pinu o metr trafia w ten sam wpis,
+ * realne przesunięcie wymusza nowe liczenie.
+ */
+
+import { MAPBOX_TOKEN } from '../config.js';
+// Klucz cache mieszka w model.js, żeby aplikacja, model i narzędzie
+// pobierające izochrony liczyły go dokładnie tak samo.
+import { reachKey } from './model.js';
+
+export { reachKey };
+
+const REACH_FILE = 'data/reach-tychy.json';
+
+/** Po tylu ms rezygnujemy z zapytania o izochronę i schodzimy do okręgu. */
+const FETCH_TIMEOUT_MS = 6000;
+
+let cache = null; // {meta, contours, routes}
+let loading = null;
+const live = new Map(); // klucz → {contours} dopytane w locie
+const pending = new Map(); // klucz → Promise, żeby nie pytać dwa razy o to samo
+
+export async function loadReach() {
+  if (cache) return cache;
+  if (!loading) {
+    loading = fetch(REACH_FILE)
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null)
+      .then((data) => {
+        cache = data || { meta: {}, contours: {}, routes: {} };
+        return cache;
+      });
+  }
+  return loading;
+}
+
+/** Czy w ogóle mamy z czego liczyć po sieci (cache albo token do zapytań). */
+export function reachAvailable() {
+  return !!(cache && Object.keys(cache.contours || {}).length) || tokenUsable();
+}
+
+function tokenUsable() {
+  return typeof MAPBOX_TOKEN === 'string' && MAPBOX_TOKEN.startsWith('pk.');
+}
+
+/** Kontury dla lokalizacji: {2: ring, 3: ring, 5: ring, 8: ring} albo null. */
+export function contoursFor(lat, lon) {
+  const key = reachKey(lat, lon);
+  if (live.has(key)) return live.get(key);
+  return (cache && cache.contours && cache.contours[key]) || null;
+}
+
+/** Trasy dojścia, które narysowały obrys — tylko z cache projektu. */
+export function routesFor(lat, lon) {
+  const key = reachKey(lat, lon);
+  return (cache && cache.routes && cache.routes[key]) || null;
+}
+
+/** Drabina konturów, na której liczony jest cache (do etykiet w UI). */
+export function contourLadder() {
+  return (cache && cache.meta && cache.meta.contours) || [2, 3, 5, 8];
+}
+
+/**
+ * Dopytuje Mapboksa o izochronę dla jednej lokalizacji. Zwraca kontury albo
+ * null (brak tokenu, brak sieci, błąd API) — wywołujący ma wtedy zejść
+ * do okręgu, a nie przerywać analizy.
+ */
+export async function fetchReach(lat, lon) {
+  const key = reachKey(lat, lon);
+  const known = contoursFor(lat, lon);
+  if (known) return known;
+  if (!tokenUsable()) return null;
+  if (pending.has(key)) return pending.get(key);
+
+  const ladder = contourLadder().join(',');
+  const url =
+    `https://api.mapbox.com/isochrone/v1/mapbox/walking/${lon.toFixed(5)},${lat.toFixed(5)}` +
+    `?contours_minutes=${ladder}&polygons=true&denoise=1&generalize=12&access_token=${MAPBOX_TOKEN}`;
+
+  // Twardy limit czasu: bez niego jedno wiszące zapytanie zatrzymywałoby
+  // przerysowanie widoku po dodaniu punktu.
+  const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS) : null;
+
+  const task = fetch(url, ctrl ? { signal: ctrl.signal } : undefined)
+    .then((r) => (r.ok ? r.json() : null))
+    .then((json) => {
+      if (!json || !json.features) return null;
+      const out = {};
+      for (const f of json.features) {
+        const minutes = f.properties && f.properties.contour;
+        if (!minutes || !f.geometry) continue;
+        const polys =
+          f.geometry.type === 'MultiPolygon' ? f.geometry.coordinates : [f.geometry.coordinates];
+        let biggest = null;
+        for (const poly of polys) {
+          if (poly[0] && (!biggest || poly[0].length > biggest.length)) biggest = poly[0];
+        }
+        if (biggest) out[minutes] = biggest;
+      }
+      if (!Object.keys(out).length) return null;
+      live.set(key, out);
+      return out;
+    })
+    .catch(() => null)
+    .finally(() => {
+      if (timer) clearTimeout(timer);
+      pending.delete(key);
+    });
+
+  pending.set(key, task);
+  return task;
+}
+
+/**
+ * Uzupełnia zasięgi dla listy lokalizacji i zwraca mapę klucz → kontury,
+ * gotową do podania modelowi. Lokalizacje bez zasięgu po prostu w niej nie ma —
+ * model policzy je okręgiem.
+ *
+ * @param {Array<{lat:number, lon:number}>} sites
+ * @param {boolean} allowFetch czy wolno dopytywać Mapboksa (domyślnie tak)
+ * @param {Function|null} onLater wołane, gdy zasięg dociągnięty w tle jest gotowy
+ */
+export async function reachMapFor(sites, { allowFetch = true, onLater = null } = {}) {
+  await loadReach();
+  const out = {};
+  const missing = [];
+
+  for (const s of sites) {
+    if (!Number.isFinite(s.lat) || !Number.isFinite(s.lon)) continue;
+    const key = reachKey(s.lat, s.lon);
+    if (out[key]) continue;
+    const known = contoursFor(s.lat, s.lon);
+    if (known) out[key] = known;
+    else missing.push(s);
+  }
+
+  // Brakujące zasięgi dociągamy W TLE. Widok nie może czekać na sieć: po
+  // dodaniu punktu ma się przerysować natychmiast (nowy punkt leci wtedy
+  // okręgiem), a gdy izochrona dojdzie, `onLater` prosi o kolejny render.
+  // Kolejne wywołanie znajdzie ją już w cache, więc pętli nie ma.
+  if (allowFetch && missing.length && tokenUsable()) {
+    Promise.all(missing.map((s) => fetchReach(s.lat, s.lon)))
+      .then((results) => {
+        if (results.some(Boolean) && typeof onLater === 'function') onLater();
+      })
+      .catch(() => {});
+  }
+
+  return out;
+}
+
+/**
+ * Wersja synchroniczna — buduje mapę zasięgów wyłącznie z tego, co już jest
+ * wczytane (cache projektu + wyniki dopytane wcześniej w tej sesji).
+ * Dla widoków, które renderują się synchronicznie: roadmapa, raport, pulpit.
+ * Dzięki temu KPI w każdym kroku liczy się tym samym zasięgiem — inaczej
+ * krok 2 mówiłby 51%, a roadmapa 62% i nikt by nie wiedział, któremu wierzyć.
+ */
+export function reachMapSync(sites) {
+  const out = {};
+  for (const s of sites) {
+    if (!Number.isFinite(s.lat) || !Number.isFinite(s.lon)) continue;
+    const c = contoursFor(s.lat, s.lon);
+    if (c) out[reachKey(s.lat, s.lon)] = c;
+  }
+  return out;
+}
+
+/** Ile lokalizacji z listy ma realny zasięg, a ile poleci okręgiem. */
+export function reachCoverageOf(sites, reachMap) {
+  let network = 0;
+  for (const s of sites) {
+    if (reachMap[reachKey(s.lat, s.lon)]) network += 1;
+  }
+  return { network, total: sites.length, radius: sites.length - network };
+}

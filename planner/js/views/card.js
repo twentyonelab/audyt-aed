@@ -1,9 +1,13 @@
 /**
  * views/card.js — Krok 3: Karta punktu (SPEC §6.5, trasa '#/card/:id').
  *
- * Dwie kolumny: sekcje karty (880 px, przewijalne) + panel boczny (520 px).
- * Osiem sekcji 1–8, każda z paskiem statusu po lewej (.card-section--crit /
- * --warn / bez modyfikatora).
+ * Dwie kolumny: sekcje karty (przewijalne) + panel boczny.
+ * Dziewięć sekcji, każda z paskiem statusu po lewej (.card-section--crit /
+ * --warn / bez modyfikatora) i zwijana klikiem w nagłówek.
+ *
+ * Kolejność jest celowa: 1–6 to dane zbierane w terenie, 7–9 to podsumowanie
+ * (preset i koszt, checklista zgodności, ocena ekspercka) — czyli wnioski
+ * z tych danych, a nie parametry wejściowe.
  *
  * Wszystkie liczby pochodzą z model.js — widok niczego nie liczy sam:
  *   • completeness()        — pasek kompletności i braki pól/zdjęć,
@@ -840,8 +844,8 @@ export async function render(root, ctx) {
     );
 
   const section2 = cardSection({
-    num: 2,
-    title: 'Preset punktu',
+    num: 7,
+    title: 'Preset i koszt jednostkowy',
     level: preset ? '' : 'crit',
     pills: preset ? [{ text: fmtCost(preset.cost), variant: '' }] : [],
     children: [
@@ -889,11 +893,11 @@ export async function render(root, ctx) {
   const inert = isProposed;
   const inertPills = inert ? [{ text: 'PO MONTAŻU', variant: 'phase3' }] : [];
   const inertNote = inert
-    ? note('Punkt jest jeszcze propozycją — te dane uzupełnia się po montażu urządzenia. Wytyczne wdrożeniowe znajdziesz w sekcji 7.')
+    ? note('Punkt jest jeszcze propozycją — te dane uzupełnia się po montażu urządzenia. Wytyczne wdrożeniowe znajdziesz w sekcji 6.')
     : null;
 
   const section3 = cardSection({
-    num: 3,
+    num: 2,
     title: 'Dostępność',
     level: levelOf(3),
     pills: inertPills,
@@ -928,7 +932,7 @@ export async function render(root, ctx) {
   });
 
   const section4 = cardSection({
-    num: 4,
+    num: 3,
     title: 'Opiekun punktu',
     level: levelOf(4),
     pills: inertPills,
@@ -950,7 +954,7 @@ export async function render(root, ctx) {
   });
 
   const section5 = cardSection({
-    num: 5,
+    num: 4,
     title: 'Oznakowanie',
     level: levelOf(5),
     pills: inertPills,
@@ -977,7 +981,7 @@ export async function render(root, ctx) {
   const padsOverdue = isOverdueMonth(point.device?.padsDue);
 
   const section6 = cardSection({
-    num: 6,
+    num: 5,
     title: 'Urządzenie',
     level: levelOf(6),
     pills: [
@@ -1023,7 +1027,7 @@ export async function render(root, ctx) {
 
   const section7 = isProposed
     ? cardSection({
-        num: 7,
+        num: 6,
         title: `Wytyczne montażu — preset ${preset ? preset.id : '—'}`,
         level: preset && (preset.checklist || []).length ? '' : 'warn',
         pills: [{ text: 'SPECYFIKACJA WDROŻENIOWA', variant: 'phase3' }],
@@ -1046,7 +1050,7 @@ export async function render(root, ctx) {
         ],
       })
     : cardSection({
-        num: 7,
+        num: 6,
         title: 'Rejestracja w systemie CPR 112/999',
         level: levelOf(7),
         children: [
@@ -1315,13 +1319,21 @@ export async function render(root, ctx) {
     'div',
     { class: 'card-column' },
     header,
+    // Najpierw to, co audytor zastaje w terenie…
     section1,
-    section2,
     section3,
     section4,
     section5,
     section6,
     section7,
+    // …a dopiero potem wnioski. Preset i checklista to wynik tych danych,
+    // nie parametr wejściowy — klient słusznie zwrócił uwagę, że stały wyżej.
+    h('div', {
+      class: 'label-caps',
+      style: { margin: '18px 0 8px', color: 'var(--ink-2)' },
+      text: 'Podsumowanie — co z tych danych wynika',
+    }),
+    section2,
     section8,
     section9
   );

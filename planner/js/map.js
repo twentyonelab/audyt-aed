@@ -103,6 +103,7 @@ const COLORS = {
   near: '#e8b33c',
   highlight: 'rgba(76,175,125,0.12)',
   highlightLine: '#4caf7d',
+  route: '#2f6f8f',
 };
 
 function ringPath(ring, project) {
@@ -153,6 +154,34 @@ export function renderSceneSvg(scene, opts = {}) {
       parts.push(
         `<path d="${ringPath(f.geometry.coordinates[0], project)}" fill="${COLORS.highlight}" stroke="${COLORS.highlightLine}" stroke-width="1.6"/>`
       );
+    }
+  }
+
+  // Realne zasięgi dojścia (izochrony) — nieregularne obrysy po sieci pieszej.
+  if (scene.reach && opts.showReach !== false) {
+    for (const r of scene.reach) {
+      if (!r.ring || r.ring.length < 3) continue;
+      const plan = r.kind === 'proposed';
+      parts.push(
+        `<path d="${ringPath(r.ring, project)}" fill="${plan ? COLORS.coveragePlan : COLORS.coverage}" ` +
+          `stroke="${plan ? COLORS.coveragePlanLine : COLORS.coverageLine}" stroke-width="${
+            r.emphasis ? 1.6 : 0.9
+          }" stroke-linejoin="round"${plan ? ' stroke-dasharray="3 2"' : ''}/>`
+      );
+    }
+  }
+
+  // Trasy, które narysowały obrys — cienkie, żeby nie konkurowały z danymi.
+  if (scene.routes && opts.showRoutes !== false) {
+    for (const line of scene.routes) {
+      if (!line || line.length < 2) continue;
+      const d = line
+        .map(([lon, lat], i) => {
+          const [x, y] = project(lon, lat);
+          return `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`;
+        })
+        .join('');
+      parts.push(`<path d="${d}" fill="none" stroke="${COLORS.route}" stroke-width="1.1" stroke-opacity="0.65"/>`);
     }
   }
 
@@ -269,6 +298,8 @@ function createMapboxMap(container, opts) {
     src('districts', emptyFc);
     src('district-hl', emptyFc);
     src('coverage', emptyFc);
+    src('reach', emptyFc);
+    src('routes', emptyFc);
     src('demand', emptyFc);
 
     map.addLayer({ id: 'districts-fill', type: 'fill', source: 'districts', paint: { 'fill-color': '#e8e8e4', 'fill-opacity': 0.55 } });
@@ -293,6 +324,33 @@ function createMapboxMap(container, opts) {
         'line-width': 1,
         'line-dasharray': [2, 1.5],
       },
+    });
+    // Realny zasięg dojścia po sieci pieszej — pod punktami popytu,
+    // żeby kolory kropek pozostały czytelne.
+    map.addLayer({
+      id: 'reach-fill',
+      type: 'fill',
+      source: 'reach',
+      paint: {
+        'fill-color': ['case', ['==', ['get', 'kind'], 'proposed'], '#8a6fc7', '#4caf7d'],
+        'fill-opacity': ['case', ['get', 'emphasis'], 0.22, 0.13],
+      },
+    });
+    map.addLayer({
+      id: 'reach-line',
+      type: 'line',
+      source: 'reach',
+      paint: {
+        'line-color': ['case', ['==', ['get', 'kind'], 'proposed'], '#8a6fc7', '#4caf7d'],
+        'line-width': ['case', ['get', 'emphasis'], 2, 1],
+      },
+    });
+    map.addLayer({
+      id: 'routes-line',
+      type: 'line',
+      source: 'routes',
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#2f6f8f', 'line-width': 1.8, 'line-opacity': 0.7 },
     });
     map.addLayer({
       id: 'demand-dots',
@@ -352,6 +410,28 @@ function createMapboxMap(container, opts) {
         properties: { kind: c.kind || 'existing' },
         geometry: circlePolygon(c.lat, c.lon, c.radiusM),
       })),
+    });
+
+    src('reach', {
+      type: 'FeatureCollection',
+      features: (scene.showReach === false ? [] : scene.reach || [])
+        .filter((r) => r.ring && r.ring.length > 2)
+        .map((r) => ({
+          type: 'Feature',
+          properties: { kind: r.kind || 'existing', emphasis: !!r.emphasis },
+          geometry: { type: 'Polygon', coordinates: [r.ring] },
+        })),
+    });
+
+    src('routes', {
+      type: 'FeatureCollection',
+      features: (scene.showRoutes === false ? [] : scene.routes || [])
+        .filter((line) => line && line.length > 1)
+        .map((line) => ({
+          type: 'Feature',
+          properties: {},
+          geometry: { type: 'LineString', coordinates: line },
+        })),
     });
 
     src('demand', {

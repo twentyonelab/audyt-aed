@@ -31,6 +31,7 @@ import {
 
 import { h, mount, toast, dotHtml, disabledControl, pickFile, parseCsv } from '../ui.js';
 import { createMap, bboxOf } from '../map.js';
+import { reachMapSync } from '../reach.js';
 import { TODAY } from '../../config.js';
 
 export const meta = {
@@ -203,6 +204,9 @@ export async function render(root, ctx) {
     population: project.population,
     scenario: 'now',
     mode: 'day',
+    // Ten sam zasięg co w kroku 2 — pulpit i setup nie mogą pokazywać
+    // innego pokrycia niż analiza.
+    reach: reachMapSync(state.points),
   });
 
   if (ctx.setMeta) {

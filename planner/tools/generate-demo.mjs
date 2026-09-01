@@ -17,6 +17,7 @@ import {
   proposeNewPoints,
   offsetLatLon,
   coverageRadiusM,
+  reachKey,
   fmtMin,
 } from '../js/model.js';
 
@@ -319,7 +320,7 @@ function buildExistingPoints() {
  * chosen site sits in Paprocany / Żwaków (the two outdoor units in the demo
  * roadmap), otherwise they fall back to the names used in the makieta.
  */
-function buildProposedPoints(existing, candidates, demandPoints) {
+function buildProposedPoints(existing, candidates, demandPoints, reach) {
   const picks = proposeNewPoints({
     demandPoints,
     points: existing,
@@ -327,6 +328,7 @@ function buildProposedPoints(existing, candidates, demandPoints) {
     standardMinutes: STANDARD_MINUTES,
     count: PROPOSED_SLOTS.length,
     mode: 'day',
+    reach,
   });
 
   const outdoorFirst = ['paprocany', 'zwakow'];
@@ -512,7 +514,18 @@ function task(id, text, phase, owner, cost, startMonth, lengthMonths) {
  * Report
  * ================================================================== */
 
-function report(districtsGeo, demand, points, candidates, recs) {
+/**
+ * Cache izochron, jeśli jest — ten sam plik, którego używa aplikacja.
+ * Bez niego generator liczy okręgami i mówi o tym w raporcie.
+ */
+function loadReach() {
+  const file = join(DATA, 'reach-tychy.json');
+  if (!existsSync(file)) return null;
+  const raw = JSON.parse(readFileSync(file, 'utf8'));
+  return raw.contours && Object.keys(raw.contours).length ? raw.contours : null;
+}
+
+function report(districtsGeo, demand, points, candidates, recs, reach) {
   // Ta sama siatka i te same dzielnice, które trafiają do demo-tychy.json.
   const districts = districtsGeo.features.map((f) => ({
     id: f.properties.id,
@@ -522,18 +535,30 @@ function report(districtsGeo, demand, points, candidates, recs) {
 
   const line = (label, value, target) =>
     `  ${label.padEnd(34)} ${String(value).padStart(12)}   ${target ? `cel: ${target}` : ''}`;
+  /** To samo, ale notatka idzie dosłownie — bez „cel:", bo to nie jest cel. */
+  const note = (label, value, text) =>
+    `  ${label.padEnd(34)} ${String(value).padStart(12)}   ${text || ''}`;
 
   console.log('\n══════ DEMO TYCHY — kontrola KPI (model = js/model.js) ══════');
   console.log(`  punktów popytu: ${demand.length}   ludność: ${POPULATION.toLocaleString('pl-PL')}`);
 
+  console.log(
+    `  zasięg: ${reach ? `izochrony po sieci pieszej (${Object.keys(reach).length} lokalizacji w cache)` : 'OKRĘGI — brak data/reach-tychy.json'}`
+  );
+
   for (const std of [2, 3, 5]) {
-    const now = analyze({ demandPoints: demand, points, districts, standardMinutes: std, population: POPULATION, scenario: 'now', mode: 'day' });
-    const plan = analyze({ demandPoints: demand, points, districts, standardMinutes: std, population: POPULATION, scenario: 'plan', mode: 'day' });
-    const night = analyze({ demandPoints: demand, points, districts, standardMinutes: std, population: POPULATION, scenario: 'now', mode: 'night' });
+    const common = { demandPoints: demand, points, districts, standardMinutes: std, population: POPULATION, reach };
+    const now = analyze({ ...common, scenario: 'now', mode: 'day' });
+    const plan = analyze({ ...common, scenario: 'plan', mode: 'day' });
+    const night = analyze({ ...common, scenario: 'now', mode: 'night' });
+    // Kontrolnie to samo okręgami — różnica pokazuje, ile pokrycia „dawał"
+    // model kołowy, którego w terenie nie ma.
+    const nowCircle = analyze({ ...common, reach: null, scenario: 'now', mode: 'day' });
+    const planCircle = analyze({ ...common, reach: null, scenario: 'plan', mode: 'day' });
     const mark = std === STANDARD_MINUTES ? ' ← DOMYŚLNY W DEMO' : '';
-    console.log(`\n── standard ≤${std} min (promień ${coverageRadiusM(std).toFixed(0)} m)${mark}`);
-    console.log(line('pokrycie teraz', `${now.coveragePct.toFixed(1)}%`, std === STANDARD_MINUTES ? '62%' : ''));
-    console.log(line('pokrycie po planie', `${plan.coveragePct.toFixed(1)}%`, std === STANDARD_MINUTES ? '81%' : ''));
+    console.log(`\n── standard ≤${std} min (okrąg odniesienia ${coverageRadiusM(std).toFixed(0)} m)${mark}`);
+    console.log(note('pokrycie teraz', `${now.coveragePct.toFixed(1)}%`, `(okręgiem byłoby ${nowCircle.coveragePct.toFixed(1)}%)`));
+    console.log(note('pokrycie po planie', `${plan.coveragePct.toFixed(1)}%`, `(okręgiem byłoby ${planCircle.coveragePct.toFixed(1)}%)`));
     console.log(line('pokrycie noc (24/7)', `${night.coveragePct.toFixed(1)}%`));
     console.log(line('mediana dojścia teraz', fmtMin(now.medianMin), std === STANDARD_MINUTES ? '3,2 min' : ''));
     console.log(line('mediana dojścia po planie', fmtMin(plan.medianMin), std === STANDARD_MINUTES ? '2,4 min' : ''));
@@ -638,8 +663,12 @@ const demandPoints = buildDemandPoints(densityCores.features).map((p) => ({
   districtId: realDistrictAt(p.lat, p.lon, districtsGeo.features),
 }));
 
+// Zasięgi po sieci pieszej — optymalizator ma wybierać punkty tak, jak zrobi
+// to aplikacja, więc dostaje ten sam cache izochron.
+const reach = loadReach();
+
 const existingPoints = buildExistingPoints();
-const points = [...existingPoints, ...buildProposedPoints(existingPoints, candidates, demandPoints)];
+const points = [...existingPoints, ...buildProposedPoints(existingPoints, candidates, demandPoints, reach)];
 
 // Piny i kandydaci też dostają realną dzielnicę (placeAt liczył je z rdzeni).
 for (const p of [...points, ...candidates]) {
@@ -684,4 +713,4 @@ if (!REPORT_ONLY) {
   console.log('zapisano: boundary-tychy.geojson, presets.json, demo-tychy.json (districts-tychy.geojson = źródło OSM, nietykane)');
 }
 
-report(districtsGeo, demandPoints, points, candidates, recommendations);
+report(districtsGeo, demandPoints, points, candidates, recommendations, reach);
