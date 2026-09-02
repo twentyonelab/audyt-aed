@@ -152,6 +152,7 @@ tools/fetch-reach.mjs    pobiera izochrony i trasy z Mapboksa do cache projektu
 tools/smoke.mjs          test przeglądarkowy całej ścieżki
 tools/interactions.mjs   test interakcji mapy (klik, przeciąganie, cofnij, kadr)
 tools/routeflow.mjs      test animacji tras dojścia na ścieżce Mapboksa (atrapa biblioteki)
+tools/routetrim.mjs      test przycinania tras do obrysu i do czasu standardu (dane z cache)
 CONTRACT.md           interfejsy modułów (wiążące)
 ITERACJA2_SPEC.md     specyfikacja produktu
 ```
@@ -162,6 +163,7 @@ ITERACJA2_SPEC.md     specyfikacja produktu
 node tools/smoke.mjs          # 35 sprawdzeń: cała ścieżka 0→5, zero błędów konsoli
 node tools/interactions.mjs   # 72 sprawdzenia: interakcje mapy, karta punktu, PDF/ZIP, roadmapa
 node tools/routeflow.mjs      # 9 sprawdzeń: kreskowanie tras w Mapboksie (setPaintProperty)
+node tools/routetrim.mjs      # 6 sprawdzeń: żadna trasa poza obrysem ani ponad standard czasu
 ```
 
 Oba potrzebują Chromium (Playwright) i same podnoszą lokalny serwer.

@@ -409,7 +409,7 @@ check(
   flowA ? `${flowA.name} ${flowA.dur} · offset ${flowA.offset} → ${flowB.offset}` : 'brak trasy'
 );
 check(
-  'analiza: kreski płyną od pinu na zewnątrz (offset maleje)',
+  'analiza: kreski płyną w kierunku rysowania trasy, czyli do pinu (offset maleje)',
   !!flowA && flowB.offset <= 0 && flowA.offset <= 0,
   flowA ? `${flowA.offset} → ${flowB.offset}` : 'brak trasy'
 );

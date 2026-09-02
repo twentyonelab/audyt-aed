@@ -1314,6 +1314,79 @@ function inRing(lat, lon, ring) {
   return inside;
 }
 
+function lerpCoord(a, b, t) {
+  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+}
+
+/**
+ * Przycina trasę dojścia tak, żeby nigdy nie wychodziła poza obrys zasięgu
+ * ani poza budżet czasu standardu.
+ *
+ * Skąd problem: Directions API prowadzi do najdalszego wierzchołka izochrony,
+ * ale po drodze przyciąga cel do najbliższej ulicy i liczy własny czas – trasa
+ * miewa 5,5 min tam, gdzie izochrona mówi 5, a obrys jest zgeneralizowany,
+ * więc realna droga potrafi wystawać poza niego o kilkadziesiąt metrów.
+ * Na mapie wyglądało to jak błąd: kreski poza zielonym polem.
+ *
+ * Trasa jest ucinana w PIERWSZYM z dwóch miejsc:
+ *   • gdzie skumulowana droga przekracza `maxMinutes` w tempie tej trasy
+ *     (tempo bierzemy z Directions: distanceM / durationMin, bo to ono
+ *     odpowiada za czas, a nie stała prędkość modelu),
+ *   • gdzie trasa po raz pierwszy opuszcza obrys – punkt przecięcia
+ *     znajdujemy bisekcją na odcinku.
+ * Trasa zaczyna się w pinie, więc obrys jest rysowany „od środka".
+ *
+ * @param {Array<[lon, lat]>} line trasa z Directions, od pinu na zewnątrz
+ * @param {Array<[lon, lat]>|null} ring obrys standardu (izochrona)
+ * @returns {{line: Array<[lon, lat]>, distanceM: number, minutes: number}}
+ */
+function trimRouteToReach(line, ring, { maxMinutes = Infinity, distanceM: totalM = null, durationMin = null } = {}) {
+  if (!Array.isArray(line) || line.length < 2) return { line: [], distanceM: 0, minutes: 0 };
+  const pace = totalM > 0 && durationMin > 0 ? totalM / durationMin : WALK_SPEED; // m/min
+  const budgetM = Number.isFinite(maxMinutes) ? maxMinutes * pace : Infinity;
+  const hasRing = Array.isArray(ring) && ring.length >= 3;
+  const asPt = ([lon, lat]) => ({ lat, lon });
+
+  const out = [line[0]];
+  let walked = 0;
+  for (let i = 1; i < line.length; i++) {
+    const a = line[i - 1];
+    const b = line[i];
+    const seg = distanceM(asPt(a), asPt(b));
+    if (!(seg > 0)) continue;
+
+    let t = 1;
+    if (walked + seg > budgetM) t = Math.min(t, Math.max(0, (budgetM - walked) / seg));
+
+    if (hasRing && !inRing(b[1], b[0], ring)) {
+      // Bisekcja: 14 kroków daje dokładność ~1/16000 długości odcinka.
+      let lo = 0;
+      let hi = Math.min(t, 1);
+      for (let k = 0; k < 14; k++) {
+        const mid = (lo + hi) / 2;
+        const p = lerpCoord(a, b, mid);
+        if (inRing(p[1], p[0], ring)) lo = mid;
+        else hi = mid;
+      }
+      t = Math.min(t, lo);
+    }
+
+    if (t < 1) {
+      if (t > 0) out.push(lerpCoord(a, b, t));
+      walked += seg * t;
+      break;
+    }
+    out.push(b);
+    walked += seg;
+  }
+
+  return {
+    line: out.length >= 2 ? out : [],
+    distanceM: Math.round(walked),
+    minutes: Math.round((walked / pace) * 10) / 10,
+  };
+}
+
 /**
  * Sonda zasięgu jednego AED.
  *
@@ -1847,7 +1920,7 @@ function fmtCost(value) {
   return `${fmtNum(Math.round(value || 0))} zł`;
 }
 
-return { DENSITY_FALLOFF, DETOUR, EXPERT_CRITERIA, EXPERT_FORMULA, FALLBACK_PRESET, GOLDEN_ANGLE, PHASE_META, WALK_SPEED, activePoints, analyze, autoRecommendations, buildDemandPoints, completeness, coverageGainFor, coverageRadiusM, distanceM, expertScore, fmtCost, fmtMin, fmtNum, fmtPct, metresPerDegLon, offsetLatLon, pointInRing, pointStatusLevel, proposeNewPoints, reachKey, ringCentroid, ringRadiusAtAngle, roadmapTotals, walkTimeMin };
+return { DENSITY_FALLOFF, DETOUR, EXPERT_CRITERIA, EXPERT_FORMULA, FALLBACK_PRESET, GOLDEN_ANGLE, PHASE_META, WALK_SPEED, activePoints, analyze, autoRecommendations, buildDemandPoints, completeness, coverageGainFor, coverageRadiusM, distanceM, expertScore, fmtCost, fmtMin, fmtNum, fmtPct, metresPerDegLon, offsetLatLon, pointInRing, pointStatusLevel, proposeNewPoints, reachKey, ringCentroid, ringRadiusAtAngle, roadmapTotals, trimRouteToReach, walkTimeMin };
 };
 
 __defs['js/ui.js'] = function () {
@@ -8039,7 +8112,7 @@ __defs['js/views/analysis.js'] = function () {
  */
 
 const { state, save, markStepDone, getPoint, getPreset, districtName, districtAt, upsertPoint, removePoint, makePoint, nextId, checkpoint } = __req('js/state.js');
-const { analyze, proposeNewPoints, coverageGainFor, completeness, pointStatusLevel, coverageRadiusM, ringCentroid, fmtPct, fmtMin, fmtNum, fmtCost, WALK_SPEED, DETOUR } = __req('js/model.js');
+const { analyze, proposeNewPoints, coverageGainFor, completeness, pointStatusLevel, coverageRadiusM, ringCentroid, trimRouteToReach, fmtPct, fmtMin, fmtNum, fmtCost, WALK_SPEED, DETOUR } = __req('js/model.js');
 const { h, mount, toast, barHtml, pillHtml, dotHtml, statusMeta, mapLegend, modal } = __req('js/ui.js');
 const { createMap, circlePolygon } = __req('js/map.js');
 const { reachMapFor, contoursFor, routesFor, fetchRoutes, reachCoverageOf } = __req('js/reach.js');
@@ -8401,7 +8474,7 @@ async function render(root, ctx) {
     if (!sel) return hide();
 
     const { site, kind, pending } = sel;
-    const routes = routesFor(site.lat, site.lon) || [];
+    const routes = routeLinesFor(sel);
     const hasReach = !!(contoursFor(site.lat, site.lon) || {})[standardMinutes];
     const longest = routes.reduce((best, r) => (r.distanceM > (best?.distanceM || 0) ? r : best), null);
     const proposal = kind === 'proposed';
@@ -8449,8 +8522,8 @@ async function render(root, ctx) {
         class: 'note',
         text: hasReach
           ? routes.length
-            ? `Obrys wyznaczyło ${fmtNum(routes.length)} tras dojścia po realnych chodnikach i ulicach; ` +
-              `najdłuższa ma ${fmtNum(longest.distanceM, 0)} m i ${fmtMin(longest.durationMin, 1)} marszu.`
+            ? `${fmtNum(routes.length)} tras dojścia po realnych chodnikach i ulicach, każda przycięta do ` +
+              `${fmtMin(standardMinutes, 0)} marszu i do obrysu; najdłuższa ma ${fmtNum(longest.distanceM, 0)} m.`
             : 'Zasięg policzony po sieci pieszej. Trasy dojścia dociągam z Mapboksa…'
           : 'Zasięg tego punktu nie przyszedł jeszcze z sieci – pokazany obszar jest przybliżeniem kołowym.',
       }),
@@ -8880,8 +8953,8 @@ async function render(root, ctx) {
         '<svg width="14" height="8" aria-hidden="true"><line x1="0" y1="4" x2="14" y2="4" ' +
           'stroke="#4caf7d" stroke-width="1.6" stroke-opacity="0.5" stroke-dasharray="4 3"/></svg>',
         'przerywane linie',
-        'trasy dojścia, które wyznaczyły obrys wybranego punktu – od pinu do granicy zasięgu ' +
-          '(fioletowe dla propozycji)'
+        'trasy dojścia do wybranego punktu – kreski biegną od granicy zasięgu do pinu, ' +
+          `każda trasa to ${fmtMin(standardMinutes, 0)} marszu (fioletowe dla propozycji)`
       ),
       h('p', {
         class: 'note',
@@ -9041,12 +9114,35 @@ async function render(root, ctx) {
       .filter(Boolean);
 
   /** Trasy dojścia wybranego punktu – w kolorze jego obrysu. */
-  const buildRouteLines = () => {
-    const sel = findSelected();
+  /**
+   * Trasy dojścia wybranego punktu, gotowe do narysowania.
+   *
+   * Każda trasa jest przycięta do obrysu standardu i do jego budżetu czasu
+   * (patrz trimRouteToReach) – dlatego nigdy nie wystaje poza zielone czy
+   * fioletowe pole i zawsze odpowiada temu samemu czasowi dojścia.
+   * Kolejność współrzędnych odwracamy: Directions liczy od pinu na zewnątrz,
+   * a animacja płynie w kierunku rysowania – po odwróceniu kreski biegną
+   * od granicy DO pinu, jak człowiek biegnący po AED.
+   */
+  const routeLinesFor = (sel) => {
     if (!sel) return [];
-    const routes = routesFor(sel.site.lat, sel.site.lon);
-    return routes ? routes.map((r) => ({ line: r.line, kind: sel.kind })) : [];
+    const routes = routesFor(sel.site.lat, sel.site.lon) || [];
+    const ring = (contoursFor(sel.site.lat, sel.site.lon) || {})[standardMinutes] || null;
+    return routes
+      .map((r) => {
+        const cut = trimRouteToReach(r.line, ring, {
+          maxMinutes: standardMinutes,
+          distanceM: r.distanceM,
+          durationMin: r.durationMin,
+        });
+        return cut.line.length >= 2
+          ? { line: cut.line.slice().reverse(), kind: sel.kind, distanceM: cut.distanceM, minutes: cut.minutes }
+          : null;
+      })
+      .filter(Boolean);
   };
+
+  const buildRouteLines = () => routeLinesFor(findSelected());
 
   /**
    * Trasy dla punktu spoza cache (np. świeżo dołożonej rekomendacji)

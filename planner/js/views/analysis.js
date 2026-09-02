@@ -37,6 +37,7 @@ import {
   pointStatusLevel,
   coverageRadiusM,
   ringCentroid,
+  trimRouteToReach,
   fmtPct,
   fmtMin,
   fmtNum,
@@ -418,7 +419,7 @@ export async function render(root, ctx) {
     if (!sel) return hide();
 
     const { site, kind, pending } = sel;
-    const routes = routesFor(site.lat, site.lon) || [];
+    const routes = routeLinesFor(sel);
     const hasReach = !!(contoursFor(site.lat, site.lon) || {})[standardMinutes];
     const longest = routes.reduce((best, r) => (r.distanceM > (best?.distanceM || 0) ? r : best), null);
     const proposal = kind === 'proposed';
@@ -466,8 +467,8 @@ export async function render(root, ctx) {
         class: 'note',
         text: hasReach
           ? routes.length
-            ? `Obrys wyznaczyło ${fmtNum(routes.length)} tras dojścia po realnych chodnikach i ulicach; ` +
-              `najdłuższa ma ${fmtNum(longest.distanceM, 0)} m i ${fmtMin(longest.durationMin, 1)} marszu.`
+            ? `${fmtNum(routes.length)} tras dojścia po realnych chodnikach i ulicach, każda przycięta do ` +
+              `${fmtMin(standardMinutes, 0)} marszu i do obrysu; najdłuższa ma ${fmtNum(longest.distanceM, 0)} m.`
             : 'Zasięg policzony po sieci pieszej. Trasy dojścia dociągam z Mapboksa…'
           : 'Zasięg tego punktu nie przyszedł jeszcze z sieci – pokazany obszar jest przybliżeniem kołowym.',
       }),
@@ -897,8 +898,8 @@ export async function render(root, ctx) {
         '<svg width="14" height="8" aria-hidden="true"><line x1="0" y1="4" x2="14" y2="4" ' +
           'stroke="#4caf7d" stroke-width="1.6" stroke-opacity="0.5" stroke-dasharray="4 3"/></svg>',
         'przerywane linie',
-        'trasy dojścia, które wyznaczyły obrys wybranego punktu – od pinu do granicy zasięgu ' +
-          '(fioletowe dla propozycji)'
+        'trasy dojścia do wybranego punktu – kreski biegną od granicy zasięgu do pinu, ' +
+          `każda trasa to ${fmtMin(standardMinutes, 0)} marszu (fioletowe dla propozycji)`
       ),
       h('p', {
         class: 'note',
@@ -1058,12 +1059,35 @@ export async function render(root, ctx) {
       .filter(Boolean);
 
   /** Trasy dojścia wybranego punktu – w kolorze jego obrysu. */
-  const buildRouteLines = () => {
-    const sel = findSelected();
+  /**
+   * Trasy dojścia wybranego punktu, gotowe do narysowania.
+   *
+   * Każda trasa jest przycięta do obrysu standardu i do jego budżetu czasu
+   * (patrz trimRouteToReach) – dlatego nigdy nie wystaje poza zielone czy
+   * fioletowe pole i zawsze odpowiada temu samemu czasowi dojścia.
+   * Kolejność współrzędnych odwracamy: Directions liczy od pinu na zewnątrz,
+   * a animacja płynie w kierunku rysowania – po odwróceniu kreski biegną
+   * od granicy DO pinu, jak człowiek biegnący po AED.
+   */
+  const routeLinesFor = (sel) => {
     if (!sel) return [];
-    const routes = routesFor(sel.site.lat, sel.site.lon);
-    return routes ? routes.map((r) => ({ line: r.line, kind: sel.kind })) : [];
+    const routes = routesFor(sel.site.lat, sel.site.lon) || [];
+    const ring = (contoursFor(sel.site.lat, sel.site.lon) || {})[standardMinutes] || null;
+    return routes
+      .map((r) => {
+        const cut = trimRouteToReach(r.line, ring, {
+          maxMinutes: standardMinutes,
+          distanceM: r.distanceM,
+          durationMin: r.durationMin,
+        });
+        return cut.line.length >= 2
+          ? { line: cut.line.slice().reverse(), kind: sel.kind, distanceM: cut.distanceM, minutes: cut.minutes }
+          : null;
+      })
+      .filter(Boolean);
   };
+
+  const buildRouteLines = () => routeLinesFor(findSelected());
 
   /**
    * Trasy dla punktu spoza cache (np. świeżo dołożonej rekomendacji)

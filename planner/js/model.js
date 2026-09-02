@@ -229,6 +229,79 @@ function inRing(lat, lon, ring) {
   return inside;
 }
 
+function lerpCoord(a, b, t) {
+  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+}
+
+/**
+ * Przycina trasę dojścia tak, żeby nigdy nie wychodziła poza obrys zasięgu
+ * ani poza budżet czasu standardu.
+ *
+ * Skąd problem: Directions API prowadzi do najdalszego wierzchołka izochrony,
+ * ale po drodze przyciąga cel do najbliższej ulicy i liczy własny czas – trasa
+ * miewa 5,5 min tam, gdzie izochrona mówi 5, a obrys jest zgeneralizowany,
+ * więc realna droga potrafi wystawać poza niego o kilkadziesiąt metrów.
+ * Na mapie wyglądało to jak błąd: kreski poza zielonym polem.
+ *
+ * Trasa jest ucinana w PIERWSZYM z dwóch miejsc:
+ *   • gdzie skumulowana droga przekracza `maxMinutes` w tempie tej trasy
+ *     (tempo bierzemy z Directions: distanceM / durationMin, bo to ono
+ *     odpowiada za czas, a nie stała prędkość modelu),
+ *   • gdzie trasa po raz pierwszy opuszcza obrys – punkt przecięcia
+ *     znajdujemy bisekcją na odcinku.
+ * Trasa zaczyna się w pinie, więc obrys jest rysowany „od środka".
+ *
+ * @param {Array<[lon, lat]>} line trasa z Directions, od pinu na zewnątrz
+ * @param {Array<[lon, lat]>|null} ring obrys standardu (izochrona)
+ * @returns {{line: Array<[lon, lat]>, distanceM: number, minutes: number}}
+ */
+export function trimRouteToReach(line, ring, { maxMinutes = Infinity, distanceM: totalM = null, durationMin = null } = {}) {
+  if (!Array.isArray(line) || line.length < 2) return { line: [], distanceM: 0, minutes: 0 };
+  const pace = totalM > 0 && durationMin > 0 ? totalM / durationMin : WALK_SPEED; // m/min
+  const budgetM = Number.isFinite(maxMinutes) ? maxMinutes * pace : Infinity;
+  const hasRing = Array.isArray(ring) && ring.length >= 3;
+  const asPt = ([lon, lat]) => ({ lat, lon });
+
+  const out = [line[0]];
+  let walked = 0;
+  for (let i = 1; i < line.length; i++) {
+    const a = line[i - 1];
+    const b = line[i];
+    const seg = distanceM(asPt(a), asPt(b));
+    if (!(seg > 0)) continue;
+
+    let t = 1;
+    if (walked + seg > budgetM) t = Math.min(t, Math.max(0, (budgetM - walked) / seg));
+
+    if (hasRing && !inRing(b[1], b[0], ring)) {
+      // Bisekcja: 14 kroków daje dokładność ~1/16000 długości odcinka.
+      let lo = 0;
+      let hi = Math.min(t, 1);
+      for (let k = 0; k < 14; k++) {
+        const mid = (lo + hi) / 2;
+        const p = lerpCoord(a, b, mid);
+        if (inRing(p[1], p[0], ring)) lo = mid;
+        else hi = mid;
+      }
+      t = Math.min(t, lo);
+    }
+
+    if (t < 1) {
+      if (t > 0) out.push(lerpCoord(a, b, t));
+      walked += seg * t;
+      break;
+    }
+    out.push(b);
+    walked += seg;
+  }
+
+  return {
+    line: out.length >= 2 ? out : [],
+    distanceM: Math.round(walked),
+    minutes: Math.round((walked / pace) * 10) / 10,
+  };
+}
+
 /**
  * Sonda zasięgu jednego AED.
  *
