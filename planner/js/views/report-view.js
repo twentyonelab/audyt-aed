@@ -78,7 +78,7 @@ const CSV_HEADERS = [
 
 const KIND_LABEL = { existing: 'istniejący', proposed: 'nowy' };
 
-const REASON_OUT_OF_SCOPE = 'poza zakresem iteracji 2';
+const REASON_OUT_OF_SCOPE = 'poza zakresem';
 
 /** Ile pikseli od górnej krawędzi podglądu uznajemy za „strona aktywna". */
 const ACTIVE_PAGE_OFFSET = 60;

@@ -88,7 +88,7 @@ const FILTERS = [
   { id: 'unverified', label: 'niezweryfikowane', test: (row) => row.point.status === 'unverified' },
 ];
 
-const REASON_OUT_OF_SCOPE = 'poza zakresem iteracji 2';
+const REASON_OUT_OF_SCOPE = 'poza zakresem';
 
 /* ------------------------------------------------------------------ *
  * Stan lokalny widoku (nie są to dane projektu)

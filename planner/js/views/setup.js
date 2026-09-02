@@ -504,7 +504,7 @@ export async function render(root, ctx) {
 
   const importOsmBtn = disabledControl(
     h('button', { class: 'btn' }, 'OSM (Overpass)'),
-    'poza zakresem iteracji 2'
+    'poza zakresem'
   );
 
   const importField = field(

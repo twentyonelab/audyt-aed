@@ -34,8 +34,8 @@ const STATUS_META = {
   zakonczony: { label: 'ZAKOŃCZONY', variant: 'ok' },
 };
 
-const REASON_DEMO_ONLY = 'dane demo tylko dla Tychów (iteracja 2)';
-const REASON_OUT_OF_SCOPE = 'poza zakresem iteracji 2';
+const REASON_DEMO_ONLY = 'dane demo tylko dla Tychów';
+const REASON_OUT_OF_SCOPE = 'poza zakresem';
 
 /** Polska odmiana liczebnika: [1, 2–4, 5+]. */
 function plural(n, forms) {

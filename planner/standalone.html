@@ -1961,8 +1961,8 @@ function modal({ title, body, confirmLabel = 'OK', cancelLabel = 'Anuluj', hideC
   });
 }
 
-/** Mark a control as out of scope for iteration 2 instead of leaving it dead. */
-function disabledControl(node, reason = 'poza zakresem iteracji 2') {
+/** Oznacza kontrolkę jako poza zakresem zamiast zostawiać ją martwą. */
+function disabledControl(node, reason = 'poza zakresem') {
   node.classList.add('is-disabled');
   node.setAttribute('disabled', '');
   node.setAttribute('data-tip', reason);
@@ -5480,8 +5480,8 @@ const STATUS_META = {
   zakonczony: { label: 'ZAKOŃCZONY', variant: 'ok' },
 };
 
-const REASON_DEMO_ONLY = 'dane demo tylko dla Tychów (iteracja 2)';
-const REASON_OUT_OF_SCOPE = 'poza zakresem iteracji 2';
+const REASON_DEMO_ONLY = 'dane demo tylko dla Tychów';
+const REASON_OUT_OF_SCOPE = 'poza zakresem';
 
 /** Polska odmiana liczebnika: [1, 2–4, 5+]. */
 function plural(n, forms) {
@@ -6397,7 +6397,7 @@ async function render(root, ctx) {
 
   const importOsmBtn = disabledControl(
     h('button', { class: 'btn' }, 'OSM (Overpass)'),
-    'poza zakresem iteracji 2'
+    'poza zakresem'
   );
 
   const importField = field(
@@ -6638,7 +6638,7 @@ const FILTERS = [
   { id: 'unverified', label: 'niezweryfikowane', test: (row) => row.point.status === 'unverified' },
 ];
 
-const REASON_OUT_OF_SCOPE = 'poza zakresem iteracji 2';
+const REASON_OUT_OF_SCOPE = 'poza zakresem';
 
 /* ------------------------------------------------------------------ *
  * Stan lokalny widoku (nie są to dane projektu)
@@ -10934,7 +10934,7 @@ async function render(root, ctx) {
 
   const fieldFormBtn = disabledControl(
     h('button', { class: 'btn btn--block' }, 'WYŚLIJ FORMULARZ TERENOWY'),
-    'poza zakresem iteracji 2'
+    'poza zakresem'
   );
 
   const panel = h(
@@ -12022,7 +12022,7 @@ const CSV_HEADERS = [
 
 const KIND_LABEL = { existing: 'istniejący', proposed: 'nowy' };
 
-const REASON_OUT_OF_SCOPE = 'poza zakresem iteracji 2';
+const REASON_OUT_OF_SCOPE = 'poza zakresem';
 
 /** Ile pikseli od górnej krawędzi podglądu uznajemy za „strona aktywna". */
 const ACTIVE_PAGE_OFFSET = 60;
@@ -12770,7 +12770,7 @@ const FIELD_PHOTO_ROLES = [
   { id: 'signage_route', label: 'Oznakowanie dojścia' },
 ];
 
-const OUT_OF_SCOPE = 'poza zakresem iteracji 2';
+const OUT_OF_SCOPE = 'poza zakresem';
 
 /* ------------------------------------------------------------------ *
  * Szkic formularza — przeżywa przerysowanie widoku

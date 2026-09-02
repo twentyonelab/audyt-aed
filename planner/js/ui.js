@@ -181,8 +181,8 @@ export function modal({ title, body, confirmLabel = 'OK', cancelLabel = 'Anuluj'
   });
 }
 
-/** Mark a control as out of scope for iteration 2 instead of leaving it dead. */
-export function disabledControl(node, reason = 'poza zakresem iteracji 2') {
+/** Oznacza kontrolkę jako poza zakresem zamiast zostawiać ją martwą. */
+export function disabledControl(node, reason = 'poza zakresem') {
   node.classList.add('is-disabled');
   node.setAttribute('disabled', '');
   node.setAttribute('data-tip', reason);

@@ -1456,7 +1456,7 @@ export async function render(root, ctx) {
 
   const fieldFormBtn = disabledControl(
     h('button', { class: 'btn btn--block' }, 'WYŚLIJ FORMULARZ TERENOWY'),
-    'poza zakresem iteracji 2'
+    'poza zakresem'
   );
 
   const panel = h(

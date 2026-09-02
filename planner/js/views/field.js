@@ -65,7 +65,7 @@ const FIELD_PHOTO_ROLES = [
   { id: 'signage_route', label: 'Oznakowanie dojścia' },
 ];
 
-const OUT_OF_SCOPE = 'poza zakresem iteracji 2';
+const OUT_OF_SCOPE = 'poza zakresem';
 
 /* ------------------------------------------------------------------ *
  * Szkic formularza — przeżywa przerysowanie widoku
