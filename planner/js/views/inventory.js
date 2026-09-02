@@ -1,9 +1,9 @@
 /**
- * views/inventory.js — Krok 1: Inwentaryzacja (SPEC §6.2, trasa '#/inventory').
+ * views/inventory.js – Krok 1: Inwentaryzacja (SPEC §6.2, trasa '#/inventory').
  *
  * Mapa (lewa, ~65%) + panel „Rejestr punktów" (prawa, 480 px).
  * Mapa pokazuje granicę, dzielnice, etykiety dzielnic i piny wszystkich punktów.
- * Stref pokrycia i punktów popytu tu nie ma — to krok 2 (SPEC §6.3).
+ * Stref pokrycia i punktów popytu tu nie ma – to krok 2 (SPEC §6.3).
  *
  * Wszystkie liczby pochodzą z model.js (completeness, pointStatusLevel) i są
  * formatowane wyłącznie przez fmtNum/fmtPct/fmtCost.
@@ -101,11 +101,11 @@ let movingPointId = null;
 let keyHandler = null;
 let outsideHandler = null;
 let openMenuEl = null;
-/** Ostatni kadr mapy — odtwarzany przy każdym przerysowaniu widoku. */
+/** Ostatni kadr mapy – odtwarzany przy każdym przerysowaniu widoku. */
 let savedCamera = null;
 
 /* ------------------------------------------------------------------ *
- * Pomocniki lokalne (rdzenia nie ruszamy — brakujące rzeczy są tutaj)
+ * Pomocniki lokalne (rdzenia nie ruszamy – brakujące rzeczy są tutaj)
  * ------------------------------------------------------------------ */
 
 function field(labelText, ...children) {
@@ -249,7 +249,7 @@ export async function render(root, ctx) {
 
   const project = state.project;
   if (!project) {
-    mount(root, h('div', { class: 'empty-state', text: 'Brak aktywnego projektu — wróć do pulpitu i otwórz audyt.' }));
+    mount(root, h('div', { class: 'empty-state', text: 'Brak aktywnego projektu – wróć do pulpitu i otwórz audyt.' }));
     return;
   }
 
@@ -269,7 +269,7 @@ export async function render(root, ctx) {
   const proposedRows = state.points.filter((p) => p.kind === 'proposed' && p.status !== 'rejected').map(decorate);
 
   // Counter reports the AUDIT status (was the point verified in the field),
-  // which is a different question from the pin colour — that one follows card
+  // which is a different question from the pin colour – that one follows card
   // completeness (SPEC §5). Both are specified, so both are shown.
   const counts = {
     total: registry.length,
@@ -339,7 +339,7 @@ export async function render(root, ctx) {
   const legendEl = legend(proposedRows.length);
   mapEl.appendChild(legendEl);
 
-  /* Klik w puste miejsce mapy proponuje dodanie punktu — bez wcześniejszego
+  /* Klik w puste miejsce mapy proponuje dodanie punktu – bez wcześniejszego
      uzbrajania trybu. Pasek jest odrzucalny, więc przypadkowy klik nic nie psuje. */
   const clickPrompt = h('div', {
     class: 'card',
@@ -362,8 +362,8 @@ export async function render(root, ctx) {
     mount(clickPrompt);
   };
 
-  /* Mini-karta aktywnego punktu. Stoi zawsze w tym samym miejscu — pod belką
-     panelu, nad rejestrem — a nie jako pływające okienko nad mapą. Analiza
+  /* Mini-karta aktywnego punktu. Stoi zawsze w tym samym miejscu – pod belką
+     panelu, nad rejestrem – a nie jako pływające okienko nad mapą. Analiza
      dostępności używa dokładnie tego samego miejsca, więc oba widoki z mapą
      zachowują się tak samo. */
   const hidePopup = () => {
@@ -371,7 +371,7 @@ export async function render(root, ctx) {
     mount(selectedBox);
   };
 
-  /** Zamknięcie karty odklikuje też punkt na mapie — inaczej pin zostawałby zaznaczony. */
+  /** Zamknięcie karty odklikuje też punkt na mapie – inaczej pin zostawałby zaznaczony. */
   const clearSelection = () => {
     hidePopup();
     state.ui.selectedPointId = null;
@@ -391,18 +391,18 @@ export async function render(root, ctx) {
         ? 'Dostępny całodobowo (24/7)'
         : access.always === false
         ? `Dostępny w godzinach${access.hours ? `: ${access.hours}` : ''}`
-        : 'Dostępność 24/7 — brak danych';
+        : 'Dostępność 24/7 – brak danych';
 
     const routeText =
       signage.route === true
         ? 'Dojście oznakowane (ILCOR)'
         : signage.route === false
         ? 'Dojście nieoznakowane'
-        : 'Oznakowanie dojścia — brak danych';
+        : 'Oznakowanie dojścia – brak danych';
 
     const overdue = isOverdueMonth(device.inspectionDue);
     const inspectionText = !device.inspectionDue
-      ? 'Przegląd — brak daty'
+      ? 'Przegląd – brak daty'
       : overdue
       ? `Przegląd przeterminowany (${fmtYearMonth(device.inspectionDue)})`
       : `Przegląd ważny do ${fmtYearMonth(device.inspectionDue)}`;
@@ -421,7 +421,7 @@ export async function render(root, ctx) {
         h('div', { text: `${point.address || 'brak adresu'} · ${districtName(point.districtId)}` }),
         h('div', {
           text: `${
-            preset ? `${preset.id} — ${preset.name} · ${fmtCost(preset.cost)}` : 'brak presetu'
+            preset ? `${preset.id} – ${preset.name} · ${fmtCost(preset.cost)}` : 'brak presetu'
           } · karta ${fmtPct(pct)}`,
         })
       ),
@@ -464,10 +464,50 @@ export async function render(root, ctx) {
             onclick: () => ctx.navigate(`#/card/${point.id}`),
           },
           'KARTA →'
-        )
+        ),
+        // Rekomendacje można usuwać wprost z karty na mapie. Punkt istniejący
+        // zostaje: rejestr jest zapisem stanu faktycznego, nie planu.
+        point.kind === 'proposed'
+          ? h(
+              'button',
+              {
+                class: 'btn btn--sm btn--ghost btn--danger',
+                title: 'Usuń tę rekomendację z mapy',
+                onclick: () => deleteProposal(point),
+              },
+              'USUŃ'
+            )
+          : null
       )
     );
     selectedBox.style.display = '';
+  };
+
+  /**
+   * Usunięcie rekomendacji z rejestru i z mapy. Dotyczy tylko punktów
+   * proponowanych – istniejące AED usuwa się z rejestru osobną ścieżką,
+   * bo to zmiana stanu faktycznego, a nie planu.
+   */
+  const deleteProposal = async (point) => {
+    if (!point || point.kind !== 'proposed') return;
+    const name = point.name || point.id;
+    const ok = await modal({
+      title: 'Usunąć rekomendację?',
+      body: h(
+        'div',
+        {},
+        h('p', { text: `„${name}" zniknie z mapy i z rejestru punktów.` }),
+        h('p', { class: 'note', text: 'Pomyłkę odwraca „Cofnij" w pasku górnym.' })
+      ),
+      confirmLabel: 'USUŃ',
+    });
+    if (!ok) return;
+
+    checkpoint(`usunięcie rekomendacji „${name}”`);
+    removePoint(point.id);
+    if (state.ui.selectedPointId === point.id) state.ui.selectedPointId = null;
+    await save();
+    toast(`Rekomendacja „${name}" usunięta.`);
   };
 
   /* ---------------- tryb dodawania punktu ---------------- */
@@ -507,7 +547,7 @@ export async function render(root, ctx) {
       toast('Tryb dodawania punktu wyłączony.');
       return;
     }
-    // Esc zamyka kartę tak samo jak ✕ — łącznie z odkliknięciem pinu na mapie.
+    // Esc zamyka kartę tak samo jak ✕ – łącznie z odkliknięciem pinu na mapie.
     if (selectedBox.style.display !== 'none') clearSelection();
   };
   document.addEventListener('keydown', keyHandler);
@@ -527,7 +567,7 @@ export async function render(root, ctx) {
       await promptNewPoint(lat, lon);
       return;
     }
-    if (movingPointId) return; // trwa przesuwanie — klik nie dodaje punktu
+    if (movingPointId) return; // trwa przesuwanie – klik nie dodaje punktu
     showClickPrompt(lat, lon);
   });
 
@@ -559,13 +599,13 @@ export async function render(root, ctx) {
       )
     );
     clickPrompt.style.display = '';
-    // Pasek stoi w tym samym pasie co legenda — na czas decyzji legenda ustępuje.
+    // Pasek stoi w tym samym pasie co legenda – na czas decyzji legenda ustępuje.
     legendEl.style.visibility = 'hidden';
   }
 
   /* ---------------- przesuwanie istniejącego punktu ---------------- */
 
-  /** Uzbraja przeciąganie dla jednego punktu — reszta pinów zostaje nieruchoma. */
+  /** Uzbraja przeciąganie dla jednego punktu – reszta pinów zostaje nieruchoma. */
   function startMoving(point) {
     movingPointId = point.id;
     hidePopup();
@@ -597,7 +637,7 @@ export async function render(root, ctx) {
     movingPointId = null;
     toast(
       movedOut
-        ? `Przesunięto „${point.name}" — nowa dzielnica: ${districtName(district)}.`
+        ? `Przesunięto „${point.name}" – nowa dzielnica: ${districtName(district)}.`
         : `Przesunięto „${point.name}".`
     );
     await save();
@@ -613,7 +653,7 @@ export async function render(root, ctx) {
     }
     showPopup(row);
     paintRows();
-    // zaznaczenie to stan interfejsu — zapisujemy je bez przerysowania widoku
+    // zaznaczenie to stan interfejsu – zapisujemy je bez przerysowania widoku
     save({ silent: true });
   }
 
@@ -632,7 +672,7 @@ export async function render(root, ctx) {
     // Mapa reaguje bez pełnego przerysowania: wybrana dzielnica dostaje
     // podświetlenie, punkty spoza niej schodzą do 20% krycia, kadr zostaje.
     repaintPins();
-    // filtr to stan interfejsu — zapis bez przerysowania (mapa zostaje na miejscu)
+    // filtr to stan interfejsu – zapis bez przerysowania (mapa zostaje na miejscu)
     save({ silent: true });
   };
 
@@ -801,8 +841,8 @@ export async function render(root, ctx) {
         class: 'note',
         style: { marginTop: '12px' },
         text:
-          'Kropka pokazuje stan karty liczony z presetu: zielona — komplet danych i zdjęć, ' +
-          'żółta — braki, czerwona — punkt niezweryfikowany. Kliknięcie wiersza centruje mapę.',
+          'Kropka pokazuje stan karty liczony z presetu: zielona – komplet danych i zdjęć, ' +
+          'żółta – braki, czerwona – punkt niezweryfikowany. Kliknięcie wiersza centruje mapę.',
       })
     );
   }
@@ -811,7 +851,7 @@ export async function render(root, ctx) {
 
   /* ---------------- scena mapy ---------------- */
 
-  /** Dzielnica aktywna w filtrze — albo null. */
+  /** Dzielnica aktywna w filtrze – albo null. */
   const filteredDistrictId = () => {
     const current = filterOf();
     return current.kind === 'district' ? current.districtId : null;
@@ -834,7 +874,7 @@ export async function render(root, ctx) {
     }));
   }
 
-  /** Przerysowuje piny i podświetlenie dzielnicy — bez utraty kadru. */
+  /** Przerysowuje piny i podświetlenie dzielnicy – bez utraty kadru. */
   function repaintPins() {
     if (map) map.setScene({ points: buildPins(), highlightDistrictId: filteredDistrictId() });
   }
@@ -860,7 +900,7 @@ export async function render(root, ctx) {
     selectedId: state.ui.selectedPointId,
     highlightDistrictId: filteredDistrictId(),
   });
-  // Kadr przeżywa przerysowanie widoku — po przesunięciu pinu mapa zostaje tam,
+  // Kadr przeżywa przerysowanie widoku – po przesunięciu pinu mapa zostaje tam,
   // gdzie ustawił ją operator, zamiast wracać do widoku całego miasta.
   if (savedCamera && typeof map.setCamera === 'function') map.setCamera(savedCamera);
   else map.fit();
@@ -876,23 +916,23 @@ export async function render(root, ctx) {
     const nameInput = h('input', {
       class: 'input',
       type: 'text',
-      placeholder: 'np. Szkoła Podstawowa nr 1 — hol główny',
+      placeholder: 'np. Szkoła Podstawowa nr 1 – hol główny',
     });
     const presetSelect = h(
       'select',
       { class: 'select' },
-      ...state.presets.map((p) => h('option', { value: p.id }, `${p.id} — ${p.name} · ${fmtCost(p.cost)}`))
+      ...state.presets.map((p) => h('option', { value: p.id }, `${p.id} – ${p.name} · ${fmtCost(p.cost)}`))
     );
     const addressInput = h('input', { class: 'input', type: 'text', placeholder: 'np. ul. Szkolna 3' });
 
-    /* Punkt wskazany na mapie to domyślnie REKOMENDACJA — nowa lokalizacja do
+    /* Punkt wskazany na mapie to domyślnie REKOMENDACJA – nowa lokalizacja do
        wdrożenia (fioletowy kwadrat, trafia do propozycji w kroku 2). Drugi tryb
        zostaje, bo krok 1 musi umieć zapisać AED zastany w terenie, którego nie
        było w rejestrze. */
     let kind = 'proposed';
     const noteEl = h('p', { class: 'note' });
     const typeButtons = [
-      { value: 'proposed', label: 'Rekomendacja — nowa lokalizacja' },
+      { value: 'proposed', label: 'Rekomendacja – nowa lokalizacja' },
       { value: 'existing', label: 'Istniejący AED zastany w terenie' },
     ].map((option) =>
       h(
@@ -916,8 +956,8 @@ export async function render(root, ctx) {
         `Współrzędne: ${fmtNum(lat, 5)} N · ${fmtNum(lon, 5)} E · dzielnica: ${districtName(districtId)}. ` +
         (kind === 'proposed'
           ? 'Punkt trafi do propozycji jako rekomendacja (fioletowy kwadrat). ' +
-            'Zysk w pokryciu policzy się od razu, a zaakceptujesz go w kroku 2 — Analiza dostępności.'
-          : 'Punkt trafi do rejestru ze statusem NIEZWERYFIKOWANY — resztę danych uzupełnisz w karcie (krok 3).');
+            'Zysk w pokryciu policzy się od razu, a zaakceptujesz go w kroku 2 – Analiza dostępności.'
+          : 'Punkt trafi do rejestru ze statusem NIEZWERYFIKOWANY – resztę danych uzupełnisz w karcie (krok 3).');
     };
     paintNote();
 
@@ -985,8 +1025,8 @@ export async function render(root, ctx) {
     await save();
     toast(
       isProposal
-        ? `Dodano rekomendację ${point.id} — ${point.name} (+${fmtPct(point.gainPct, 1)} pokrycia). Zaakceptuj ją w kroku 2.`
-        : `Dodano punkt ${point.id} — ${point.name}.`
+        ? `Dodano rekomendację ${point.id} – ${point.name} (+${fmtPct(point.gainPct, 1)} pokrycia). Zaakceptuj ją w kroku 2.`
+        : `Dodano punkt ${point.id} – ${point.name}.`
     );
   }
 
@@ -1156,7 +1196,7 @@ export async function render(root, ctx) {
 }
 
 /* ------------------------------------------------------------------ *
- * Legenda mapy — trzy statusy punktu (SPEC §6.2)
+ * Legenda mapy – trzy statusy punktu (SPEC §6.2)
  * ------------------------------------------------------------------ */
 
 function legend(proposedCount) {
@@ -1166,7 +1206,7 @@ function legend(proposedCount) {
     h('div', { class: 'map-legend__row', html: `${dotHtml('crit')}<span>niezweryfikowany</span>` }),
     h('div', {
       class: 'map-legend__row',
-      html: `${dotHtml('square')}<span>rekomendacja — nowa lokalizacja${
+      html: `${dotHtml('square')}<span>rekomendacja – nowa lokalizacja${
         proposedCount > 0 ? ` (${fmtNum(proposedCount)})` : ''
       }</span>`,
     }),

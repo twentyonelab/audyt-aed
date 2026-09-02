@@ -1,5 +1,5 @@
 /**
- * model.js — all analytical computation for the AED planner.
+ * model.js – all analytical computation for the AED planner.
  *
  * Pure functions only: no DOM, no state import, no side effects.
  * This module is imported both by the browser app and by tools/generate-demo.mjs,
@@ -38,7 +38,7 @@ export function metresPerDegLon(lat) {
   return M_PER_DEG_LAT * Math.cos((lat * Math.PI) / 180);
 }
 
-/** Equirectangular approximation — accurate enough at city scale. */
+/** Equirectangular approximation – accurate enough at city scale. */
 export function distanceM(a, b) {
   const dy = (a.lat - b.lat) * M_PER_DEG_LAT;
   const dx = (a.lon - b.lon) * metresPerDegLon((a.lat + b.lat) / 2);
@@ -196,7 +196,7 @@ export function activePoints(points, scenario = 'now', mode = 'day') {
  * ------------------------------------------------------------------ */
 
 /**
- * Klucz zasięgu w cache — zaokrąglona współrzędna, 5 miejsc ≈ 1 m.
+ * Klucz zasięgu w cache – zaokrąglona współrzędna, 5 miejsc ≈ 1 m.
  * Ta jedna definicja obowiązuje model, moduł reach.js i narzędzie
  * tools/fetch-reach.mjs; rozjazd oznaczałby cichy brak trafień w cache.
  */
@@ -234,11 +234,11 @@ function inRing(lat, lon, ring) {
  *
  * Z izochroną: „w zasięgu" znaczy „wewnątrz konturu standardu", a czas dojścia
  * wypada w paśmie między sąsiednimi konturami. Wewnątrz pasma porządkuje punkty
- * odległość w linii prostej — sieć daje pasmo, geometria kolejność w nim.
+ * odległość w linii prostej – sieć daje pasmo, geometria kolejność w nim.
  * Bez izochrony: stary okrąg, oznaczony jako przybliżenie.
  *
  * @param {{lat:number, lon:number}} site
- * @param {object|null} contours {2: ring, 3: ring, …} — pierścienie [lon,lat]
+ * @param {object|null} contours {2: ring, 3: ring, …} – pierścienie [lon,lat]
  */
 function makeProbe(site, contours, standardMinutes, radiusM) {
   const ladder = contours
@@ -280,7 +280,7 @@ function makeProbe(site, contours, standardMinutes, radiusM) {
         }
         prev = band.minutes;
       }
-      // poza całą drabiną — realny czas jest co najmniej tak duży jak ostatni kontur
+      // poza całą drabiną – realny czas jest co najmniej tak duży jak ostatni kontur
       return Math.max(straight, outerMinutes + 0.1);
     },
   };
@@ -429,7 +429,7 @@ export function analyze({
     radiusM,
     scenario,
     mode,
-    /** 'network' — wszystkie czynne AED mają izochronę; 'mixed' / 'radius' — reszta liczona okręgiem. */
+    /** 'network' – wszystkie czynne AED mają izochronę; 'mixed' / 'radius' – reszta liczona okręgiem. */
     reachMode: networkCount === active.length && active.length ? 'network' : networkCount ? 'mixed' : 'radius',
     reachStats: { network: networkCount, total: active.length },
     activeCount: active.length,
@@ -474,7 +474,7 @@ export function proposeNewPoints({
   const covered = demandPoints.map((dp) => baseProbes.some((probe) => probe.covers(dp)));
   const totalWeight = demandPoints.reduce((s, dp) => s + dp.weight, 0) || 1;
 
-  // Sonda kandydata liczona raz — greedy przechodzi listę tyle razy, ile
+  // Sonda kandydata liczona raz – greedy przechodzi listę tyle razy, ile
   // punktów wybiera, a budowa bboxów konturu nie jest darmowa.
   const candProbes = new Map(
     candidates.map((c) => [c.id, makeProbe(c, reach ? reach[reachKey(c.lat, c.lon)] : null, standardMinutes, radiusM)])
@@ -525,7 +525,7 @@ export function proposeNewPoints({
 }
 
 /**
- * Coverage gain of a single site given the current plan — used for live
+ * Coverage gain of a single site given the current plan – used for live
  * recalculation while a proposed pin is being dragged.
  */
 export function coverageGainFor(
@@ -566,14 +566,14 @@ function isFilled(value) {
 }
 
 /**
- * Baseline requirements for a point that has no preset assigned yet — usually
+ * Baseline requirements for a point that has no preset assigned yet – usually
  * an unverified import from OSM. Without this such a card would report 100%
  * complete simply because nothing is required of it, which is the opposite of
  * the truth.
  */
 export const FALLBACK_PRESET = {
   id: null,
-  name: 'Bez presetu — wymaga wizyty',
+  name: 'Bez presetu – wymaga wizyty',
   requiredFields: [
     'name', 'address', 'placement', 'access', 'keeper',
     'signage.atDevice', 'signage.route', 'device.model', 'dispatcherRegistered',
@@ -747,7 +747,7 @@ export function fmtPct(value, digits = 0) {
 }
 
 export function fmtMin(value, digits = 1) {
-  if (!Number.isFinite(value)) return '—';
+  if (!Number.isFinite(value)) return '–';
   return `${value.toFixed(digits).replace('.', ',')} min`;
 }
 

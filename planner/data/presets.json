@@ -1,7 +1,7 @@
 [
   {
     "id": "P1",
-    "name": "Wewnętrzny — budynek publiczny",
+    "name": "Wewnętrzny – budynek publiczny",
     "cost": 8500,
     "requiredFields": [
       "name",
@@ -27,7 +27,7 @@
   },
   {
     "id": "P2",
-    "name": "Wewnętrzny — obiekt 24/7",
+    "name": "Wewnętrzny – obiekt 24/7",
     "cost": 9000,
     "requiredFields": [
       "name",
@@ -53,7 +53,7 @@
   },
   {
     "id": "P3",
-    "name": "Zewnętrzny — szafka na elewacji",
+    "name": "Zewnętrzny – szafka na elewacji",
     "cost": 15000,
     "requiredFields": [
       "name",
@@ -80,7 +80,7 @@
   },
   {
     "id": "P4",
-    "name": "Zewnętrzny — słupek wolnostojący",
+    "name": "Zewnętrzny – słupek wolnostojący",
     "cost": 24000,
     "requiredFields": [
       "name",

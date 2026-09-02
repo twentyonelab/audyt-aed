@@ -1,5 +1,5 @@
 /**
- * router.js — hash routing plus the application shell (top bar, sub bar,
+ * router.js – hash routing plus the application shell (top bar, sub bar,
  * stepper). Views are plain modules that export `meta` and `render`.
  *
  * Spec reference: ITERACJA2_SPEC.md §3 (shell), §6 (routes).
@@ -203,7 +203,7 @@ export async function render() {
     { class: 'subbar' },
     h('span', {
       class: 'subbar__title',
-      html: `${stepLabel}${meta.title || ''}${meta.subtitle ? ` <em>— „${meta.subtitle}”</em>` : ''}`,
+      html: `${stepLabel}${meta.title || ''}${meta.subtitle ? ` <em>– „${meta.subtitle}”</em>` : ''}`,
     }),
     subbarMeta,
     h('span', { class: 'subbar__spacer' }),
@@ -229,7 +229,7 @@ export async function render() {
   } catch (err) {
     console.error(err);
     mount(workspace, h('div', { class: 'boot', text: `Błąd widoku: ${err.message}` }));
-    toast('Widok nie wczytał się poprawnie — szczegóły w konsoli.');
+    toast('Widok nie wczytał się poprawnie – szczegóły w konsoli.');
   }
 }
 

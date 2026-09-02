@@ -1,11 +1,11 @@
 /**
- * photos.js — the photo pipeline (ITERACJA2_SPEC.md §7).
+ * photos.js – the photo pipeline (ITERACJA2_SPEC.md §7).
  *
  * Photos in this tool are *audit evidence bound to criteria*, not a gallery:
  * a preset declares which role slots are required, a missing one lowers card
  * completeness (model.js `completeness`) and raises an auto-recommendation.
  *
- * Everything happens in the browser, in this exact order (spec §10 — "nie
+ * Everything happens in the browser, in this exact order (spec §10 – "nie
  * usuwaj EXIF przed odczytaniem GPS"):
  *
  *   1. read EXIF from the original bytes  (GPS, DateTimeOriginal, orientation)
@@ -53,7 +53,7 @@ import { PHOTO_MAX_EDGE, PHOTO_THUMB_EDGE, PHOTO_QUALITY } from '../config.js';
  * 1. Minimal EXIF reader
  *
  * Hand-written on purpose: zero dependencies (spec §2). It understands just
- * enough of JPEG/TIFF to answer three questions — where was this taken, when
+ * enough of JPEG/TIFF to answer three questions – where was this taken, when
  * was it taken, which way is up. Anything it cannot parse yields empty
  * metadata; it never throws, because a photo without EXIF is still evidence.
  * ================================================================== */
@@ -99,7 +99,7 @@ function findExifTiffStart(view) {
       offset += 2;
       continue;
     }
-    // start of scan / end of image — image data begins, no more metadata
+    // start of scan / end of image – image data begins, no more metadata
     if (marker === 0xda || marker === 0xd9) return -1;
 
     const size = view.getUint16(offset + 2, false);
@@ -194,7 +194,7 @@ function readIfd(view, tiffStart, ifdOffset, little) {
   if (ifdOffset <= 0 || base + 2 > view.byteLength) return out;
 
   const entries = view.getUint16(base, little);
-  if (entries > 512) return out; // implausible — treat as corrupt
+  if (entries > 512) return out; // implausible – treat as corrupt
 
   for (let i = 0; i < entries; i++) {
     const p = base + 2 + i * 12;
@@ -232,7 +232,7 @@ function exifDateToIso(raw) {
 }
 
 /**
- * STEP 1 — read GPS, capture date and orientation from the ORIGINAL file,
+ * STEP 1 – read GPS, capture date and orientation from the ORIGINAL file,
  * before any canvas pass destroys them.
  *
  * @returns {Promise<{gps:{lat:number,lon:number}|null, takenAt:string|null, orientation:number}>}
@@ -283,7 +283,7 @@ async function readExifMeta(file) {
 
     return { gps, takenAt, orientation };
   } catch (err) {
-    // A photo we cannot parse is still a valid photo — never block the upload.
+    // A photo we cannot parse is still a valid photo – never block the upload.
     console.warn('EXIF: nie udało się odczytać metadanych', err);
     return { ...EMPTY_EXIF };
   }
@@ -316,7 +316,7 @@ async function loadRawBitmap(file) {
       try {
         node.style.imageOrientation = 'none';
       } catch (err) {
-        /* property unsupported — orientation may already be baked in */
+        /* property unsupported – orientation may already be baked in */
       }
       node.src = url;
     });
@@ -337,12 +337,12 @@ function applyOrientation(ctx, orientation, w, h) {
     case 6: ctx.transform(0, 1, -1, 0, h, 0); break;   // 90° CW
     case 7: ctx.transform(0, -1, -1, 0, h, w); break;  // transverse
     case 8: ctx.transform(0, -1, 1, 0, 0, w); break;   // 90° CCW
-    default: break;                                    // 1 — already upright
+    default: break;                                    // 1 – already upright
   }
 }
 
 /**
- * STEP 2 — redraw through a canvas. This is what actually removes EXIF: the
+ * STEP 2 – redraw through a canvas. This is what actually removes EXIF: the
  * canvas holds pixels only, so nothing but the image survives the copy.
  */
 function drawUpright(source, rawW, rawH, maxEdge, orientation) {
@@ -369,7 +369,7 @@ function drawUpright(source, rawW, rawH, maxEdge, orientation) {
   return canvas;
 }
 
-/** STEP 4 — thumbnail, taken from the already-upright canvas. */
+/** STEP 4 – thumbnail, taken from the already-upright canvas. */
 function scaleCanvas(src, maxEdge) {
   const scale = Math.min(1, maxEdge / (Math.max(src.width, src.height) || 1));
   const canvas = document.createElement('canvas');
@@ -407,7 +407,7 @@ function canvasToBlob(canvas, type, quality) {
   });
 }
 
-/** STEP 3 — WebP q0.8, with a JPEG fallback for engines that cannot write it. */
+/** STEP 3 – WebP q0.8, with a JPEG fallback for engines that cannot write it. */
 async function exportCanvas(canvas) {
   const preferred = supportsWebp() ? 'image/webp' : 'image/jpeg';
   let blob = await canvasToBlob(canvas, preferred, PHOTO_QUALITY);
@@ -434,7 +434,7 @@ async function hashBlob(blob) {
       const digest = await globalThis.crypto.subtle.digest('SHA-256', buffer);
       return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
     } catch (err) {
-      console.warn('crypto.subtle niedostępne — używam zapasowego skrótu', err);
+      console.warn('crypto.subtle niedostępne – używam zapasowego skrótu', err);
     }
   }
   const bytes = new Uint8Array(buffer);
@@ -485,13 +485,13 @@ export async function attachPhoto(file, { pointId, role } = {}) {
     return null;
   }
   if (!isImageFile(file)) {
-    toast('To nie jest plik graficzny — wybierz JPEG, PNG lub WebP.');
+    toast('To nie jest plik graficzny – wybierz JPEG, PNG lub WebP.');
     return null;
   }
 
   let bitmap = null;
   try {
-    // 1. EXIF FIRST — the canvas pass below destroys it irreversibly.
+    // 1. EXIF FIRST – the canvas pass below destroys it irreversibly.
     const exif = await readExifMeta(file);
 
     // 2. rescale + strip EXIF + straighten
@@ -581,7 +581,7 @@ export async function removePhoto(photoId) {
 }
 
 /* ================================================================== *
- * UI — the slot row (spec §7)
+ * UI – the slot row (spec §7)
  * ================================================================== */
 
 function cameraIcon() {
@@ -633,7 +633,7 @@ function setSlotBusy(slot, roleLabel) {
 /**
  * Preview modal: full photo, editable caption, EXIF read-out, delete/replace.
  * `modal()` only offers confirm/cancel, so the secondary actions record an
- * intent and then close the dialog through its own cancel button — that keeps
+ * intent and then close the dialog through its own cancel button – that keeps
  * the promise and the Escape listener in ui.js properly cleaned up.
  */
 async function openPhotoModal(meta, { onChange } = {}) {
@@ -731,7 +731,7 @@ async function openPhotoModal(meta, { onChange } = {}) {
     .catch(() => {});
 
   const confirmed = await modal({
-    title: `Zdjęcie — ${photoRoleLabel(meta.role)}`,
+    title: `Zdjęcie – ${photoRoleLabel(meta.role)}`,
     body,
     confirmLabel: 'Zapisz podpis',
     cancelLabel: 'Zamknij',
@@ -779,7 +779,7 @@ async function openPhotoModal(meta, { onChange } = {}) {
 /**
  * Render one 106×106 slot per role from PHOTO_ROLES.
  *
- * Synchronous by contract — card.js calls it inside its render pass — while
+ * Synchronous by contract – card.js calls it inside its render pass – while
  * thumbnails and uploads resolve afterwards.
  *
  * @param {HTMLElement} container
@@ -806,7 +806,7 @@ export function renderPhotoSlots(container, point, preset, { onChange } = {}) {
   const upload = async (slot, role, file) => {
     if (!file) return;
     if (!isImageFile(file)) {
-      toast('To nie jest plik graficzny — wybierz JPEG, PNG lub WebP.');
+      toast('To nie jest plik graficzny – wybierz JPEG, PNG lub WebP.');
       return;
     }
     setSlotBusy(slot, photoRoleLabel(role));
@@ -835,11 +835,11 @@ export function renderPhotoSlots(container, point, preset, { onChange } = {}) {
       role: 'button',
       tabindex: '0',
       'aria-label': photo
-        ? `Zdjęcie: ${role.label} — otwórz podgląd`
+        ? `Zdjęcie: ${role.label} – otwórz podgląd`
         : `Dodaj zdjęcie: ${role.label}${isRequired ? ' (wymagane przez preset)' : ''}`,
       'data-tip': photo
-        ? `${role.label} — kliknij, aby otworzyć podgląd`
-        : `${role.label} — kliknij lub przeciągnij plik${isRequired ? ' · wymagane przez preset' : ''}`,
+        ? `${role.label} – kliknij, aby otworzyć podgląd`
+        : `${role.label} – kliknij lub przeciągnij plik${isRequired ? ' · wymagane przez preset' : ''}`,
     });
 
     if (photo) {
@@ -908,7 +908,7 @@ export function renderPhotoSlots(container, point, preset, { onChange } = {}) {
     row.appendChild(slot);
   }
 
-  /* Summary line — every number comes from model.js `completeness`. */
+  /* Summary line – every number comes from model.js `completeness`. */
   const comp = completeness(point, preset, state.photos);
   const requiredCount = requiredRoles.size;
   const missingLabels = comp.missingPhotos.map(photoRoleLabel);
@@ -918,13 +918,13 @@ export function renderPhotoSlots(container, point, preset, { onChange } = {}) {
     { class: 'note' },
     h('div', {
       text: requiredCount
-        ? `Wymagane przez preset ${preset ? preset.id : '—'}: ` +
+        ? `Wymagane przez preset ${preset ? preset.id : '–'}: ` +
           `${fmtNum(requiredCount - comp.missingPhotos.length)} z ${fmtNum(requiredCount)} slotów. ` +
           `Wgranych zdjęć przy punkcie: ${fmtNum(pointPhotos.length)}.`
         : `Ten preset nie wymaga zdjęć. Wgranych przy punkcie: ${fmtNum(pointPhotos.length)}.`,
     }),
     missingLabels.length
-      ? h('div', { text: `Brakuje: ${missingLabels.join(', ')} — obniża kompletność karty.` })
+      ? h('div', { text: `Brakuje: ${missingLabels.join(', ')} – obniża kompletność karty.` })
       : null,
     h('div', {
       text:

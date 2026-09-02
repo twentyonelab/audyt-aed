@@ -1,13 +1,13 @@
 /**
- * views/analysis.js — Krok 2: Analiza dostępności (SPEC §6.3, trasa '#/analysis').
+ * views/analysis.js – Krok 2: Analiza dostępności (SPEC §6.3, trasa '#/analysis').
  *
  * Mapa (strefy pokrycia, punkty popytu, etykiety luk, przeciągalne piny
  * propozycji) + panel wskaźników 380 px.
  *
- * Wszystkie liczby pochodzą z model.js — widok nie liczy nic samodzielnie:
- *   • analyze()          — KPI, luki wg dzielnic, status punktów popytu,
- *   • proposeNewPoints() — greedy max coverage dla kandydatów,
- *   • coverageGainFor()  — „+X% pokrycia" pojedynczej propozycji (także na żywo
+ * Wszystkie liczby pochodzą z model.js – widok nie liczy nic samodzielnie:
+ *   • analyze()          – KPI, luki wg dzielnic, status punktów popytu,
+ *   • proposeNewPoints() – greedy max coverage dla kandydatów,
+ *   • coverageGainFor()  – „+X% pokrycia" pojedynczej propozycji (także na żywo
  *                          w trakcie przeciągania pinu).
  *
  * Scenariusz i tryb (dzień/noc) siedzą w state.ui i są zapisywane przez save(),
@@ -23,6 +23,7 @@ import {
   districtName,
   districtAt,
   upsertPoint,
+  removePoint,
   makePoint,
   nextId,
   checkpoint,
@@ -53,6 +54,7 @@ import {
   dotHtml,
   statusMeta,
   mapLegend,
+  modal,
 } from '../ui.js';
 
 import { createMap, circlePolygon } from '../map.js';
@@ -79,7 +81,7 @@ const PENDING_PREFIX = 'pending:';
 /** Ile dzielnic dostaje etykietę „LUKA: …" na mapie. */
 const GAP_LABELS_ON_MAP = 3;
 
-/** Presety zewnętrzne — szafka i totem pracują całodobowo (jak w danych demo). */
+/** Presety zewnętrzne – szafka i totem pracują całodobowo (jak w danych demo). */
 const OUTDOOR_PRESETS = new Set(['P3', 'P4']);
 
 /** Próg, poniżej którego różnicę KPI uznajemy za brak zmiany. */
@@ -91,7 +93,7 @@ const EPS = 0.05;
 
 let map = null;
 let dragTimer = null;
-/** Ostatni kadr mapy — odtwarzany przy każdym przerysowaniu widoku. */
+/** Ostatni kadr mapy – odtwarzany przy każdym przerysowaniu widoku. */
 let savedCamera = null;
 /** Punkt, którego zasięg i trasy dojścia są pokazane; przeżywa przerysowania. */
 let selectedReachId = null;
@@ -200,7 +202,7 @@ function kpiDelta(def, nowValue, planValue) {
 export async function render(root, ctx) {
   const project = state.project;
   if (!project) {
-    mount(root, h('div', { class: 'empty-state', text: 'Brak aktywnego projektu — wróć do pulpitu i otwórz audyt.' }));
+    mount(root, h('div', { class: 'empty-state', text: 'Brak aktywnego projektu – wróć do pulpitu i otwórz audyt.' }));
     return;
   }
 
@@ -233,7 +235,7 @@ export async function render(root, ctx) {
 
   /* ---------------- Obliczenia (zawsze z model.js) ---------------- */
 
-  /** Dwa przebiegi analyze() — „teraz" i „po planie" — dla podanej listy punktów. */
+  /** Dwa przebiegi analyze() – „teraz" i „po planie" – dla podanej listy punktów. */
   const analysesFor = (points) => {
     const base = {
       demandPoints: state.demandPoints,
@@ -328,7 +330,7 @@ export async function render(root, ctx) {
         const free = (state.candidates || []).filter((c) => !takenByPending.has(c.id));
 
         if (!free.length) {
-          toast('Brak wolnych kandydatów — wszyscy są już propozycją albo punktem.');
+          toast('Brak wolnych kandydatów – wszyscy są już propozycją albo punktem.');
           return;
         }
 
@@ -371,7 +373,39 @@ export async function render(root, ctx) {
       h('div', { class: 'note', style: { marginLeft: '14px' }, text: why })
     );
 
-  /** Aktywna karta punktu — to samo miejsce co w inwentaryzacji: pod belką panelu. */
+  /**
+   * Usunięcie rekomendacji z mapy. Propozycja czekająca na decyzję wypada
+   * z kolejki, rekomendacja już dołożona do projektu – z listy punktów.
+   * Obie operacje odwraca „Cofnij" w pasku górnym.
+   */
+  const deleteProposal = async (sel) => {
+    if (!sel || sel.kind !== 'proposed') return;
+    const name = sel.site.name || sel.site.id;
+    const ok = await modal({
+      title: 'Usunąć rekomendację?',
+      body: h(
+        'div',
+        {},
+        h('p', { text: `„${name}" zniknie z mapy, a pokrycie przeliczy się bez niej.` }),
+        h('p', { class: 'note', text: 'Pomyłkę odwraca „Cofnij" w pasku górnym.' })
+      ),
+      confirmLabel: 'USUŃ',
+    });
+    if (!ok) return;
+
+    checkpoint(`usunięcie rekomendacji „${name}”`);
+    if (sel.pending) {
+      state.pendingProposals = state.pendingProposals.filter((pr) => pendingPinId(pr) !== sel.pinId);
+    } else {
+      removePoint(sel.site.id);
+    }
+    selectedReachId = null;
+    if (state.ui.selectedPointId === sel.pinId) state.ui.selectedPointId = null;
+    await save();
+    toast(`Rekomendacja „${name}" usunięta.`);
+  };
+
+  /** Aktywna karta punktu – to samo miejsce co w inwentaryzacji: pod belką panelu. */
   const selectedBox = h('div', { class: 'panel__selected', style: { display: 'none' } });
 
   const paintSelected = () => {
@@ -390,7 +424,7 @@ export async function render(root, ctx) {
     const proposal = kind === 'proposed';
 
     // Zysk liczony na żywo tym samym coverageGainFor(), którego używa
-    // optymalizator — a nie wartością zapamiętaną przy dodaniu punktu.
+    // optymalizator – a nie wartością zapamiętaną przy dodaniu punktu.
     const gain = proposal ? gainFor(site, state.points, pending ? null : site.id) : null;
 
     selectedBox.style.display = '';
@@ -435,7 +469,7 @@ export async function render(root, ctx) {
             ? `Obrys wyznaczyło ${fmtNum(routes.length)} tras dojścia po realnych chodnikach i ulicach; ` +
               `najdłuższa ma ${fmtNum(longest.distanceM, 0)} m i ${fmtMin(longest.durationMin, 1)} marszu.`
             : 'Zasięg policzony po sieci pieszej. Trasy dojścia dociągam z Mapboksa…'
-          : 'Zasięg tego punktu nie przyszedł jeszcze z sieci — pokazany obszar jest przybliżeniem kołowym.',
+          : 'Zasięg tego punktu nie przyszedł jeszcze z sieci – pokazany obszar jest przybliżeniem kołowym.',
       }),
       h(
         'div',
@@ -449,11 +483,25 @@ export async function render(root, ctx) {
                 onclick: () => ctx.navigate(`#/card/${encodeURIComponent(site.id)}`),
               },
               'OTWÓRZ KARTĘ'
+            ),
+        // Rekomendację można zdjąć z mapy od razu z karty – bez wchodzenia
+        // w pełny widok punktu. Punktów istniejących ten przycisk nie dotyczy:
+        // inwentaryzacja jest zapisem stanu faktycznego, nie planu.
+        proposal
+          ? h(
+              'button',
+              {
+                class: 'btn btn--sm btn--ghost btn--danger',
+                title: 'Usuń tę rekomendację z mapy',
+                onclick: () => deleteProposal(sel),
+              },
+              'USUŃ PUNKT'
             )
+          : null
       )
     );
 
-    // Brakujące trasy dociągamy w tle — karta odświeży się sama.
+    // Brakujące trasy dociągamy w tle – karta odświeży się sama.
     ensureRoutes(sel);
   };
 
@@ -467,11 +515,11 @@ export async function render(root, ctx) {
       current.reachMode === 'radius'
         ? `Model przybliżony: prędkość marszu ${fmtNum(WALK_SPEED, 0)} m/min, współczynnik obejścia ` +
           `${fmtNum(DETOUR, 2)}, promień ${fmtNum(coverageRadiusM(standardMinutes), 0)} m. ` +
-          'Nie udało się pobrać zasięgów po sieci pieszej — liczymy okręgami.'
+          'Nie udało się pobrać zasięgów po sieci pieszej – liczymy okręgami.'
         : `Zasięg liczony po realnej sieci pieszej (izochrony ${fmtMin(standardMinutes, 0)} marszu): ` +
           `${fmtNum(stats.network)} z ${fmtNum(stats.total)} czynnych AED ma obrys z sieci` +
           (current.reachMode === 'mixed' ? ', pozostałe liczone są okręgiem.' : '. ') +
-          'Tory, rzeka czy ogrodzenie potrafią odciąć teren, który w linii prostej wygląda na bliski — ' +
+          'Tory, rzeka czy ogrodzenie potrafią odciąć teren, który w linii prostej wygląda na bliski – ' +
           'dlatego obrysy nie są kołami.';
   };
 
@@ -481,7 +529,7 @@ export async function render(root, ctx) {
     h(
       'div',
       { class: 'panel__head' },
-      h('h3', { text: 'Wskaźniki — na żywo' }),
+      h('h3', { text: 'Wskaźniki – na żywo' }),
       h('span', { html: pillHtml(scenario === 'plan' ? 'PLAN' : 'STAN OBECNY') }),
       h('span', { html: pillHtml(mode === 'night' ? 'NOC' : 'DZIEŃ') })
     ),
@@ -489,7 +537,7 @@ export async function render(root, ctx) {
     h(
       'div',
       { class: 'panel__body' },
-      section('Wskaźniki — teraz → po planie', kpiBox),
+      section('Wskaźniki – teraz → po planie', kpiBox),
       section('Luki wg dzielnic', gapsBox),
       section('Propozycje nowych punktów', proposalsBox),
       section(
@@ -594,7 +642,7 @@ export async function render(root, ctx) {
     point.gainPct = proposal.gainPct;
     point.gainWeight = proposal.gainWeight;
     // Szafka na elewacji i totem są z definicji dostępne całodobowo, punkt
-    // w budynku publicznym — nie. Tak samo jest w danych demo.
+    // w budynku publicznym – nie. Tak samo jest w danych demo.
     point.access.always = OUTDOOR_PRESETS.has(presetId);
     point.phase = OUTDOOR_PRESETS.has(presetId) ? 3 : 2;
 
@@ -637,7 +685,7 @@ export async function render(root, ctx) {
           'button',
           {
             class: 'btn btn--sm',
-            title: 'Akceptuj — punkt trafi do planu, kart i roadmapy',
+            title: 'Akceptuj – punkt trafi do planu, kart i roadmapy',
             'aria-label': 'Akceptuj propozycję',
             onclick: () => acceptPending(item.candidateId),
           },
@@ -647,7 +695,7 @@ export async function render(root, ctx) {
           'button',
           {
             class: 'btn btn--sm btn--danger',
-            title: 'Odrzuć — propozycja znika z listy',
+            title: 'Odrzuć – propozycja znika z listy',
             'aria-label': 'Odrzuć propozycję',
             onclick: () => rejectPending(item.candidateId),
           },
@@ -660,7 +708,7 @@ export async function render(root, ctx) {
           'button',
           {
             class: 'btn btn--sm',
-            title: 'Akceptuj — punkt wejdzie do scenariusza Plan',
+            title: 'Akceptuj – punkt wejdzie do scenariusza Plan',
             'aria-label': 'Akceptuj propozycję',
             onclick: () => setPointStatus(item.id, 'accepted', 'Zaakceptowano: %s.'),
           },
@@ -670,7 +718,7 @@ export async function render(root, ctx) {
           'button',
           {
             class: 'btn btn--sm btn--danger',
-            title: 'Odrzuć — punkt zostanie oznaczony jako odrzucony',
+            title: 'Odrzuć – punkt zostanie oznaczony jako odrzucony',
             'aria-label': 'Odrzuć propozycję',
             onclick: () => setPointStatus(item.id, 'rejected', 'Odrzucono: %s.'),
           },
@@ -683,7 +731,7 @@ export async function render(root, ctx) {
           'button',
           {
             class: 'btn btn--sm',
-            title: 'Cofnij akceptację — punkt wróci do propozycji',
+            title: 'Cofnij akceptację – punkt wróci do propozycji',
             onclick: () => setPointStatus(item.id, 'proposed', 'Cofnięto akceptację: %s.'),
           },
           'Cofnij'
@@ -737,7 +785,7 @@ export async function render(root, ctx) {
         ? h('div', {
             class: 'note',
             style: { marginTop: '6px' },
-            text: 'Czeka na decyzję — nie jest jeszcze punktem projektu. Pin przeciągasz na mapie.',
+            text: 'Czeka na decyzję – nie jest jeszcze punktem projektu. Pin przeciągasz na mapie.',
           })
         : null
     );
@@ -786,7 +834,7 @@ export async function render(root, ctx) {
         proposalsBox,
         h('div', {
           class: 'empty-state',
-          text: 'Brak propozycji — użyj przycisku „ZAPROPONUJ NOWE PUNKTY" poniżej.',
+          text: 'Brak propozycji – użyj przycisku „ZAPROPONUJ NOWE PUNKTY" poniżej.',
         })
       );
       return;
@@ -797,7 +845,7 @@ export async function render(root, ctx) {
 
   /**
    * Przemalowanie całego panelu dla podanej (być może tymczasowej) listy punktów.
-   * Zwraca analizę bieżącego scenariusza — mapa korzysta z niej przy pierwszym renderze.
+   * Zwraca analizę bieżącego scenariusza – mapa korzysta z niej przy pierwszym renderze.
    */
   const paintPanel = (points, pending) => {
     const { now, plan } = analysesFor(points);
@@ -841,28 +889,28 @@ export async function render(root, ctx) {
           `Pytanie tej mapy: gdzie mieszkaniec NIE zdąży dobiec do AED w ${fmtMin(standardMinutes, 0)} i wrócić. ` +
           'Każda kropka to skupisko ludności, obrys to realny zasięg jednego AED.',
       }),
-      legendRow(dotHtml('ok'), 'zielona kropka', 'w zasięgu — ktoś zdąży przynieść AED na czas'),
+      legendRow(dotHtml('ok'), 'zielona kropka', 'w zasięgu – ktoś zdąży przynieść AED na czas'),
       legendRow(dotHtml('warn'), 'żółta kropka', 'na granicy standardu'),
-      legendRow(dotHtml('crit'), 'czerwona kropka', 'poza zasięgiem — nie obsługuje ich żadne AED'),
-      legendRow(dotHtml('square'), 'fioletowy kwadrat', 'propozycja — przeciągnij, licznik przeliczy się na żywo'),
+      legendRow(dotHtml('crit'), 'czerwona kropka', 'poza zasięgiem – nie obsługuje ich żadne AED'),
+      legendRow(dotHtml('square'), 'fioletowy kwadrat', 'propozycja – przeciągnij, licznik przeliczy się na żywo'),
       legendRow(
         '<svg width="14" height="8" aria-hidden="true"><line x1="0" y1="4" x2="14" y2="4" ' +
           'stroke="#4caf7d" stroke-width="1.6" stroke-opacity="0.5" stroke-dasharray="4 3"/></svg>',
         'przerywane linie',
-        'trasy dojścia, które wyznaczyły obrys wybranego punktu — od pinu do granicy zasięgu ' +
+        'trasy dojścia, które wyznaczyły obrys wybranego punktu – od pinu do granicy zasięgu ' +
           '(fioletowe dla propozycji)'
       ),
       h('p', {
         class: 'note',
         text:
           analysis.reachMode === 'radius'
-            ? `Kryterium: ${fmtNum(analysis.radiusM, 0)} m w linii prostej — przybliżenie, brak danych o sieci pieszej.`
+            ? `Kryterium: ${fmtNum(analysis.radiusM, 0)} m w linii prostej – przybliżenie, brak danych o sieci pieszej.`
             : `Kryterium: ${fmtMin(standardMinutes, 0)} marszu po realnych chodnikach i ulicach. Obrys to izochrona, nie okrąg.`,
       }),
       h('p', {
         class: 'note',
         text:
-          'Klik w pin — także w fioletową propozycję — pokazuje jej obrys, trasy dojścia i zysk pokrycia ' +
+          'Klik w pin – także w fioletową propozycję – pokazuje jej obrys, trasy dojścia i zysk pokrycia ' +
           'w karcie w panelu obok; drugi klik otwiera pełną kartę punktu.',
       }),
     ])
@@ -880,7 +928,7 @@ export async function render(root, ctx) {
           'Obrys zasięgu pochodzi z izochron Mapboksa liczonych po sieci pieszej OSM. ' +
           'Punkty bez izochrony liczone są zapasowo okręgiem.',
         text: reachStats.radius
-          ? `ZASIĘG PO SIECI PIESZEJ — ${fmtNum(reachStats.network)}/${fmtNum(reachStats.total)} AED`
+          ? `ZASIĘG PO SIECI PIESZEJ – ${fmtNum(reachStats.network)}/${fmtNum(reachStats.total)} AED`
           : 'ZASIĘG PO REALNEJ SIECI PIESZEJ',
       })
     )
@@ -906,7 +954,7 @@ export async function render(root, ctx) {
         lat: p.lat,
         lon: p.lon,
         level: 'proposed',
-        name: `${p.name} — propozycja`,
+        name: `${p.name} – propozycja`,
         draggable: true,
       });
     }
@@ -917,7 +965,7 @@ export async function render(root, ctx) {
         lat: proposal.lat,
         lon: proposal.lon,
         level: 'proposed',
-        name: `${proposal.name} — propozycja (czeka na decyzję)`,
+        name: `${proposal.name} – propozycja (czeka na decyzję)`,
         draggable: true,
       });
     }
@@ -941,7 +989,7 @@ export async function render(root, ctx) {
 
   /**
    * Obrysy realnego zasięgu dojścia dla czynnych AED bieżącego scenariusza.
-   * Wybrany punkt dostaje mocniejszy obrys — reszta zostaje tłem.
+   * Wybrany punkt dostaje mocniejszy obrys – reszta zostaje tłem.
    */
   /**
    * Wybrany punkt: szukamy w punktach projektu, a potem w propozycjach
@@ -959,24 +1007,41 @@ export async function render(root, ctx) {
         pinId: point.id,
       };
     }
-    // Propozycja czekająca na decyzję nie ma jeszcze id punktu — na mapie
+    // Propozycja czekająca na decyzję nie ma jeszcze id punktu – na mapie
     // identyfikuje ją id pinu, więc to ono jest tu kluczem.
     const proposal = state.pendingProposals.find((pr) => pendingPinId(pr) === selectedReachId);
     if (proposal) return { site: proposal, kind: 'proposed', pending: true, pinId: selectedReachId };
     return null;
   };
 
-  /** Czynne AED scenariusza plus wybrany punkt, choćby jeszcze nie liczył się do pokrycia. */
+  /**
+   * Lokalizacje, którym rysujemy obrys zasięgu: czynne AED scenariusza oraz
+   * KAŻDA rekomendacja – także ta, która w bieżącym scenariuszu nie liczy się
+   * jeszcze do pokrycia. Bez tego fioletowy pin wisiał na mapie bez obrysu
+   * i nie było widać, jaki obszar miałby obsłużyć.
+   */
   const shapeSites = () => {
-    const list = (analysis.activePoints || []).map((p) => ({
-      site: p,
-      kind: p.kind === 'proposed' ? 'proposed' : 'existing',
-      pinId: p.id,
-    }));
-    const sel = findSelected();
-    if (sel && !list.some((x) => x.pinId === sel.pinId)) {
-      list.push({ site: sel.site, kind: sel.kind, pinId: sel.pinId });
+    const list = [];
+    const seen = new Set();
+    const add = (site, kind, pinId) => {
+      if (seen.has(pinId)) return;
+      seen.add(pinId);
+      list.push({ site, kind, pinId });
+    };
+
+    for (const p of analysis.activePoints || []) {
+      add(p, p.kind === 'proposed' ? 'proposed' : 'existing', p.id);
     }
+    for (const p of state.points) {
+      if (p.kind !== 'proposed' || p.status === 'rejected') continue;
+      add(p, 'proposed', p.id);
+    }
+    for (const proposal of state.pendingProposals) {
+      add(proposal, 'proposed', pendingPinId(proposal));
+    }
+
+    const sel = findSelected();
+    if (sel) add(sel.site, sel.kind, sel.pinId);
     return list;
   };
 
@@ -985,14 +1050,14 @@ export async function render(root, ctx) {
       .map(({ site: p, kind, pinId }) => {
         const contours = contoursFor(p.lat, p.lon);
         const ring = (contours && contours[standardMinutes]) ||
-          // Bez izochrony rysujemy okrąg, którym model i tak ten punkt liczy —
+          // Bez izochrony rysujemy okrąg, którym model i tak ten punkt liczy –
           // lepiej pokazać przybliżenie z adnotacją niż pustą mapę.
           circlePolygon(p.lat, p.lon, analysis.radiusM).coordinates[0];
         return { id: pinId, kind, ring, emphasis: pinId === selectedReachId };
       })
       .filter(Boolean);
 
-  /** Trasy dojścia wybranego punktu — w kolorze jego obrysu. */
+  /** Trasy dojścia wybranego punktu – w kolorze jego obrysu. */
   const buildRouteLines = () => {
     const sel = findSelected();
     if (!sel) return [];
@@ -1023,7 +1088,7 @@ export async function render(root, ctx) {
       // Obrysy dzielnic wyłączone: nakładały się na punkty popytu i utrudniały
       // czytanie kolorów. Nazwy dzielnic zostają w panelu luk.
       showDistricts: false,
-      // Zamiast okręgów — realne izochrony po sieci pieszej (patrz reach.js).
+      // Zamiast okręgów – realne izochrony po sieci pieszej (patrz reach.js).
       coverage: [],
       showCoverage: false,
       reach: buildReachShapes(),
@@ -1042,14 +1107,14 @@ export async function render(root, ctx) {
   paintScene();
   paintSelected();
   // Widok przerysowuje się po każdej zmianie danych (przesunięcie pinu, nowa
-  // rekomendacja). Kadr wraca taki, jaki był — bez odjeżdżania do całego miasta.
+  // rekomendacja). Kadr wraca taki, jaki był – bez odjeżdżania do całego miasta.
   if (savedCamera && typeof map.setCamera === 'function') map.setCamera(savedCamera);
   else map.fit();
 
   /* ---------------- Interakcje mapy ---------------- */
 
   // Klik w pin nie przerzuca już od razu do karty: najpierw pokazuje, SKĄD
-  // bierze się zasięg tego AED — obrys na mocno i trasy dojścia, które go
+  // bierze się zasięg tego AED – obrys na mocno i trasy dojścia, które go
   // narysowały. Do karty prowadzi przycisk w panelu i drugi klik w ten sam pin.
   map.on('pointclick', (pin) => {
     // Propozycja czekająca na decyzję zachowuje się tak samo jak punkt
@@ -1057,7 +1122,7 @@ export async function render(root, ctx) {
     // Karty punktu jeszcze nie ma, więc drugi klik jej nie otwiera.
     if (selectedReachId === pin.id) {
       if (isPendingPin(pin.id)) {
-        toast('Propozycja czeka na decyzję — po ✓ dostanie własną kartę punktu.');
+        toast('Propozycja czeka na decyzję – po ✓ dostanie własną kartę punktu.');
         return;
       }
       ctx.navigate(`#/card/${encodeURIComponent(pin.id)}`);
@@ -1068,7 +1133,7 @@ export async function render(root, ctx) {
     paintSelected();
   });
 
-  // Klik w puste miejsce mapy dokłada rekomendację (fioletowy kwadrat) — to
+  // Klik w puste miejsce mapy dokłada rekomendację (fioletowy kwadrat) – to
   // najszybsza odpowiedź na pytanie „a gdyby AED stanęło tutaj?". Zysk liczy
   // ten sam coverageGainFor(), którego używa optymalizator, więc nowa
   // rekomendacja jest porównywalna z propozycjami wygenerowanymi automatycznie.
@@ -1076,14 +1141,14 @@ export async function render(root, ctx) {
   map.on('mapclick', async ({ lat, lon }) => {
     const districtId = districtAt(lat, lon);
     if (!districtId) {
-      toast('Kliknięcie poza granicą miasta — rekomendacji nie dodano.');
+      toast('Kliknięcie poza granicą miasta – rekomendacji nie dodano.');
       return;
     }
 
     const presetId = 'P1';
     const point = makePoint({
       id: nextId('NEW'),
-      name: `Rekomendacja — ${districtName(districtId)}`,
+      name: `Rekomendacja – ${districtName(districtId)}`,
       lat: Math.round(lat * 1e6) / 1e6,
       lon: Math.round(lon * 1e6) / 1e6,
       presetId,
@@ -1100,7 +1165,7 @@ export async function render(root, ctx) {
     upsertPoint(point);
     // Nowy punkt od razu staje się aktywny: operator widzi jego obrys zasięgu,
     // trasy dojścia i wpływ na pokrycie bez dodatkowego kliknięcia.
-    // Izochrona dla świeżej lokalizacji dochodzi z Mapboksa w tle — do tego
+    // Izochrona dla świeżej lokalizacji dochodzi z Mapboksa w tle – do tego
     // czasu obrys jest kołowy, a karta mówi o tym wprost.
     selectedReachId = point.id;
     await save();
@@ -1108,7 +1173,7 @@ export async function render(root, ctx) {
   });
 
   // Przeciąganie na żywo: liczymy na tymczasowej kopii i przemalowujemy panel.
-  // Nic nie trafia do IndexedDB — zapis dopiero w pointdragend.
+  // Nic nie trafia do IndexedDB – zapis dopiero w pointdragend.
   let lastDrag = null;
   map.on('pointdrag', (pin) => {
     lastDrag = pin;

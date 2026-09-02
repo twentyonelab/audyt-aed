@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-bundle.py — squash the whole makieta into one self-contained HTML file.
+bundle.py – squash the whole makieta into one self-contained HTML file.
 
 Needed for previews that can only host a single file (and for handing the demo
 to someone on a pendrive). ES modules are turned into lazily evaluated factory
 functions in a tiny registry, data files are inlined and served through a fetch
-shim, and the Mapbox CDN tags are dropped — the schematic map renderer takes
+shim, and the Mapbox CDN tags are dropped – the schematic map renderer takes
 over, which is exactly what happens offline anyway.
 
     python3 tools/bundle.py            # -> dist/aed-planner-standalone.html
@@ -19,7 +19,7 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 OUT = ROOT / "dist" / "aed-planner-standalone.html"
 
-# Load order is irrelevant — the registry evaluates lazily — but listing them
+# Load order is irrelevant – the registry evaluates lazily – but listing them
 # explicitly keeps the bundle deterministic and makes a missing file loud.
 MODULES = [
     "config.js",
@@ -131,7 +131,7 @@ def main() -> None:
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sinecco · AED Planner — makieta iteracji 2</title>
+<title>Sinecco · AED Planner – makieta iteracji 2</title>
 <style>
 {css}
 </style>

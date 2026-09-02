@@ -2,7 +2,7 @@
   "project": {
     "id": "tychy-2026",
     "name": "Tychy",
-    "label": "TYCHY — Audyt 2026",
+    "label": "TYCHY – Audyt 2026",
     "status": "w_toku",
     "population": 127500,
     "standardMinutes": 5,
@@ -199,7 +199,7 @@
         "Z": 7,
         "O": 9,
         "R": 7,
-        "note": "Wejście A czynne całodobowo, portiernia z obsadą — lokalizacja wzorcowa."
+        "note": "Wejście A czynne całodobowo, portiernia z obsadą – lokalizacja wzorcowa."
       },
       "photos": [],
       "verification": {
@@ -214,7 +214,7 @@
       "id": "AED-003",
       "kind": "existing",
       "status": "verified_gaps",
-      "name": "SP nr 7 — hol główny",
+      "name": "SP nr 7 – hol główny",
       "address": "ul. Szkolna 3",
       "districtId": "zwakow",
       "lat": 50.108946,
@@ -256,7 +256,7 @@
         "Z": 8,
         "O": 6,
         "R": 8,
-        "note": "Poza godzinami lekcji budynek zamknięty — dostępność ogranicza wynik."
+        "note": "Poza godzinami lekcji budynek zamknięty – dostępność ogranicza wynik."
       },
       "photos": [],
       "verification": {
@@ -363,7 +363,7 @@
         "source": null
       },
       "recommendations": [],
-      "notes": "Punkt z importu OSM — wymaga wizyty terenowej."
+      "notes": "Punkt z importu OSM – wymaga wizyty terenowej."
     },
     {
       "id": "AED-006",
@@ -411,7 +411,7 @@
         "Z": 3,
         "O": 2,
         "R": 4,
-        "note": "Prywatny właściciel, brak opiekuna i zgody na oznakowanie — do wyjaśnienia."
+        "note": "Prywatny właściciel, brak opiekuna i zgody na oznakowanie – do wyjaśnienia."
       },
       "photos": [],
       "verification": {
@@ -420,7 +420,7 @@
         "source": null
       },
       "recommendations": [],
-      "notes": "Punkt z importu OSM — wymaga wizyty terenowej."
+      "notes": "Punkt z importu OSM – wymaga wizyty terenowej."
     },
     {
       "id": "AED-007",
@@ -671,7 +671,7 @@
       "id": "AED-012",
       "kind": "existing",
       "status": "verified_gaps",
-      "name": "SP nr 10 — szafka zewn.",
+      "name": "SP nr 10 – szafka zewn.",
       "address": "ul. Borowa 123",
       "districtId": "czulow",
       "lat": 50.146559,
@@ -769,7 +769,7 @@
       "id": "AED-014",
       "kind": "existing",
       "status": "unverified",
-      "name": "Market — Osiedle U",
+      "name": "Market – Osiedle U",
       "address": "ul. Damrota 62",
       "districtId": "suble",
       "lat": 50.118269,
@@ -812,7 +812,7 @@
         "source": null
       },
       "recommendations": [],
-      "notes": "Punkt z importu OSM — wymaga wizyty terenowej."
+      "notes": "Punkt z importu OSM – wymaga wizyty terenowej."
     },
     {
       "id": "NEW-001",
@@ -974,7 +974,7 @@
       "id": "NEW-004",
       "kind": "proposed",
       "status": "accepted",
-      "name": "Totem wolnostojący — Paprocany",
+      "name": "Totem wolnostojący – Paprocany",
       "address": null,
       "districtId": "paprocany",
       "lat": 50.092742,
@@ -1026,7 +1026,7 @@
       "id": "NEW-005",
       "kind": "proposed",
       "status": "accepted",
-      "name": "Szafka zewnętrzna — Żwaków",
+      "name": "Szafka zewnętrzna – Żwaków",
       "address": null,
       "districtId": "zwakow",
       "lat": 50.105263,
@@ -1078,7 +1078,7 @@
   "candidates": [
     {
       "id": "C-01",
-      "name": "SP nr 1 — wejście główne",
+      "name": "SP nr 1 – wejście główne",
       "districtId": "suble",
       "presetId": "P1",
       "category": "szkoła",
@@ -1123,7 +1123,7 @@
     },
     {
       "id": "C-06",
-      "name": "SP nr 22 — Paprocany",
+      "name": "SP nr 22 – Paprocany",
       "districtId": "paprocany",
       "presetId": "P1",
       "category": "szkoła",
@@ -1132,7 +1132,7 @@
     },
     {
       "id": "C-07",
-      "name": "SP nr 35 — Żwaków",
+      "name": "SP nr 35 – Żwaków",
       "districtId": "zwakow",
       "presetId": "P1",
       "category": "szkoła",
@@ -1222,7 +1222,7 @@
     },
     {
       "id": "C-17",
-      "name": "Orlik — Czułów",
+      "name": "Orlik – Czułów",
       "districtId": "zwierzyniec",
       "presetId": "P3",
       "category": "sport",
@@ -1240,7 +1240,7 @@
     },
     {
       "id": "C-19",
-      "name": "Plaża i molo — Paprocany",
+      "name": "Plaża i molo – Paprocany",
       "districtId": "paprocany",
       "presetId": "P4",
       "category": "sport",
@@ -1330,7 +1330,7 @@
     },
     {
       "id": "C-29",
-      "name": "Market — Urbanowice",
+      "name": "Market – Urbanowice",
       "districtId": "urbanowice",
       "presetId": "P3",
       "category": "inne",
@@ -1339,7 +1339,7 @@
     },
     {
       "id": "C-30",
-      "name": "Strefa przemysłowa — portiernia",
+      "name": "Strefa przemysłowa – portiernia",
       "districtId": "urbanowice",
       "presetId": "P3",
       "category": "inne",
@@ -1357,7 +1357,7 @@
     },
     {
       "id": "C-32",
-      "name": "Kościół — Czułów",
+      "name": "Kościół – Czułów",
       "districtId": "czulow",
       "presetId": "P1",
       "category": "inne",
@@ -1609,7 +1609,7 @@
       "id": "plan-NEW-001",
       "pointId": "NEW-001",
       "rule": "install",
-      "text": "Montaż AED — Hala sportowa (Wewnętrzny — budynek publiczny)",
+      "text": "Montaż AED – Hala sportowa (Wewnętrzny – budynek publiczny)",
       "priority": "high",
       "cost": 8500,
       "owner": "wykonawca",
@@ -1623,7 +1623,7 @@
       "id": "plan-NEW-002",
       "pointId": "NEW-002",
       "rule": "install",
-      "text": "Montaż AED — MOPS (Wewnętrzny — budynek publiczny)",
+      "text": "Montaż AED – MOPS (Wewnętrzny – budynek publiczny)",
       "priority": "high",
       "cost": 8500,
       "owner": "wykonawca",
@@ -1637,7 +1637,7 @@
       "id": "plan-NEW-003",
       "pointId": "NEW-003",
       "rule": "install",
-      "text": "Montaż AED — SP nr 3 (Wewnętrzny — obiekt 24/7)",
+      "text": "Montaż AED – SP nr 3 (Wewnętrzny – obiekt 24/7)",
       "priority": "high",
       "cost": 9000,
       "owner": "wykonawca",
@@ -1651,7 +1651,7 @@
       "id": "plan-NEW-004",
       "pointId": "NEW-004",
       "rule": "install",
-      "text": "Montaż AED — Totem wolnostojący — Paprocany (Zewnętrzny — słupek wolnostojący)",
+      "text": "Montaż AED – Totem wolnostojący – Paprocany (Zewnętrzny – słupek wolnostojący)",
       "priority": "medium",
       "cost": 24000,
       "owner": "wykonawca",
@@ -1665,7 +1665,7 @@
       "id": "plan-NEW-005",
       "pointId": "NEW-005",
       "rule": "install",
-      "text": "Montaż AED — Szafka zewnętrzna — Żwaków (Zewnętrzny — szafka na elewacji)",
+      "text": "Montaż AED – Szafka zewnętrzna – Żwaków (Zewnętrzny – szafka na elewacji)",
       "priority": "medium",
       "cost": 15000,
       "owner": "wykonawca",

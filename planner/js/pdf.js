@@ -1,16 +1,16 @@
 /**
- * pdf.js — minimalny generator PDF pisany od zera, zero zależności.
+ * pdf.js – minimalny generator PDF pisany od zera, zero zależności.
  *
  * Powstał, bo klient chce pobierać karty punktów jako OSOBNE pliki PDF
  * (nie wydruk przeglądarki), a spec iteracji 2 zakazuje bibliotek runtime.
  *
  * Co umie i czego nie umie:
- *   • fonty: wbudowane Helvetica / Helvetica-Bold (Base14) — bez osadzania,
+ *   • fonty: wbudowane Helvetica / Helvetica-Bold (Base14) – bez osadzania,
  *   • polskie znaki: /BaseEncoding /WinAnsiEncoding + /Differences dla liter
  *     z ogonkami i kreskami (kody jak w CP1250, glify nazwane wg Adobe),
  *   • tekst z łamaniem wierszy (metryki Helvetiki wpisane niżej), linie,
  *     prostokąty z wypełnieniem i obrysem,
- *   • obrazy JPEG (XObject /DCTDecode) — dokładnie tyle, ile trzeba, żeby
+ *   • obrazy JPEG (XObject /DCTDecode) – dokładnie tyle, ile trzeba, żeby
  *     karta punktu niosła zdjęcia z audytu; konwersję WebP/SVG→JPEG robi
  *     wołający (canvas w przeglądarce),
  *   • wielostronicowość; współrzędne API idą OD GÓRY (jak w CSS) i są
@@ -55,7 +55,7 @@ const WINANSI = {
   '”': 0x94,
   '•': 0x95,
   '–': 0x96,
-  '—': 0x97,
+  '—': 0x97, // pauza nie jest używana w tekstach, ale gdy trafi z danych – ma glif
   '°': 0xb0,
   '·': 0xb7,
   Ó: 0xd3,
@@ -107,7 +107,7 @@ function pdfString(str) {
 }
 
 /* ------------------------------------------------------------------ *
- * Metryki Helvetiki (AFM, 1/1000 em) — do łamania wierszy
+ * Metryki Helvetiki (AFM, 1/1000 em) – do łamania wierszy
  * ------------------------------------------------------------------ */
 
 // prettier-ignore
@@ -145,7 +145,7 @@ export function createPdf(opts = {}) {
   const width = opts.width || A4.width;
   const height = opts.height || A4.height;
 
-  /** Strumienie treści stron — tablica tablic operatorów. */
+  /** Strumienie treści stron – tablica tablic operatorów. */
   const pages = [];
   let ops = null;
 
@@ -163,7 +163,7 @@ export function createPdf(opts = {}) {
   function measure(str, size, bold = false) {
     let units = 0;
     for (const ch of sanitize(str)) units += charWidth(ch);
-    // Odmiana bold jest szersza — mnożnik trzyma łamanie po bezpiecznej stronie.
+    // Odmiana bold jest szersza – mnożnik trzyma łamanie po bezpiecznej stronie.
     return (units / 1000) * size * (bold ? 1.08 : 1);
   }
 

@@ -1,19 +1,19 @@
 /**
- * report.js — treść raportu dla decydenta (SPEC §6.7).
+ * report.js – treść raportu dla decydenta (SPEC §6.7).
  *
  * Ten moduł buduje wyłącznie **treść**: osiem sekcji jako gotowe fragmenty HTML
  * plus pięć wskaźników KPI. Nie dotyka DOM widoku, nie tworzy mapy
- * interaktywnej, nie zapisuje stanu — dzięki temu tę samą treść da się w
+ * interaktywnej, nie zapisuje stanu – dzięki temu tę samą treść da się w
  * iteracji 3 wyrenderować po stronie serwera do PDF-a bez żadnej zmiany.
  *
  * Warstwa widoku (`views/report-view.js`) opakowuje każdą sekcję w `.report-page`
  * z nagłówkiem brandingu i steruje tym, które sekcje są włączone.
  *
  * Zasady, których ten plik pilnuje:
- *  • wszystkie liczby pochodzą z `analyze()` i `roadmapTotals()` — w HTML nie ma
+ *  • wszystkie liczby pochodzą z `analyze()` i `roadmapTotals()` – w HTML nie ma
  *    ani jednej wpisanej na sztywno,
  *  • formatowanie wyłącznie przez fmtPct / fmtMin / fmtNum / fmtCost,
- *  • mapy „jest / będzie" rysuje `renderSceneSvg()` — statyczny SVG, który działa
+ *  • mapy „jest / będzie" rysuje `renderSceneSvg()` – statyczny SVG, który działa
  *    także bez tokenu Mapboxa i bez problemu wchodzi do druku,
  *  • kolor pojawia się tylko tam, gdzie niesie informację o danych
  *    (status punktu, faza, kierunek zmiany wskaźnika).
@@ -66,26 +66,26 @@ export const REPORT_SECTIONS = [
 ];
 
 /**
- * Zdanie kontekstowe wymagane przez SPEC §6.7 — jedyny fragment raportu, który
+ * Zdanie kontekstowe wymagane przez SPEC §6.7 – jedyny fragment raportu, który
  * jest tekstem stałym, bo to cytat z materiałów merytorycznych, nie liczba
  * z modelu.
  */
 export const CONTEXT_SENTENCE =
   'Karetka dojeżdża średnio w 8–15 min. Defibrylacja w 3–5 min daje 50–70% ' +
-  'przeżywalności — każda minuta zwłoki to −10%.';
+  'przeżywalności – każda minuta zwłoki to −10%.';
 
 const OWNER_LABEL = { gmina: 'gmina', serwis: 'serwis', wykonawca: 'wykonawca' };
 
 const KIND_LABEL = { existing: 'istniejący', proposed: 'nowy' };
 
-/** Rozmiar mapy w raporcie — proporcja kolumny `.report-map` (SVG i tak skaluje się do 100%). */
+/** Rozmiar mapy w raporcie – proporcja kolumny `.report-map` (SVG i tak skaluje się do 100%). */
 const MAP_W = 300;
 const MAP_H = 220;
 
 const TODAY_MONTH = String(TODAY).slice(0, 7);
 
 /* ------------------------------------------------------------------ *
- * Pomocniki lokalne (rdzenia nie ruszamy — czego brakuje, jest tutaj)
+ * Pomocniki lokalne (rdzenia nie ruszamy – czego brakuje, jest tutaj)
  * ------------------------------------------------------------------ */
 
 const esc = escapeHtml;
@@ -101,7 +101,7 @@ function plural(n, [one, few, many]) {
 }
 
 /**
- * Tabela raportu. Komórki przekazujemy jako **gotowy HTML** — każdy wywołujący
+ * Tabela raportu. Komórki przekazujemy jako **gotowy HTML** – każdy wywołujący
  * sam decyduje, co escape'uje (teksty z danych zawsze przez `esc()`).
  */
 function tableHtml(headers, rows, align = []) {
@@ -130,7 +130,7 @@ function presetById(state, id) {
 function districtNameOf(state, id) {
   const list = (state.project && state.project.districts) || [];
   const found = list.find((d) => d.id === id);
-  return found ? found.name : '—';
+  return found ? found.name : '–';
 }
 
 /** Udział procentowy elementów spełniających warunek. */
@@ -159,7 +159,7 @@ const governanceNow = (p) => hasKeeper(p) && inspectionValid(p);
 
 /**
  * Ład punktu po wykonaniu roadmapy: braki domknięte przez zadanie przypisane
- * do fazy. Punkty nowe liczymy jako spełnione — ich wdrożenie obejmuje
+ * do fazy. Punkty nowe liczymy jako spełnione – ich wdrożenie obejmuje
  * z definicji nowe urządzenie i wskazanie opiekuna (pozycja „install" w fazie).
  */
 function governancePlan(state, p) {
@@ -170,7 +170,7 @@ function governancePlan(state, p) {
 }
 
 /* ------------------------------------------------------------------ *
- * Kontekst obliczeniowy — jedno miejsce, w którym wołamy model
+ * Kontekst obliczeniowy – jedno miejsce, w którym wołamy model
  * ------------------------------------------------------------------ */
 
 /**
@@ -195,7 +195,7 @@ function buildContext(state, options = {}) {
   const night = analyze({ ...base, reach, scenario: 'now', mode: 'night' });
   const totals = roadmapTotals(state.recommendations || []);
 
-  // Wiersze inwentarza — kompletność i status liczone raz, używane w kilku sekcjach.
+  // Wiersze inwentarza – kompletność i status liczone raz, używane w kilku sekcjach.
   const rows = (state.points || []).map((point) => {
     const preset = presetById(state, point.presetId);
     const comp = completeness(point, preset, state.photos || []);
@@ -230,7 +230,7 @@ function buildContext(state, options = {}) {
 }
 
 /* ------------------------------------------------------------------ *
- * KPI raportu (SPEC §6.7 — pięć wskaźników)
+ * KPI raportu (SPEC §6.7 – pięć wskaźników)
  * ------------------------------------------------------------------ */
 
 function deltaPp(value) {
@@ -308,10 +308,10 @@ function kpisFrom(ctx) {
     {
       id: 'costPerPerson',
       label: 'Koszt planu na mieszkańca objętego ochroną',
-      now: '—',
+      now: '–',
       // fmtCost zaokrągla do pełnych złotych, co skasowałoby wskaźnik rzędu
-      // kilku złotych — dlatego kwota jednostkowa idzie przez fmtNum z groszami.
-      plan: gainedPeople ? `${fmtNum(perPerson, 2)} zł` : '—',
+      // kilku złotych – dlatego kwota jednostkowa idzie przez fmtNum z groszami.
+      plan: gainedPeople ? `${fmtNum(perPerson, 2)} zł` : '–',
       delta: gainedPeople
         ? `${fmtCost(totals.total)} / ${fmtNum(gainedPeople)} ${plural(gainedPeople, ['osoba', 'osoby', 'osób'])}`
         : 'plan nie zwiększa liczby objętych osób',
@@ -331,7 +331,7 @@ export function reportKpis(state) {
 }
 
 /* ------------------------------------------------------------------ *
- * Mapy „jest / będzie" — statyczny SVG z map.js
+ * Mapy „jest / będzie" – statyczny SVG z map.js
  * ------------------------------------------------------------------ */
 
 function sceneFor(ctx, analysis) {
@@ -404,7 +404,7 @@ function sectionCover(ctx) {
     <p class="muted">Audyt dostępności i plan rozwoju sieci defibrylatorów AED</p>
     <div class="divider"></div>
     ${factsHtml([
-      ['Gmina', esc(project.name || '—')],
+      ['Gmina', esc(project.name || '–')],
       ['Liczba mieszkańców', `${fmtNum(project.population || 0)}`],
       ['Jednostki pomocnicze (dzielnice)', fmtNum(districts)],
       ['Punkty AED w inwentarzu', fmtNum(existing)],
@@ -417,7 +417,7 @@ function sectionCover(ctx) {
     ])}
     <div class="divider"></div>
     <p class="note">
-      Dokument roboczy iteracji 2 — makieta klikalna. Liczby pochodzą z modelu
+      Dokument roboczy iteracji 2 – makieta klikalna. Liczby pochodzą z modelu
       uproszczonego (SPEC §5) i z danych wprowadzonych w krokach 0–4;
       przed publikacją wymagają potwierdzenia w terenie.
     </p>`;
@@ -430,9 +430,9 @@ function sectionSummary(ctx, kpis) {
   const tasks = (ctx.state.recommendations || []).filter((r) => r.phase).length;
 
   return `
-    <h2>Podsumowanie dla decydenta — na jednej kartce</h2>
+    <h2>Podsumowanie dla decydenta – na jednej kartce</h2>
     <p>
-      Sieć AED w gminie ${esc(ctx.project.name || '—')} obejmuje dziś
+      Sieć AED w gminie ${esc(ctx.project.name || '–')} obejmuje dziś
       <strong>${fmtPct(now.coveragePct, 0)}</strong> mieszkańców w standardzie
       dojścia <strong>${fmtMin(standardMinutes, 0)}</strong> w jedną stronę.
       Po wykonaniu planu będzie to <strong>${fmtPct(plan.coveragePct, 0)}</strong>, czyli
@@ -442,11 +442,11 @@ function sectionSummary(ctx, kpis) {
     </p>
     ${kpiStripHtml(kpis)}
     <div class="report-maps">
-      ${mapHtml(ctx, now, 'Jest — stan obecny')}
-      ${mapHtml(ctx, plan, 'Będzie — po planie')}
+      ${mapHtml(ctx, now, 'Jest – stan obecny')}
+      ${mapHtml(ctx, plan, 'Będzie – po planie')}
     </div>
     <p class="note">
-      Zielone punkty to mieszkańcy w zasięgu, czerwone — poza zasięgiem.
+      Zielone punkty to mieszkańcy w zasięgu, czerwone – poza zasięgiem.
       Okręgi to strefy pokrycia (fioletowe: punkty planowane).
     </p>
     <div class="report-quote">„${esc(CONTEXT_SENTENCE)}”</div>
@@ -468,7 +468,7 @@ function sectionCurrent(ctx) {
   const inventoryRows = [
     ['ok', 'Zweryfikowane, karta kompletna'],
     ['warn', 'Zweryfikowane, karta z brakami'],
-    ['crit', 'Niezweryfikowane — wymagają wizyty'],
+    ['crit', 'Niezweryfikowane – wymagają wizyty'],
   ].map(([level, label]) => {
     const count = byLevel(level);
     return [
@@ -480,7 +480,7 @@ function sectionCurrent(ctx) {
   inventoryRows.push([
     `${dotHtml('proposed')} Punkty planowane (zaakceptowane propozycje)`,
     fmtNum(rows.filter((r) => r.point.kind === 'proposed').length),
-    '—',
+    '–',
   ]);
 
   const avgCompleteness = existing.length
@@ -502,8 +502,8 @@ function sectionCurrent(ctx) {
 
     <h3>Wskaźniki wyjściowe</h3>
     ${factsHtml([
-      [`Pokrycie ≤ ${fmtMin(ctx.standardMinutes, 0)} — dzień`, fmtPct(now.coveragePct, 0)],
-      [`Pokrycie ≤ ${fmtMin(ctx.standardMinutes, 0)} — noc (tylko 24/7)`, fmtPct(night.coveragePct, 0)],
+      [`Pokrycie ≤ ${fmtMin(ctx.standardMinutes, 0)} – dzień`, fmtPct(now.coveragePct, 0)],
+      [`Pokrycie ≤ ${fmtMin(ctx.standardMinutes, 0)} – noc (tylko 24/7)`, fmtPct(night.coveragePct, 0)],
       ['Mediana czasu dojścia', fmtMin(now.medianMin)],
       ['Średni czas dojścia (ważony ludnością)', fmtMin(now.meanMin)],
       ['Mieszkańcy w zasięgu', `${fmtNum(now.coveredPeople)} z ${fmtNum(now.totalPeople)}`],
@@ -512,7 +512,7 @@ function sectionCurrent(ctx) {
       ['Średnia kompletność kart', fmtPct(avgCompleteness, 0)],
     ])}
     <p class="note">
-      Pokrycie nocne liczone jest wyłącznie po punktach z całodobowym dostępem —
+      Pokrycie nocne liczone jest wyłącznie po punktach z całodobowym dostępem –
       to najczęstsza przyczyna różnicy między deklarowaną a realną dostępnością sieci.
     </p>`;
 }
@@ -537,10 +537,10 @@ function sectionAnalysis(ctx) {
     .filter((r) => r.point.kind === 'proposed')
     .map((r) => [
       esc(r.point.name),
-      `${esc(r.point.presetId || '—')}${r.preset ? ` <span class="muted">${esc(r.preset.name)}</span>` : ''}`,
+      `${esc(r.point.presetId || '–')}${r.preset ? ` <span class="muted">${esc(r.preset.name)}</span>` : ''}`,
       esc(districtNameOf(ctx.state, r.point.districtId)),
-      Number.isFinite(r.point.gainPct) ? `+${fmtPct(r.point.gainPct, 1)}` : '—',
-      r.preset ? fmtCost(r.preset.cost) : '—',
+      Number.isFinite(r.point.gainPct) ? `+${fmtPct(r.point.gainPct, 1)}` : '–',
+      r.preset ? fmtCost(r.preset.cost) : '–',
     ]);
 
   const totalGain = ctx.rows
@@ -557,7 +557,7 @@ function sectionAnalysis(ctx) {
       (${fmtMin(ctx.standardMinutes, 0)} w jedną stronę).
     </p>
 
-    <h3>Luki wg dzielnic — stan obecny</h3>
+    <h3>Luki wg dzielnic – stan obecny</h3>
     ${tableHtml(
       ['Dzielnica', 'Osoby poza zasięgiem', 'Udział poza zasięgiem', 'Maks. czas dojścia'],
       gapRows,
@@ -571,7 +571,7 @@ function sectionAnalysis(ctx) {
       ['', '', '', 'r', 'r']
     )}
     <p class="note">
-      Dobór lokalizacji: algorytm zachłanny maksymalnego pokrycia — w każdej turze
+      Dobór lokalizacji: algorytm zachłanny maksymalnego pokrycia – w każdej turze
       wybierany jest kandydat domykający najwięcej niepokrytej ludności.
       Łączny przyrost: <strong>${fmtNum(totalGain)}</strong>
       ${plural(totalGain, ['osoba', 'osoby', 'osób'])} w zasięgu.
@@ -601,7 +601,7 @@ function sectionRecommendations(ctx) {
   const recs = ctx.state.recommendations || [];
   const pointName = (id) => {
     const row = ctx.rows.find((r) => r.point.id === id);
-    return row ? row.point.name : '—';
+    return row ? row.point.name : '–';
   };
 
   const order = { high: 0, medium: 1, low: 2 };
@@ -612,8 +612,8 @@ function sectionRecommendations(ctx) {
   const rows = sorted.map((r) => [
     esc(r.text),
     r.pointId ? `${esc(r.pointId)} <span class="muted">${esc(pointName(r.pointId))}</span>` : '<span class="muted">zadanie ogólne</span>',
-    pillHtml(PRIORITY_LABEL[r.priority] || r.priority || '—', PRIORITY_VARIANT[r.priority] || ''),
-    esc(OWNER_LABEL[r.owner] || r.owner || '—'),
+    pillHtml(PRIORITY_LABEL[r.priority] || r.priority || '–', PRIORITY_VARIANT[r.priority] || ''),
+    esc(OWNER_LABEL[r.owner] || r.owner || '–'),
     r.phase ? pillHtml(PHASE_META[r.phase].label, `phase${r.phase}`) : '<span class="muted">nieprzypisane</span>',
     fmtCost(r.cost || 0),
   ]);
@@ -664,12 +664,12 @@ function sectionRoadmap(ctx) {
       const rows = bucket.items.map((r) => [
         esc(r.text),
         r.pointId ? esc(pointName(r.pointId) || r.pointId) : '<span class="muted">zadanie ogólne</span>',
-        esc(OWNER_LABEL[r.owner] || r.owner || '—'),
-        Number.isFinite(r.startMonth) ? `${fmtNum(r.startMonth)}–${fmtNum(r.startMonth + (r.lengthMonths || 1) - 1)}` : '—',
+        esc(OWNER_LABEL[r.owner] || r.owner || '–'),
+        Number.isFinite(r.startMonth) ? `${fmtNum(r.startMonth)}–${fmtNum(r.startMonth + (r.lengthMonths || 1) - 1)}` : '–',
         fmtCost(r.cost || 0),
       ]);
       return `
-        <h3>${esc(meta.label)} — ${esc(meta.title)}
+        <h3>${esc(meta.label)} – ${esc(meta.title)}
           <span class="muted">· ${esc(meta.months)} · ${fmtCost(bucket.cost)} ·
           ${fmtNum(bucket.items.length)} ${plural(bucket.items.length, ['pozycja', 'pozycje', 'pozycji'])}</span>
         </h3>
@@ -703,7 +703,7 @@ function sectionRoadmap(ctx) {
     ${phaseBlocks}
     <p class="note">
       Terminy wyznaczają zadania proceduralne (zamówienie sprzętu, dokumentacja
-      i uzgodnienia, przetarg), a nie sam montaż — dlatego są ujęte w harmonogramie
+      i uzgodnienia, przetarg), a nie sam montaż – dlatego są ujęte w harmonogramie
       jako osobne pozycje.
     </p>`;
 }
@@ -726,8 +726,8 @@ function sectionMethod(ctx) {
       ['Promień strefy pokrycia', `${fmtNum(coverageRadiusM(ctx.standardMinutes))} m`],
       ['Punkty popytu w modelu', fmtNum(demand)],
       ['Ludność objęta modelem', fmtNum(ctx.now.totalPeople)],
-      ['Punkty czynne — dzień', fmtNum(ctx.now.activeCount)],
-      ['Punkty czynne — noc (24/7)', fmtNum(ctx.night.activeCount)],
+      ['Punkty czynne – dzień', fmtNum(ctx.now.activeCount)],
+      ['Punkty czynne – noc (24/7)', fmtNum(ctx.night.activeCount)],
     ])}
 
     <h3>Punkty popytu</h3>
@@ -755,7 +755,7 @@ function sectionMethod(ctx) {
     <h3>Ograniczenia tej wersji</h3>
     <ul class="note">
       <li>Czasy dojścia z modelu uproszczonego, nie z izochron po sieci pieszej.</li>
-      <li>Granice i dane ludnościowe poglądowe — bez pobierania z PRG/GUS/OSM.</li>
+      <li>Granice i dane ludnościowe poglądowe – bez pobierania z PRG/GUS/OSM.</li>
       <li>Raport generowany jako wydruk przeglądarki (snapshot), nie PDF serwerowy.</li>
       <li>Dane trzymane lokalnie w przeglądarce (IndexedDB), bez kont użytkowników.</li>
     </ul>`;
@@ -775,10 +775,10 @@ function sectionCards(ctx) {
     return [
       `${dotHtml(r.level)} ${esc(r.point.id)} <span class="muted">${esc(KIND_LABEL[r.point.kind] || r.point.kind)}</span>`,
       `<span class="table__main">${esc(r.point.name)}</span><div class="table__sub">${esc(
-        r.point.address || '—'
+        r.point.address || '–'
       )}</div>`,
       esc(districtNameOf(ctx.state, r.point.districtId)),
-      esc(r.point.presetId || '—'),
+      esc(r.point.presetId || '–'),
       pctCell,
       fmtNum(recCount),
       pillHtml(r.status.label, r.status.variant),
@@ -786,7 +786,7 @@ function sectionCards(ctx) {
   });
 
   return `
-    <h2>Karty punktów — załącznik</h2>
+    <h2>Karty punktów – załącznik</h2>
     <p class="note">
       Zestawienie skrócone. Pełne karty (dostępność, opiekun, oznakowanie,
       urządzenie, rejestracja u dyspozytora, dokumentacja fotograficzna) są
@@ -829,7 +829,7 @@ export function isSectionOn(state, id) {
  * Buduje treść raportu.
  *
  * @param {object} state pełny obiekt stanu aplikacji
- * @param {object} [options] `{date, contact}` — metryka dokumentu z panelu konfiguracji
+ * @param {object} [options] `{date, contact}` – metryka dokumentu z panelu konfiguracji
  * @returns {{sections: Array<{id,title,html}>, kpis: Array}}
  */
 export function buildReport(state, options = {}) {

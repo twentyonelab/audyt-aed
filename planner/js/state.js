@@ -1,5 +1,5 @@
 /**
- * state.js — the single application state object, its IndexedDB persistence
+ * state.js – the single application state object, its IndexedDB persistence
  * and the photo blob store.
  *
  * Everything the UI renders comes from `state`. Views mutate it through the
@@ -18,14 +18,14 @@ import { buildDemandPoints } from './model.js';
 export const state = {
   /** Dashboard project index. Only `tychy-2026` carries demo data. */
   projects: [
-    { id: 'tychy-2026', name: 'Tychy', label: 'TYCHY — Audyt 2026', status: 'w_toku', available: true },
-    { id: 'brodnica-2026', name: 'Brodnica', label: 'BRODNICA — Audyt 2026', status: 'oferta', available: false },
-    { id: 'czluchow-2026', name: 'Człuchów', label: 'CZŁUCHÓW — Audyt 2026', status: 'oferta', available: false },
+    { id: 'tychy-2026', name: 'Tychy', label: 'TYCHY – Audyt 2026', status: 'w_toku', available: true },
+    { id: 'brodnica-2026', name: 'Brodnica', label: 'BRODNICA – Audyt 2026', status: 'oferta', available: false },
+    { id: 'czluchow-2026', name: 'Człuchów', label: 'CZŁUCHÓW – Audyt 2026', status: 'oferta', available: false },
   ],
 
   project: null,        // active project (spec §4 "project")
   points: [],           // spec §4 "points"
-  photos: [],           // spec §4 "photos" — metadata only, blobs live in IDB
+  photos: [],           // spec §4 "photos" – metadata only, blobs live in IDB
   recommendations: [],  // spec §4 "recommendations"
   presets: [],          // spec §4 "presets"
   candidates: [],       // sites the optimiser may choose from
@@ -34,7 +34,7 @@ export const state = {
   districtsGeo: null,   // GeoJSON FeatureCollection
   demandPoints: [],     // derived, never persisted
 
-  /** Transient interface state — persisted so a reload feels continuous. */
+  /** Transient interface state – persisted so a reload feels continuous. */
   ui: {
     scenario: 'now',    // 'now' | 'plan'
     mode: 'day',        // 'day' | 'night'
@@ -131,7 +131,7 @@ function idbDelete(store, key) {
 }
 
 /* ------------------------------------------------------------------ *
- * Photo blob store — the only two functions that touch photo bytes.
+ * Photo blob store – the only two functions that touch photo bytes.
  * Iteration 3 swaps their bodies for disk access; nothing else changes.
  * ------------------------------------------------------------------ */
 
@@ -184,7 +184,7 @@ async function seedDemoPhotos() {
     { id: 'ph-001', pointId: 'AED-001', role: 'device', caption: 'AED w holu obiektu', color: '#4caf7d', text: 'AED' },
     { id: 'ph-002', pointId: 'AED-001', role: 'signage_route', caption: 'Tabliczka kierunkowa przy wejściu', color: '#3a3a3a', text: 'ZNAK' },
     { id: 'ph-003', pointId: 'AED-003', role: 'device', caption: 'AED przy portierni', color: '#4caf7d', text: 'AED' },
-    { id: 'ph-004', pointId: 'AED-002', role: 'device', caption: 'AED — wejście A', color: '#4caf7d', text: 'AED' },
+    { id: 'ph-004', pointId: 'AED-002', role: 'device', caption: 'AED – wejście A', color: '#4caf7d', text: 'AED' },
     { id: 'ph-005', pointId: 'AED-002', role: 'signage_route', caption: 'Oznakowanie dojścia', color: '#3a3a3a', text: 'ZNAK' },
     { id: 'ph-006', pointId: 'AED-004', role: 'device', caption: 'AED przy kasie basenu', color: '#4caf7d', text: 'AED' },
   ];
@@ -251,7 +251,7 @@ export async function initState({ reset = false } = {}) {
   // trafiałby w cache izochron i mapa pokazywałaby pustkę. Stempel wersji
   // rozstrzyga to jednoznacznie: rozjazd = wracamy do świeżego demo.
   if (stored && stored.project && stored.project.dataVersion !== demo.project.dataVersion) {
-    console.info('Dane demo są nowsze niż zapisany projekt — wczytuję je od nowa.');
+    console.info('Dane demo są nowsze niż zapisany projekt – wczytuję je od nowa.');
     stored = null;
   }
 
@@ -279,7 +279,7 @@ export async function initState({ reset = false } = {}) {
   }
 
   // Siatka popytu jest częścią danych projektu (w produkcji: siatka GUS 1 km),
-  // a nie pochodną granic dzielnic — dzielnice z OSM to warstwa administracyjna,
+  // a nie pochodną granic dzielnic – dzielnice z OSM to warstwa administracyjna,
   // a rozkład ludności modelują osobne rdzenie gęstości zabudowy. Fallback dla
   // projektów bez własnej siatki: spirala z wielokątów dzielnic, jak dawniej.
   state.demandPoints =
@@ -311,7 +311,7 @@ export async function save({ silent = false } = {}) {
  * ------------------------------------------------------------------ */
 
 /**
- * One entry per discrete operator action — adding a point on the map, moving a
+ * One entry per discrete operator action – adding a point on the map, moving a
  * pin, accepting a proposal. Field-level edits inside a card are not stacked;
  * they would bury the map actions the button is there for.
  *
@@ -335,7 +335,7 @@ export function checkpoint(label) {
   if (undoStack.length > UNDO_LIMIT) undoStack.shift();
 }
 
-/** Discard the last checkpoint without restoring it — for an action that turned out to be a no-op. */
+/** Discard the last checkpoint without restoring it – for an action that turned out to be a no-op. */
 export function dropCheckpoint() {
   undoStack.pop();
 }
@@ -374,7 +374,7 @@ export async function resetToDemo() {
 }
 
 /* ------------------------------------------------------------------ *
- * Export / import (spec §1 — ZIP is iteration 3; here it is JSON)
+ * Export / import (spec §1 – ZIP is iteration 3; here it is JSON)
  * ------------------------------------------------------------------ */
 
 export function exportProject() {
@@ -420,7 +420,7 @@ export function getDistrict(id) {
 
 export function districtName(id) {
   const d = getDistrict(id);
-  return d ? d.name : '—';
+  return d ? d.name : '–';
 }
 
 export function photosForPoint(pointId) {
@@ -491,7 +491,7 @@ export function makePoint({ id, name, lat, lon, presetId = 'P1', districtId = nu
     device: { model: null, inspectionDue: null, padsDue: null },
     dispatcherRegistered: null,
     technical: { power: null, distanceToSource: null, works: null, connectionCost: null, monitoring: false },
-    expert: null, // ocena ekspercka {D,W,N,Z,O,R, note} — null, dopóki audytor nie oceni
+    expert: null, // ocena ekspercka {D,W,N,Z,O,R, note} – null, dopóki audytor nie oceni
     photos: [],
     verification: { date: null, by: null, source: null },
     recommendations: [],
@@ -500,7 +500,7 @@ export function makePoint({ id, name, lat, lon, presetId = 'P1', districtId = nu
 }
 
 /**
- * Which district polygon contains a coordinate — used when the operator drops
+ * Which district polygon contains a coordinate – used when the operator drops
  * a pin on the map so the point lands in the right gap statistics.
  */
 function pointInRing(lat, lon, ring) {
@@ -521,7 +521,7 @@ export function districtAt(lat, lon) {
 
   // Realne granice z OSM miewają szczeliny (cztery relacje Tychów są w źródle
   // niedomknięte). Punkt wewnątrz miasta, który nie trafił w żaden wielokąt,
-  // dostaje najbliższą dzielnicę po centroidzie — zamiast null, które
+  // dostaje najbliższą dzielnicę po centroidzie – zamiast null, które
   // blokowałoby dodawanie punktów.
   const boundary = state.boundary?.geometry?.coordinates?.[0];
   if (!boundary || !pointInRing(lat, lon, boundary)) return null;

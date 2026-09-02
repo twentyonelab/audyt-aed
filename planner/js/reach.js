@@ -1,5 +1,5 @@
 /**
- * reach.js — zasięgi dojścia pieszego po realnej sieci ulic i chodników.
+ * reach.js – zasięgi dojścia pieszego po realnej sieci ulic i chodników.
  *
  * Zastępuje okrąg „promień = czas × prędkość ÷ współczynnik obejścia" realnym
  * obrysem izochrony z Mapboksa, policzonym po sieci pieszej OSM. Różnica jest
@@ -8,13 +8,13 @@
  * a pieszo jest 900 m. Okrąg pokazywał tam pokrycie, którego nie ma.
  *
  * Trzy źródła zasięgu, w tej kolejności:
- *   1. cache projektu (data/reach-tychy.json) — powtarzalny, offline, bez API,
- *   2. zapytanie do Mapboksa w locie — dla punktów dodanych lub przesuniętych
+ *   1. cache projektu (data/reach-tychy.json) – powtarzalny, offline, bez API,
+ *   2. zapytanie do Mapboksa w locie – dla punktów dodanych lub przesuniętych
  *      przez operatora; wynik zostaje w pamięci sesji,
- *   3. okrąg — gdy nie ma ani cache, ani sieci. Analiza działa dalej, ale
+ *   3. okrąg – gdy nie ma ani cache, ani sieci. Analiza działa dalej, ale
  *      widok mówi wprost, że to przybliżenie.
  *
- * Klucz cache to zaokrąglona współrzędna (5 miejsc ≈ 1 m) — identycznie jak
+ * Klucz cache to zaokrąglona współrzędna (5 miejsc ≈ 1 m) – identycznie jak
  * w tools/fetch-reach.mjs. Przesunięcie pinu o metr trafia w ten sam wpis,
  * realne przesunięcie wymusza nowe liczenie.
  */
@@ -82,7 +82,7 @@ export function contourLadder() {
 
 /**
  * Dopytuje Mapboksa o izochronę dla jednej lokalizacji. Zwraca kontury albo
- * null (brak tokenu, brak sieci, błąd API) — wywołujący ma wtedy zejść
+ * null (brak tokenu, brak sieci, błąd API) – wywołujący ma wtedy zejść
  * do okręgu, a nie przerywać analizy.
  */
 export async function fetchReach(lat, lon) {
@@ -134,7 +134,7 @@ export async function fetchReach(lat, lon) {
 
 /**
  * Uzupełnia zasięgi dla listy lokalizacji i zwraca mapę klucz → kontury,
- * gotową do podania modelowi. Lokalizacje bez zasięgu po prostu w niej nie ma —
+ * gotową do podania modelowi. Lokalizacje bez zasięgu po prostu w niej nie ma –
  * model policzy je okręgiem.
  *
  * @param {Array<{lat:number, lon:number}>} sites
@@ -171,12 +171,12 @@ export async function reachMapFor(sites, { allowFetch = true, onLater = null } =
 }
 
 /**
- * Trasy dojścia dla lokalizacji spoza cache — dociągane z Directions API
+ * Trasy dojścia dla lokalizacji spoza cache – dociągane z Directions API
  * na żądanie (po kliknięciu w punkt). Dwanaście kierunków rozłożonych po
  * kącie, każdy do najdalszego wierzchołka konturu w swoim wycinku, więc
  * linie realnie obrysowują zasięg, a nie idą losowo.
  *
- * Zwraca [] przy braku tokenu, sieci albo konturu — widok pokaże sam obrys.
+ * Zwraca [] przy braku tokenu, sieci albo konturu – widok pokaże sam obrys.
  */
 export async function fetchRoutes(lat, lon, ring, count = 12) {
   const key = reachKey(lat, lon);
@@ -233,10 +233,10 @@ export async function fetchRoutes(lat, lon, ring, count = 12) {
 }
 
 /**
- * Wersja synchroniczna — buduje mapę zasięgów wyłącznie z tego, co już jest
+ * Wersja synchroniczna – buduje mapę zasięgów wyłącznie z tego, co już jest
  * wczytane (cache projektu + wyniki dopytane wcześniej w tej sesji).
  * Dla widoków, które renderują się synchronicznie: roadmapa, raport, pulpit.
- * Dzięki temu KPI w każdym kroku liczy się tym samym zasięgiem — inaczej
+ * Dzięki temu KPI w każdym kroku liczy się tym samym zasięgiem – inaczej
  * krok 2 mówiłby 51%, a roadmapa 62% i nikt by nie wiedział, któremu wierzyć.
  */
 export function reachMapSync(sites) {

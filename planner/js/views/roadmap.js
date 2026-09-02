@@ -1,24 +1,24 @@
 /**
- * views/roadmap.js — Krok 4: Roadmapa (SPEC §6.6, trasa '#/roadmap').
+ * views/roadmap.js – Krok 4: Roadmapa (SPEC §6.6, trasa '#/roadmap').
  *
- * Kanban — trzy kolumny faz (+ „Nieprzypisane") z drag & drop między fazami,
+ * Kanban – trzy kolumny faz (+ „Nieprzypisane") z drag & drop między fazami,
  * paskiem mapy w kolorach faz i zatwierdzeniem kroku. (Tryb „Oś czasu" został
  * usunięty na życzenie klienta w iteracji 3.)
  *
- * Wszystkie liczby pochodzą z modelu — widok nie wpisuje żadnej na sztywno:
- *   • roadmapTotals()  — koszty i pozycje w rozbiciu na fazy,
- *   • analyze()        — pokrycie dla trzech scenariuszy (tylko istniejące,
+ * Wszystkie liczby pochodzą z modelu – widok nie wpisuje żadnej na sztywno:
+ *   • roadmapTotals()  – koszty i pozycje w rozbiciu na fazy,
+ *   • analyze()        – pokrycie dla trzech scenariuszy (tylko istniejące,
  *                        istniejące + fazy 1–2, istniejące + całość planu),
  *                        czyli wartości kamieni milowych i krzywej,
- *   • points[].gainPct — efekt pojedynczego montażu na pokrycie.
+ *   • points[].gainPct – efekt pojedynczego montażu na pokrycie.
  * Formatowanie wyłącznie przez fmtPct / fmtNum / fmtCost.
  *
- * Pasek mapy korzysta z renderSceneSvg() — to statyczny string SVG, widok NIE
+ * Pasek mapy korzysta z renderSceneSvg() – to statyczny string SVG, widok NIE
  * tworzy interaktywnej mapy (createMap), więc nie ma czego zwalniać w destroy();
  * sprzątamy tam ResizeObserver paska i ewentualne listenery przeciągania paska
  * Gantta.
  *
- * Każda zmiana danych idzie przez upsertRecommendation() + save() — save()
+ * Każda zmiana danych idzie przez upsertRecommendation() + save() – save()
  * przerysowuje widok, więc sumy, kamienie milowe i krzywa przeliczają się same.
  */
 
@@ -29,6 +29,7 @@ import {
   getPoint,
   upsertRecommendation,
   removeRecommendation,
+  checkpoint,
 } from '../state.js';
 
 import {
@@ -77,7 +78,7 @@ const MONTHS_PER_QUARTER = MONTHS / QUARTERS;
 /**
  * Poziom pinu na mapie dla danej fazy. Mapowanie jest nieprzypadkowe:
  * map.js rysuje 'ok' kolorem --phase-1, 'warn' kolorem --phase-2, a 'proposed'
- * kolorem --phase-3 — dzięki temu pasek mapy pokazuje realne kolory faz
+ * kolorem --phase-3 – dzięki temu pasek mapy pokazuje realne kolory faz
  * i nie wprowadzamy ani jednego nowego koloru.
  */
 const PHASE_LEVEL = { 1: 'ok', 2: 'warn', 3: 'proposed' };
@@ -109,7 +110,7 @@ const CURVE = { height: 74, top: 26, bottom: 14, padPct: 4 };
  * Stan lokalny widoku (nie są to dane projektu)
  * ------------------------------------------------------------------ */
 
-/** Filtr priorytetu i klucz sortowania — stan widoku, nie dane projektu. */
+/** Filtr priorytetu i klucz sortowania – stan widoku, nie dane projektu. */
 let prioFilter = 'all';
 let sortKey = 'priority';
 
@@ -196,7 +197,7 @@ function nextManualId() {
   return `man-${String(next).padStart(3, '0')}`;
 }
 
-/** Efekt pojedynczej pozycji na pokrycie — bierzemy go z powiązanego punktu. */
+/** Efekt pojedynczej pozycji na pokrycie – bierzemy go z powiązanego punktu. */
 function pointGainPct(pointId) {
   if (!pointId) return 0;
   const point = getPoint(pointId);
@@ -227,7 +228,7 @@ function phaseEndMonth(items, fallback) {
 }
 
 /**
- * Koszt na mieszkańca — fmtCost() zaokrągla do pełnych złotych, a tu potrzebne
+ * Koszt na mieszkańca – fmtCost() zaokrągla do pełnych złotych, a tu potrzebne
  * są grosze (SPEC §6.7: „3,10 zł"), więc liczbę formatuje fmtNum z dwoma
  * miejscami, a „zł" dokładamy jako jednostkę.
  */
@@ -244,15 +245,15 @@ function emptyBox(text) {
  * ------------------------------------------------------------------ */
 
 export async function render(root, ctx) {
-  destroy(); // przerysowanie po save() — zwolnij listenery poprzedniego renderu
+  destroy(); // przerysowanie po save() – zwolnij listenery poprzedniego renderu
 
   const project = state.project;
   if (!project) {
-    mount(root, emptyBox('Brak aktywnego projektu — wróć do pulpitu i otwórz audyt.'));
+    mount(root, emptyBox('Brak aktywnego projektu – wróć do pulpitu i otwórz audyt.'));
     return;
   }
 
-  // Oś czasu (Gantt) usunięta na życzenie klienta — roadmapa to sam kanban.
+  // Oś czasu (Gantt) usunięta na życzenie klienta – roadmapa to sam kanban.
   const recommendations = state.recommendations || [];
 
   if (ctx.subbar && ctx.subbar.controls) {
@@ -265,7 +266,7 @@ export async function render(root, ctx) {
   const unassigned = recommendations.filter((rec) => phaseOf(rec) === null);
 
   /**
-   * Filtr i sortowanie działają na tym, co widać w kolumnach — sumy kosztów
+   * Filtr i sortowanie działają na tym, co widać w kolumnach – sumy kosztów
    * i KPI zostają liczone z całości, bo plan nie zmienia się od tego, że
    * operator zawęził widok.
    */
@@ -280,7 +281,7 @@ export async function render(root, ctx) {
     return sorted;
   };
 
-  // Ten sam zasięg co w kroku 2 — inaczej roadmapa obiecywałaby pokrycie,
+  // Ten sam zasięg co w kroku 2 – inaczej roadmapa obiecywałaby pokrycie,
   // którego analiza nie potwierdza.
   const reach = reachMapSync([...state.points, ...(state.candidates || [])]);
 
@@ -289,7 +290,7 @@ export async function render(root, ctx) {
     districts: project.districts || [],
     standardMinutes: project.standardMinutes,
     population: project.population,
-    // Roadmapa raportuje pokrycie dzienne — to ono trafia do kamieni milowych
+    // Roadmapa raportuje pokrycie dzienne – to ono trafia do kamieni milowych
     // i na okładkę raportu. Tryb nocny zostaje w kroku 2.
     mode: 'day',
     reach,
@@ -349,58 +350,98 @@ export async function render(root, ctx) {
     );
   };
 
-  /** „+ pozycja" — nowa rekomendacja bez punktu, w wybranej fazie. */
-  const addItem = async (targetPhase) => {
+  /**
+   * Formularz pozycji roadmapy – jeden dla dodawania i dla edycji, żeby oba
+   * okna miały ten sam zestaw pól i tę samą walidację. Zwraca dane albo null,
+   * gdy operator zrezygnował lub nie wpisał treści.
+   */
+  const itemForm = async ({ rec = null, targetPhase = null }) => {
+    const editing = !!rec;
     const textInput = h('input', {
       class: 'input',
       type: 'text',
       placeholder: 'np. Szkolenie z obsługi AED dla pracowników urzędu',
+      value: editing ? rec.text || '' : '',
     });
     const ownerSelect = h(
       'select',
       { class: 'select' },
-      ...OWNERS.map((o) => h('option', { value: o.id }, o.label))
+      ...OWNERS.map((o) =>
+        h('option', { value: o.id, ...(editing && rec.owner === o.id ? { selected: 'selected' } : {}) }, o.label)
+      )
     );
-    const costInput = h('input', { class: 'input num', type: 'number', min: '0', step: '100', value: '0' });
+    const prioSelect = h(
+      'select',
+      { class: 'select' },
+      ...['high', 'medium', 'low'].map((id) =>
+        h(
+          'option',
+          { value: id, ...((editing ? rec.priority : 'medium') === id ? { selected: 'selected' } : {}) },
+          PRIORITY_LABEL[id]
+        )
+      )
+    );
+    const costInput = h('input', {
+      class: 'input num',
+      type: 'number',
+      min: '0',
+      step: '100',
+      value: String(editing ? Math.max(0, Math.round(rec.cost || 0)) : 0),
+    });
 
-    const heading = targetPhase
-      ? `${PHASE_META[targetPhase].label} — ${PHASE_META[targetPhase].title}`
-      : 'Nieprzypisane';
+    const phase = editing ? phaseOf(rec) : targetPhase;
+    const heading = phase ? `${PHASE_META[phase].label} – ${PHASE_META[phase].title}` : 'Nieprzypisane';
 
     const confirmed = await modal({
-      title: `Nowa pozycja roadmapy — ${heading}`,
+      title: `${editing ? 'Edycja pozycji roadmapy' : 'Nowa pozycja roadmapy'} – ${heading}`,
       body: h(
         'div',
         { class: 'stack' },
         field('Treść pozycji', textInput),
         field('Odpowiedzialny', ownerSelect),
+        field('Ważność', prioSelect),
         field('Koszt (zł)', costInput),
         h('p', {
           class: 'note',
-          text:
-            'Pozycja nie jest powiązana z żadnym punktem AED (pointId: null) — tak zapisujemy ' +
-            'zadania organizacyjne: przetargi, dokumentację, szkolenia.',
+          text: editing
+            ? rec.auto
+              ? 'Pozycja pochodzi z reguły. Zmiany zostają, ale reguła dopisze ją ponownie, ' +
+                'jeśli brak w karcie punktu wróci. Fazę zmienia się przeciągnięciem kafelka.'
+              : 'Fazę zmienia się przeciągnięciem kafelka między kolumnami – terminy przeliczą się same.'
+            : 'Pozycja nie jest powiązana z żadnym punktem AED (pointId: null) – tak zapisujemy ' +
+              'zadania organizacyjne: przetargi, dokumentację, szkolenia.',
         })
       ),
-      confirmLabel: 'DODAJ POZYCJĘ',
+      confirmLabel: editing ? 'ZAPISZ ZMIANY' : 'DODAJ POZYCJĘ',
     });
-    if (!confirmed) return;
+    if (!confirmed) return null;
 
     const text = textInput.value.trim();
     if (!text) {
-      toast('Pozycja bez treści nie zostanie dodana.');
-      return;
+      toast(editing ? 'Pozycja bez treści nie zostanie zapisana.' : 'Pozycja bez treści nie zostanie dodana.');
+      return null;
     }
 
+    return {
+      text,
+      owner: ownerSelect.value,
+      priority: prioSelect.value,
+      cost: Math.max(0, Math.round(Number(costInput.value) || 0)),
+    };
+  };
+
+  /** „+ pozycja" – nowa rekomendacja bez punktu, w wybranej fazie. */
+  const addItem = async (targetPhase) => {
+    const data = await itemForm({ targetPhase });
+    if (!data) return;
+
     const span = targetPhase ? PHASE_SPAN[targetPhase] : { start: 1, length: 3 };
+    checkpoint('dodanie pozycji roadmapy');
     upsertRecommendation({
       id: nextManualId(),
       pointId: null,
       rule: 'manual',
-      text,
-      priority: 'medium',
-      cost: Math.max(0, Math.round(Number(costInput.value) || 0)),
-      owner: ownerSelect.value,
+      ...data,
       phase: targetPhase,
       auto: false,
       done: false,
@@ -408,10 +449,20 @@ export async function render(root, ctx) {
       lengthMonths: span.length,
     });
     await save();
-    toast(`Dodano pozycję: „${text}".`);
+    toast(`Dodano pozycję: „${data.text}".`);
   };
 
-  /** Usunięcie pozycji dodanej ręcznie (pozycji auto nie kasujemy — wracają z reguł). */
+  /** Edycja istniejącej pozycji – tym samym formularzem co przy dodawaniu. */
+  const editItem = async (rec) => {
+    const data = await itemForm({ rec });
+    if (!data) return;
+    checkpoint(`edycja pozycji „${rec.text}”`);
+    upsertRecommendation({ id: rec.id, ...data });
+    await save();
+    toast(`Zapisano zmiany w pozycji: „${data.text}".`);
+  };
+
+  /** Usunięcie pozycji dodanej ręcznie (pozycji auto nie kasujemy – wracają z reguł). */
   const deleteItem = async (rec) => {
     const confirmed = await modal({
       title: 'Usunąć pozycję roadmapy?',
@@ -423,7 +474,7 @@ export async function render(root, ctx) {
           ? h('p', {
               class: 'note',
               text:
-                'To pozycja z reguły — wróci na listę, dopóki brak w karcie punktu, ' +
+                'To pozycja z reguły – wróci na listę, dopóki brak w karcie punktu, ' +
                 'który ją wywołał, nie zostanie uzupełniony albo odhaczony.',
             })
           : null
@@ -431,6 +482,7 @@ export async function render(root, ctx) {
       confirmLabel: 'USUŃ',
     });
     if (!confirmed) return;
+    checkpoint(`usunięcie pozycji „${rec.text}”`);
     removeRecommendation(rec.id);
     await save();
     toast('Pozycja usunięta z roadmapy.');
@@ -482,7 +534,7 @@ export async function render(root, ctx) {
     { class: 'row row--wrap', style: { marginBottom: '10px' } },
     h('span', {
       class: 'label-caps',
-      text: `Plan wdrożenia — ${fmtNum(PHASES.length)} fazy · horyzont ${fmtNum(MONTHS)} mies.`,
+      text: `Plan wdrożenia – ${fmtNum(PHASES.length)} fazy · horyzont ${fmtNum(MONTHS)} mies.`,
     }),
     h(
       'div',
@@ -517,8 +569,8 @@ export async function render(root, ctx) {
       { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '10px 18px' } },
       legendItem(
         'Skąd biorą się pozycje',
-        'Etykieta „z reguły" — pozycja wygenerowana automatycznie z braku stwierdzonego w karcie punktu ' +
-          '(np. brak opiekuna, przeterminowany przegląd). „Ręczna" — dopisana przez audytora.'
+        'Etykieta „z reguły" – pozycja wygenerowana automatycznie z braku stwierdzonego w karcie punktu ' +
+          '(np. brak opiekuna, przeterminowany przegląd). „Ręczna" – dopisana przez audytora.'
       ),
       legendItem(
         'Trzy fazy',
@@ -534,12 +586,12 @@ export async function render(root, ctx) {
       legendItem(
         '„+X% pokrycia"',
         'O tyle wzrośnie odsetek mieszkańców mających AED w zasięgu standardu, jeśli ta pozycja zostanie ' +
-          'zrealizowana. Liczone tym samym modelem co krok 2 — po realnej sieci pieszej.'
+          'zrealizowana. Liczone tym samym modelem co krok 2 – po realnej sieci pieszej.'
       ),
       legendItem(
         'Koszty',
         'Kwota przy pozycji to koszt jednostkowy presetu (typu instalacji) albo koszt wpisany ręcznie. ' +
-          'Suma fazy i suma całości liczą się z tych pozycji — nic nie jest wpisane na sztywno.'
+          'Suma fazy i suma całości liczą się z tych pozycji – nic nie jest wpisane na sztywno.'
       )
     )
   );
@@ -561,12 +613,12 @@ export async function render(root, ctx) {
       'div',
       { class: 'kpi' },
       h('div', { class: 'kpi__label', text: 'Koszt na mieszkańca objętego ochroną' }),
-      h('div', { class: 'kpi__value', text: costPerPerson === null ? '—' : fmtCostPerPerson(costPerPerson) }),
+      h('div', { class: 'kpi__value', text: costPerPerson === null ? '–' : fmtCostPerPerson(costPerPerson) }),
       h('div', {
         class: 'kpi__delta',
         text:
           costPerPerson === null
-            ? 'Plan nie obejmuje jeszcze nikogo nowego — brak mianownika.'
+            ? 'Plan nie obejmuje jeszcze nikogo nowego – brak mianownika.'
             : `suma planu ÷ przyrost objętej ludności (${fmtNum(peopleGained)} os.)`,
       })
     ),
@@ -595,7 +647,7 @@ export async function render(root, ctx) {
       style: { flex: '1', minWidth: '260px', margin: '0' },
       text:
         `Zatwierdzenie zalicza krok 4 w stepperze i przenosi do raportu. Sumy i terminy ` +
-        `pozostają edytowalne — raport czyta je na bieżąco ze stanu projektu.`,
+        `pozostają edytowalne – raport czyta je na bieżąco ze stanu projektu.`,
     }),
     h('button', { class: 'btn btn--primary', onclick: approve }, 'ZATWIERDŹ → RAPORT')
   );
@@ -603,9 +655,9 @@ export async function render(root, ctx) {
   /* ---------------- Zawartość trybu ---------------- */
 
   const body = recommendations.length
-    ? buildKanban({ phases, unassigned, movePhase, addItem, deleteItem, afterPlan, arrange })
+    ? buildKanban({ phases, unassigned, movePhase, addItem, editItem, deleteItem, afterPlan, arrange })
     : emptyBox(
-        'Roadmapa jest pusta — rekomendacje powstają w kartach punktów (krok 3), ' +
+        'Roadmapa jest pusta – rekomendacje powstają w kartach punktów (krok 3), ' +
           'a zadania organizacyjne dodasz przyciskiem „+ pozycja" w kanbanie.'
       );
 
@@ -616,11 +668,11 @@ export async function render(root, ctx) {
  * Tryb KANBAN
  * ------------------------------------------------------------------ */
 
-function buildKanban({ phases, unassigned, movePhase, addItem, deleteItem, afterPlan, arrange }) {
+function buildKanban({ phases, unassigned, movePhase, addItem, editItem, deleteItem, afterPlan, arrange }) {
   const columns = [
     ...PHASES.map((n) => ({
       phase: n,
-      title: `${PHASE_META[n].label} — ${PHASE_META[n].title}`,
+      title: `${PHASE_META[n].label} – ${PHASE_META[n].title}`,
       months: PHASE_META[n].months,
       items: arrange(phases[n].items),
       totalItems: phases[n].items.length,
@@ -629,7 +681,7 @@ function buildKanban({ phases, unassigned, movePhase, addItem, deleteItem, after
     {
       phase: null,
       title: 'Nieprzypisane',
-      months: 'bez terminu — przeciągnij do fazy',
+      months: 'bez terminu – przeciągnij do fazy',
       items: arrange(unassigned),
       totalItems: unassigned.length,
       cost: unassigned.reduce((sum, rec) => sum + (rec.cost || 0), 0),
@@ -638,13 +690,13 @@ function buildKanban({ phases, unassigned, movePhase, addItem, deleteItem, after
 
   const board = h('div', {
     class: 'kanban',
-    // Czwarta kolumna „Nieprzypisane" jest poza siatką 3-kolumnową z app.css —
+    // Czwarta kolumna „Nieprzypisane" jest poza siatką 3-kolumnową z app.css –
     // rozszerzamy ją lokalnie, bez dopisywania klas do arkusza rdzenia.
     style: { gridTemplateColumns: `repeat(${columns.length}, 1fr)` },
   });
 
   for (const column of columns) {
-    board.appendChild(kanbanColumn(column, { movePhase, addItem, deleteItem }));
+    board.appendChild(kanbanColumn(column, { movePhase, addItem, editItem, deleteItem }));
   }
 
   return h('div', {}, board, mapStrip(afterPlan));
@@ -679,7 +731,7 @@ function kanbanColumn(column, actions) {
   });
 
   if (column.items.length) {
-    for (const rec of column.items) body.appendChild(kanbanCard(rec, actions.deleteItem));
+    for (const rec of column.items) body.appendChild(kanbanCard(rec, actions));
   } else {
     body.appendChild(
       h('div', {
@@ -687,7 +739,7 @@ function kanbanColumn(column, actions) {
         style: { padding: '18px 8px' },
         text: column.totalItems
           ? `Filtr ukrył wszystkie ${fmtNum(column.totalItems)} pozycji tej fazy.`
-          : 'Pusto — przeciągnij tu pozycję.',
+          : 'Pusto – przeciągnij tu pozycję.',
       })
     );
   }
@@ -748,7 +800,7 @@ function recKind(rec) {
   return point && point.kind === 'proposed' ? 'new' : 'update';
 }
 
-function kanbanCard(rec, onDelete) {
+function kanbanCard(rec, actions) {
   const gain = pointGainPct(rec.pointId);
 
   const card = h(
@@ -756,7 +808,7 @@ function kanbanCard(rec, onDelete) {
     {
       class: 'kanban__card',
       draggable: 'true',
-      title: 'Przeciągnij na inną fazę — sumy i terminy przeliczą się same',
+      title: 'Przeciągnij na inną fazę – sumy i terminy przeliczą się same',
     },
     h('span', { class: 'kanban__grip', html: '⋮⋮', 'aria-hidden': 'true' }),
     h(
@@ -782,20 +834,40 @@ function kanbanCard(rec, onDelete) {
       gain > 0 ? h('div', { class: 'kanban__effect num', text: `+${fmtPct(gain, 1)} pokrycia` }) : null
     ),
     h(
-      'button',
-      {
-        class: 'btn btn--sm btn--ghost btn--danger',
-        // Także pozycje z reguł: audytor bywa mądrzejszy od reguły i musi móc
-        // zdjąć z planu coś, czego gmina nie zrobi. Okno potwierdzenia mówi,
-        // że pozycja z reguły wróci, dopóki brak w karcie nie zostanie usunięty.
-        title: rec.auto ? 'Usuń pozycję z planu' : 'Usuń pozycję dodaną ręcznie',
-        'aria-label': 'Usuń pozycję',
-        onclick: (e) => {
-          e.stopPropagation();
-          onDelete(rec);
+      'div',
+      { class: 'kanban__actions' },
+      // Edycja tym samym formularzem co „+ pozycja": treść, odpowiedzialny,
+      // ważność, koszt. Dotyczy też pozycji z reguł – audytor doprecyzowuje
+      // treść i kwotę, których reguła nie zna.
+      h(
+        'button',
+        {
+          class: 'btn btn--sm btn--ghost',
+          title: 'Edytuj pozycję',
+          'aria-label': 'Edytuj pozycję',
+          onclick: (e) => {
+            e.stopPropagation();
+            actions.editItem(rec);
+          },
         },
-      },
-      '✕'
+        '✎'
+      ),
+      h(
+        'button',
+        {
+          class: 'btn btn--sm btn--ghost btn--danger',
+          // Także pozycje z reguł: audytor bywa mądrzejszy od reguły i musi móc
+          // zdjąć z planu coś, czego gmina nie zrobi. Okno potwierdzenia mówi,
+          // że pozycja z reguły wróci, dopóki brak w karcie nie zostanie usunięty.
+          title: rec.auto ? 'Usuń pozycję z planu' : 'Usuń pozycję dodaną ręcznie',
+          'aria-label': 'Usuń pozycję',
+          onclick: (e) => {
+            e.stopPropagation();
+            actions.deleteItem(rec);
+          },
+        },
+        '✕'
+      )
     )
   );
 
@@ -900,7 +972,7 @@ function mapStrip(afterPlan) {
     'div',
     { class: 'row row--wrap', style: { marginTop: '8px' } },
     ...PHASES.map((n) =>
-      h('span', { html: pillHtml(`${PHASE_META[n].label} — ${PHASE_META[n].title}`, PHASE_VARIANT[n]) })
+      h('span', { html: pillHtml(`${PHASE_META[n].label} – ${PHASE_META[n].title}`, PHASE_VARIANT[n]) })
     ),
     h('span', { class: 'spacer' }),
     h('span', {

@@ -1,5 +1,5 @@
 /**
- * zip.js — zapis archiwum ZIP bez kompresji (metoda „store"), zero zależności.
+ * zip.js – zapis archiwum ZIP bez kompresji (metoda „store"), zero zależności.
  *
  * Wystarcza do spakowania kilkunastu PDF-ów kart w jeden plik do pobrania.
  * Brak kompresji jest zamierzony: PDF-y i tak się nie kompresują, a implementacja
@@ -35,7 +35,7 @@ function dosDateTime(isoDate) {
 
 /**
  * @param {Array<{name: string, data: Uint8Array}>} files
- * @param {string} stamp — data ISO wpisywana w metadane plików
+ * @param {string} stamp – data ISO wpisywana w metadane plików
  * @returns {Uint8Array}
  */
 export function zipStore(files, stamp) {

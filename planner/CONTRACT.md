@@ -1,8 +1,8 @@
-# CONTRACT.md — interfejsy modułów (iteracja 2)
+# CONTRACT.md – interfejsy modułów (iteracja 2)
 
 Dokument wiążący dla wszystkich plików w `js/views/`. Rdzeń (`state.js`,
 `model.js`, `ui.js`, `map.js`, `router.js`, `css/app.css`) jest **gotowy i nie
-wolno go zmieniać** — widoki mają się do niego dostosować. Jeśli czegoś
+wolno go zmieniać** – widoki mają się do niego dostosować. Jeśli czegoś
 naprawdę brakuje, dopisz to lokalnie w swoim pliku widoku.
 
 Kod i nazwy zmiennych po angielsku, **cały interfejs po polsku** (z polskimi
@@ -34,13 +34,13 @@ export function destroy() {}   // opcjonalne: sprzątanie (mapa, listenery)
 |---|---|
 | `ctx.params` | parametry trasy, np. `{ id: 'AED-003' }` dla `#/card/:id` |
 | `ctx.navigate(hash)` | przejście do innej trasy |
-| `ctx.subbar.controls` | pusty `<div class="subbar__controls">` — wstaw tam przełączniki |
+| `ctx.subbar.controls` | pusty `<div class="subbar__controls">` – wstaw tam przełączniki |
 | `ctx.setMeta(html)` | ustawia licznik w sub barze, np. `14 punktów: 6 ✓ · 5 ! · 3 ?` |
 
 `root` jest już elementem `.workspace` (dla `layout:'scroll'` ma padding i
 przewijanie). Przy `layout:'split'` widok sam robi `display:flex`.
 
-**Po zmianie danych wołaj `await save()`** ze `state.js` — to zapisuje do
+**Po zmianie danych wołaj `await save()`** ze `state.js` – to zapisuje do
 IndexedDB i przerysowuje bieżący widok. Nie wołaj `render()` ręcznie.
 
 ---
@@ -70,7 +70,7 @@ state.presets[]      P1..P5
 state.candidates[]   kandydaci dla optymalizatora {id,name,districtId,presetId,category,lat,lon}
 state.boundary       GeoJSON Feature (granica gminy)
 state.districtsGeo   GeoJSON FeatureCollection (dzielnice)
-state.demandPoints[] {lat,lon,weight,districtId} — policzone, nie zapisywane
+state.demandPoints[] {lat,lon,weight,districtId} – policzone, nie zapisywane
 state.projects[]     kafelki pulpitu {id,name,label,status,available}
 state.pendingProposals[]  propozycje czekające na akceptację
 state.ui             {scenario,mode,selectedPointId,inventoryFilter,cardsFilter,
@@ -137,10 +137,10 @@ import { h, el, frag, mount, clear, escapeHtml, qs, qsa,
          toast, modal, disabledControl, download, pickFile, toCsv, parseCsv } from '../ui.js';
 ```
 
-- `h(tag, props, ...children)` — `class`, `text`, `html`, `style` (obiekt),
+- `h(tag, props, ...children)` – `class`, `text`, `html`, `style` (obiekt),
   `dataset` (obiekt), `onclick`/`oninput`/… jako funkcje.
 - `modal({title, body, confirmLabel, cancelLabel, hideCancel})` → `Promise<boolean>`.
-- `disabledControl(node, 'poza zakresem iteracji 2')` — **tak oznaczamy
+- `disabledControl(node, 'poza zakresem iteracji 2')` – **tak oznaczamy
   wszystko, czego nie ma w iteracji 2. Żadnego martwego przycisku.**
 - `statusMeta(point, completenessPct)` → `{level:'ok'|'warn'|'crit'|'proposed', label, variant}`.
 
@@ -174,7 +174,7 @@ map.fit(); map.flyTo(lat, lon); map.destroy();
 ```
 
 `renderSceneSvg(scene, {width,height,showDemand,showCoverage,showLabels})`
-zwraca **string SVG** — używaj do mini-mapy w karcie punktu i map w raporcie
+zwraca **string SVG** – używaj do mini-mapy w karcie punktu i map w raporcie
 (działa bez Mapboxa).
 
 Kontener mapy musi mieć klasę `map-wrap` i niezerową wysokość.
@@ -209,9 +209,9 @@ informację o danych. Zaokrąglenia ≤ 2 px, brak cieni i gradientów.
 
 ## 7. Zasady, których nie łamiemy (SPEC §10)
 
-1. Żadnego martwego przycisku — `disabledControl()` z tooltipem.
+1. Żadnego martwego przycisku – `disabledControl()` z tooltipem.
 2. Kolor tylko dla danych.
 3. **Wszystkie liczby liczone z modelu**, nigdy wpisane w HTML.
 4. Polskie znaki wszędzie.
 5. Bez bibliotek UI.
-6. Nie zmieniaj nazw pól z §4 — iteracja 3 buduje na tym kontrakcie.
+6. Nie zmieniaj nazw pól z §4 – iteracja 3 buduje na tym kontrakcie.

@@ -1,5 +1,5 @@
 /**
- * field.js — Formularz terenowy (SPEC §6.8, trasa '#/field/:token').
+ * field.js – Formularz terenowy (SPEC §6.8, trasa '#/field/:token').
  *
  * Widok mobilny bez steppera i bez nawigacji: osoba w terenie dostaje wąską
  * kolumnę (.field-form, maks. 420 px) z dużymi polami dotykowymi i jednym
@@ -7,15 +7,15 @@
  * `verification.source = 'formularz_terenowy'`, a widok pokazuje ekran
  * podziękowania z podsumowaniem i linkiem do karty punktu.
  *
- * Wszystkie liczby pochodzą z model.js — widok niczego nie liczy sam:
- *   • completeness()        — pasek kompletności i wybór statusu po wysłaniu,
- *   • autoRecommendations() — licznik rekomendacji na ekranie podziękowania,
- *   • distanceM/walkTimeMin — porównanie odczytu GPS z lokalizacją w karcie,
- *   • fmtPct/fmtNum/fmtMin  — formatowanie.
+ * Wszystkie liczby pochodzą z model.js – widok niczego nie liczy sam:
+ *   • completeness()        – pasek kompletności i wybór statusu po wysłaniu,
+ *   • autoRecommendations() – licznik rekomendacji na ekranie podziękowania,
+ *   • distanceM/walkTimeMin – porównanie odczytu GPS z lokalizacją w karcie,
+ *   • fmtPct/fmtNum/fmtMin  – formatowanie.
  *
  * Zapis: pola formularza trafiają najpierw do lokalnego szkicu (moduł
  * przechowuje go między przerysowaniami, bo photos.js woła save() po wgraniu
- * zdjęcia), a do punktu dopiero po kliknięciu WYŚLIJ — wtedy leci save().
+ * zdjęcia), a do punktu dopiero po kliknięciu WYŚLIJ – wtedy leci save().
  */
 
 import {
@@ -68,7 +68,7 @@ const FIELD_PHOTO_ROLES = [
 const OUT_OF_SCOPE = 'poza zakresem';
 
 /* ------------------------------------------------------------------ *
- * Szkic formularza — przeżywa przerysowanie widoku
+ * Szkic formularza – przeżywa przerysowanie widoku
  * ------------------------------------------------------------------ */
 
 /**
@@ -104,7 +104,7 @@ function newSession(point) {
 }
 
 /* ------------------------------------------------------------------ *
- * Styl lokalny — tylko wymiary dotykowe, żadnych nowych kolorów
+ * Styl lokalny – tylko wymiary dotykowe, żadnych nowych kolorów
  * ------------------------------------------------------------------ */
 
 const STYLE_ID = 'field-form-style';
@@ -186,7 +186,7 @@ function yesNoLabel(value) {
 
 function orDash(value) {
   const text = (value || '').trim();
-  return text || '—';
+  return text || '–';
 }
 
 function section(number, title, missing, ...body) {
@@ -280,7 +280,7 @@ export async function render(root, ctx) {
         { class: 'field-form' },
         h('div', {
           class: 'empty-state',
-          text: 'W projekcie nie ma żadnego punktu — formularz terenowy nie ma czego dotyczyć.',
+          text: 'W projekcie nie ma żadnego punktu – formularz terenowy nie ma czego dotyczyć.',
         })
       )
     );
@@ -304,7 +304,7 @@ export async function render(root, ctx) {
 async function renderForm(shell, point, preset, demoMode, reason) {
   const values = session.values;
   const rerender = () => {
-    // Odświeżenie samego formularza (pasków „do uzupełnienia”) bez save() —
+    // Odświeżenie samego formularza (pasków „do uzupełnienia”) bez save() –
     // dane jeszcze nie trafiły do punktu, więc nie ma czego zapisywać.
     renderForm(shell, getPoint(point.id) || point, preset, demoMode, reason);
   };
@@ -328,7 +328,7 @@ async function renderForm(shell, point, preset, demoMode, reason) {
     h('div', {
       class: 'muted',
       text: [orDash(point.address), districtName(point.districtId)]
-        .filter((part) => part && part !== '—')
+        .filter((part) => part && part !== '–')
         .join(' · '),
     }),
     h('div', {
@@ -388,7 +388,7 @@ async function renderForm(shell, point, preset, demoMode, reason) {
     }, {
       placeholder: 'np. pn–pt 8:00–16:00',
       hint: values.always
-        ? 'Przy dostępie całodobowym możesz zostawić puste — wpiszemy „całodobowo (24/7)”.'
+        ? 'Przy dostępie całodobowym możesz zostawić puste – wpiszemy „całodobowo (24/7)”.'
         : 'Wpisz godziny, w których da się wejść po AED.',
     }),
     textField('Weekend', values.weekend, (v) => {
@@ -532,7 +532,7 @@ async function renderForm(shell, point, preset, demoMode, reason) {
     };
 
     if (!navigator.geolocation) {
-      fallback('Przeglądarka nie udostępnia lokalizacji — użyto współrzędnych z karty punktu.');
+      fallback('Przeglądarka nie udostępnia lokalizacji – użyto współrzędnych z karty punktu.');
       return;
     }
 
@@ -560,7 +560,7 @@ async function renderForm(shell, point, preset, demoMode, reason) {
           3: 'przekroczono czas oczekiwania',
         };
         const why = reasons[error && error.code] || 'nieznany błąd';
-        fallback(`Nie udało się pobrać lokalizacji (${why}) — użyto współrzędnych z karty punktu.`);
+        fallback(`Nie udało się pobrać lokalizacji (${why}) – użyto współrzędnych z karty punktu.`);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
@@ -622,7 +622,7 @@ async function renderForm(shell, point, preset, demoMode, reason) {
       text:
         'W iteracji 2 formularz działa lokalnie: dane trafiają wprost do karty punktu w tej ' +
         'przeglądarce. Nie ma jeszcze realnego linku wysyłanego SMS-em ani mailem, tokenów ' +
-        'jednorazowych ani wysyłki na serwer — to iteracja 3.',
+        'jednorazowych ani wysyłki na serwer – to iteracja 3.',
     })
   );
 
@@ -645,7 +645,7 @@ async function renderForm(shell, point, preset, demoMode, reason) {
 }
 
 /* ------------------------------------------------------------------ *
- * Zdjęcia — photos.js, a gdy go nie ma, zwykłe pole pliku
+ * Zdjęcia – photos.js, a gdy go nie ma, zwykłe pole pliku
  * ------------------------------------------------------------------ */
 
 async function mountPhotos(container, point, preset) {
@@ -665,7 +665,7 @@ async function mountPhotos(container, point, preset) {
     const slots = h('div');
     // Wymuszamy dwa sloty wymagane przez formularz terenowy niezależnie od
     // tego, czego wymaga preset punktu.
-    // `id` musi być ustawione — photos.js pokazuje je w podsumowaniu slotów,
+    // `id` musi być ustawione – photos.js pokazuje je w podsumowaniu slotów,
     // a punkty niezweryfikowane nie mają jeszcze presetu.
     const fieldPreset = {
       ...(preset || {}),
@@ -702,7 +702,7 @@ function mountPhotoFallback(container, point) {
     const picked = FIELD_PHOTO_ROLES.filter((role) => session.photoNames[role.id]);
     chosen.textContent = picked.length
       ? `Wybrano ${fmtNum(picked.length)} z ${fmtNum(FIELD_PHOTO_ROLES.length)}: ${picked
-          .map((role) => `${role.label} — ${session.photoNames[role.id]}`)
+          .map((role) => `${role.label} – ${session.photoNames[role.id]}`)
           .join(' · ')}`
       : 'Nie wybrano jeszcze żadnego pliku.';
   };
@@ -735,7 +735,7 @@ function mountPhotoFallback(container, point) {
     h('div', {
       class: 'note',
       text:
-        'Moduł zdjęć nie jest dostępny w tej przeglądarce — pliki nie zostaną tu przetworzone. ' +
+        'Moduł zdjęć nie jest dostępny w tej przeglądarce – pliki nie zostaną tu przetworzone. ' +
         'Zdjęcia zostaną dołączone do karty po stronie operatora.',
     })
   );
@@ -748,7 +748,7 @@ function mountPhotoFallback(container, point) {
 async function submitForm(pointId) {
   const point = getPoint(pointId);
   if (!point) {
-    toast('Punkt zniknął ze stanu — odśwież widok.');
+    toast('Punkt zniknął ze stanu – odśwież widok.');
     return;
   }
 
@@ -813,7 +813,7 @@ async function submitForm(pointId) {
       'Lokalizacja GPS',
       session.gps
         ? `${fmtNum(session.gps.lat, 5)}, ${fmtNum(session.gps.lon, 5)}${
-            gpsApplied ? ' — zapisana w karcie' : ' — tylko odczyt'
+            gpsApplied ? ' – zapisana w karcie' : ' – tylko odczyt'
           }`
         : 'nie pobrano',
     ],
@@ -851,7 +851,7 @@ function renderThanks(shell, point, preset, ctx) {
     'div',
     { class: 'field-form__head' },
     h('span', { class: 'label-caps', text: 'Sinecco · AED Planner' }),
-    h('h2', { text: 'Dziękujemy — dane zostały przesłane' }),
+    h('h2', { text: 'Dziękujemy – dane zostały przesłane' }),
     h('div', {
       class: 'muted',
       text: `${point.name || point.id} · ${orDash(point.address)}`,
@@ -876,7 +876,7 @@ function renderThanks(shell, point, preset, ctx) {
       class: 'note',
       text: hasPreset
         ? `${fmtPct(done.pct)} · pola i zdjęcia: ${fmtNum(done.filled)}/${fmtNum(done.required)}`
-        : 'Punkt nie ma jeszcze presetu — kompletność policzy się po jego wybraniu w karcie punktu.',
+        : 'Punkt nie ma jeszcze presetu – kompletność policzy się po jego wybraniu w karcie punktu.',
     }),
     h('div', {
       class: 'note',
@@ -922,7 +922,7 @@ function renderThanks(shell, point, preset, ctx) {
       text:
         'W iteracji 2 formularz działa lokalnie: dane trafiają wprost do karty punktu w tej ' +
         'przeglądarce. Nie ma jeszcze realnego linku wysyłanego SMS-em ani mailem, tokenów ' +
-        'jednorazowych ani wysyłki na serwer — to iteracja 3.',
+        'jednorazowych ani wysyłki na serwer – to iteracja 3.',
     })
   );
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * smoke.mjs — drives the makieta in a real browser and checks that the whole
+ * smoke.mjs – drives the makieta in a real browser and checks that the whole
  * operator path 0 -> 5 works with no console errors and no dead controls.
  *
  *   node tools/smoke.mjs            # run checks, write screenshots to tools/shots/
@@ -38,7 +38,7 @@ let failures = 0;
 function check(name, ok, detail = '') {
   results.push({ name, ok, detail });
   if (!ok) failures++;
-  console.log(`${ok ? '  ok  ' : ' FAIL '} ${name}${detail ? ` — ${detail}` : ''}`);
+  console.log(`${ok ? '  ok  ' : ' FAIL '} ${name}${detail ? ` – ${detail}` : ''}`);
 }
 
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--no-sandbox'] });
@@ -57,7 +57,7 @@ const shot = async (name) => {
   if (WANT_SHOTS) await page.screenshot({ path: join(SHOTS, `${name}.png`) });
 };
 
-console.log('\n── Sinecco AED Planner — smoke test\n');
+console.log('\n── Sinecco AED Planner – smoke test\n');
 
 /* ---------- 0. boot + dashboard ---------- */
 await go('#/', 1600);
@@ -124,7 +124,7 @@ await go('#/card/AED-003', 1600);
 const sections = await page.locator('.card-section').count();
 check('karta punktu: sekcje 1–9', sections >= 9, `${sections}`);
 
-// Karta otwiera się zwinięta do przeglądu nagłówków — rozwijamy wszystko.
+// Karta otwiera się zwinięta do przeglądu nagłówków – rozwijamy wszystko.
 const expandBtn = page.locator('button', { hasText: /ROZWIŃ WSZYSTKIE/i }).first();
 check('karta punktu: przycisk rozwiń wszystkie', (await expandBtn.count()) > 0);
 if (await expandBtn.count()) {

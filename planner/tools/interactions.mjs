@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * interactions.mjs — checks the map interactions that smoke.mjs does not touch:
+ * interactions.mjs – checks the map interactions that smoke.mjs does not touch:
  * click-to-add on both maps, drag that must not open anything, undo, the camera
  * surviving a re-render, and the district outlines being gone.
  *
@@ -39,7 +39,7 @@ const errors = [];
 let failures = 0;
 const check = (name, ok, detail = '') => {
   if (!ok) failures++;
-  console.log(`${ok ? '  ok  ' : ' FAIL '} ${name}${detail ? ` — ${detail}` : ''}`);
+  console.log(`${ok ? '  ok  ' : ' FAIL '} ${name}${detail ? ` – ${detail}` : ''}`);
 };
 
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--no-sandbox'] });
@@ -60,7 +60,7 @@ const proposedCount = () =>
 
 const mapBox = async () => (await page.locator('.map-wrap').first().boundingBox());
 
-console.log('\n── AED Planner — interakcje mapy\n');
+console.log('\n── AED Planner – interakcje mapy\n');
 
 /* ---------------------------------------------------------------- *
  * 1. Obrysy dzielnic zniknęły z inwentaryzacji i analizy
@@ -94,7 +94,7 @@ check('analiza: nowy punkt to propozycja NEW-', /^NEW-\d+\/proposed\/proposed$/.
 const squares = await page.locator('.map-fallback svg rect[fill="#8a6fc7"]').count();
 check('analiza: rekomendacje rysują się jako fioletowe kwadraty', squares >= after, `${squares} kwadratów`);
 
-/* Podwójny klik przybliża — i nie dokłada przy okazji dwóch punktów. */
+/* Podwójny klik przybliża – i nie dokłada przy okazji dwóch punktów. */
 const beforeDbl = await proposedCount();
 box = await mapBox();
 await page.mouse.dblclick(box.x + box.width * 0.6, box.y + box.height * 0.35);
@@ -134,7 +134,7 @@ const spread = () =>
   });
 
 const spreadFitted = await spread();
-// Zoom wokół pierwszego fioletowego kwadratu — zoom celowany w kursor trzyma
+// Zoom wokół pierwszego fioletowego kwadratu – zoom celowany w kursor trzyma
 // ten punkt w miejscu, więc kwadrat nie ucieknie poza kadr przed przeciąganiem.
 const zoomAnchor = await page.locator('.map-fallback svg rect[fill="#8a6fc7"]').first().boundingBox();
 box = await mapBox();
@@ -284,7 +284,7 @@ const [pdfDl] = await Promise.all([page.waitForEvent('download'), pdfBtn.click()
 const pdfBytes = readFileSync(await pdfDl.path());
 const pdfHead = pdfBytes.subarray(0, 5).toString('latin1');
 check('pojedyncza karta pobiera się jako PDF', pdfHead === '%PDF-', `${pdfDl.suggestedFilename()} · ${pdfHead}`);
-// AED-001 (pierwszy wiersz) ma dwa zdjęcia demo — w PDF muszą być osadzone JPEG-i.
+// AED-001 (pierwszy wiersz) ma dwa zdjęcia demo – w PDF muszą być osadzone JPEG-i.
 check(
   'zdjęcia karty są osadzone w PDF (DCTDecode)',
   pdfBytes.includes('/DCTDecode'),
@@ -404,7 +404,7 @@ check('✕ gasi też linie dojścia', (await routeLines()) === 0);
  * 13. Nowy fioletowy punkt: własny obrys, podświetlone pole, wpływ na pokrycie
  * ---------------------------------------------------------------- */
 
-/** Fioletowe obrysy zasięgu (propozycje) — kreskowane, w odróżnieniu od zielonych. */
+/** Fioletowe obrysy zasięgu (propozycje) – kreskowane, w odróżnieniu od zielonych. */
 const planRings = () =>
   page.locator('.map-fallback svg path[stroke-dasharray="3 2"][fill="rgba(138,111,199,0.16)"]').count();
 const ringsBefore = await planRings();
@@ -447,7 +447,7 @@ await page.waitForTimeout(800);
 
 await go('#/inventory', 1300);
 // Wybór punktu jest zapisany w projekcie, więc po wcześniejszych sekcjach
-// karta może być już otwarta — zamykamy ją, żeby test startował z czystego stanu.
+// karta może być już otwarta – zamykamy ją, żeby test startował z czystego stanu.
 if (await cardPlace()) {
   await page.locator('.panel .panel__selected button[title*="Zamknij"]').first().click();
   await page.waitForTimeout(600);
@@ -479,12 +479,166 @@ check(
   (await page.locator('.map-fallback svg circle[stroke="#1e1e1e"]').count()) === 0
 );
 
+/* ---------------------------------------------------------------- *
+ * 15. Rekomendacje mają obrys zawsze, nie tylko w scenariuszu „po planie"
+ * ---------------------------------------------------------------- */
+
+await go('#/analysis', 1400);
+const proposedInState = await proposedCount();
+const ringsNow = await planRings();
+check(
+  'analiza: każda rekomendacja ma obrys w scenariuszu „teraz"',
+  ringsNow === proposedInState,
+  `${ringsNow} obrysów / ${proposedInState} rekomendacji`
+);
+const scenarioNow = await page.evaluate(() => window.__aed.ui.scenario);
+check('… a scenariusz to faktycznie „teraz"', scenarioNow !== 'plan', String(scenarioNow));
+
+/* ---------------------------------------------------------------- *
+ * 16. Usuwanie rekomendacji: karta na mapie w analizie, w inwentaryzacji, cała karta
+ * ---------------------------------------------------------------- */
+
+/** Klik w przycisk potwierdzenia w oknie modalnym. */
+const confirmModal = async (label) => {
+  const btn = page.locator(`.modal__foot .btn--primary:has-text("${label}")`);
+  await btn.first().click();
+  await page.waitForTimeout(900);
+};
+
+// Zaznacz fioletowy kwadrat propozycji i usuń go z mini-karty.
+await page.locator('.map-fallback svg rect[fill="#8a6fc7"]').first().click();
+await page.waitForTimeout(1200);
+const delBtn = page.locator('.panel .panel__selected button:has-text("USUŃ PUNKT")');
+check('analiza: karta rekomendacji ma USUŃ PUNKT', (await delBtn.count()) === 1);
+const beforeDel = await proposedCount();
+await delBtn.first().click();
+await page.waitForTimeout(500);
+await confirmModal('USUŃ');
+const afterDel = await proposedCount();
+check('analiza: USUŃ PUNKT zdejmuje rekomendację', afterDel === beforeDel - 1, `${beforeDel} → ${afterDel}`);
+check('… i zamyka kartę wybranego punktu', (await cardPlace()) === null);
+check(
+  '… a jego obrys znika z mapy',
+  (await planRings()) === afterDel,
+  `${await planRings()} obrysów / ${afterDel} rekomendacji`
+);
+
+await page.locator('.topbar__undo').click();
+await page.waitForTimeout(900);
+check('Cofnij przywraca usuniętą rekomendację', (await proposedCount()) === beforeDel, `${await proposedCount()}`);
+
+// Punkt istniejący takiego przycisku nie dostaje.
+await page.locator('.map-fallback svg circle[r="6"]').first().click();
+await page.waitForTimeout(1100);
+check(
+  'analiza: punkt istniejący NIE ma USUŃ PUNKT',
+  (await page.locator('.panel .panel__selected button:has-text("USUŃ PUNKT")').count()) === 0
+);
+
+// Ta sama akcja w inwentaryzacji.
+await go('#/inventory', 1300);
+await page.locator('.map-fallback svg rect[fill="#8a6fc7"]').first().click();
+await page.waitForTimeout(900);
+const invDel = page.locator('.panel .panel__selected button:has-text("USUŃ")');
+check('inwentaryzacja: karta rekomendacji ma USUŃ', (await invDel.count()) === 1);
+const invBefore = await proposedCount();
+await invDel.first().click();
+await page.waitForTimeout(500);
+await confirmModal('USUŃ');
+check(
+  'inwentaryzacja: USUŃ zdejmuje rekomendację z rejestru',
+  (await proposedCount()) === invBefore - 1,
+  `${invBefore} → ${await proposedCount()}`
+);
+await page.locator('.topbar__undo').click();
+await page.waitForTimeout(900);
+
+// I na całej karcie punktu.
+const proposedId = await page.evaluate(
+  () => (window.__aed.points.find((p) => p.kind === 'proposed' && p.status !== 'rejected') || {}).id
+);
+await go(`#/card/${proposedId}`, 1400);
+const cardDel = page.locator('.panel--card .panel__foot button:has-text("USUŃ PUNKT")');
+check('karta punktu: rekomendacja ma USUŃ PUNKT', (await cardDel.count()) === 1, String(proposedId));
+const cardBefore = await proposedCount();
+await cardDel.first().click();
+await page.waitForTimeout(500);
+await confirmModal('USUŃ PUNKT');
+check(
+  'karta punktu: USUŃ PUNKT usuwa i wraca do analizy',
+  (await proposedCount()) === cardBefore - 1 && page.url().includes('#/analysis'),
+  `${cardBefore} → ${await proposedCount()} · ${page.url().split('#')[1]}`
+);
+await page.locator('.topbar__undo').click();
+await page.waitForTimeout(900);
+
+await go('#/card/AED-003', 1300);
+check(
+  'karta punktu: istniejący AED NIE ma USUŃ PUNKT',
+  (await page.locator('.panel--card .panel__foot button:has-text("USUŃ PUNKT")').count()) === 0
+);
+
+/* ---------------------------------------------------------------- *
+ * 17. Roadmapa: edycja pozycji tym samym formularzem co „+ pozycja"
+ * ---------------------------------------------------------------- */
+
+await go('#/roadmap', 1500);
+const editBtn = page.locator('.kanban__card button[title="Edytuj pozycję"]');
+const editCount = await editBtn.count();
+check('roadmapa: każdy kafelek ma przycisk edycji', editCount > 0, `${editCount} przycisków`);
+
+const firstCardText = await page.locator('.kanban__card h4').first().innerText();
+await editBtn.first().click();
+await page.waitForTimeout(600);
+
+const formFields = await page.evaluate(() => {
+  const box = document.querySelector('.modal__body');
+  if (!box) return null;
+  return {
+    title: document.querySelector('.modal__head').textContent,
+    inputs: box.querySelectorAll('input').length,
+    selects: box.querySelectorAll('select').length,
+    text: box.querySelector('input[type="text"]').value,
+    cost: box.querySelector('input[type="number"]').value,
+  };
+});
+check(
+  'roadmapa: formularz edycji jest wypełniony danymi pozycji',
+  !!formFields && formFields.text === firstCardText,
+  formFields ? `„${formFields.text}"` : 'brak formularza'
+);
+check(
+  'roadmapa: te same pola co przy dodawaniu (treść, odpowiedzialny, ważność, koszt)',
+  !!formFields && formFields.inputs === 2 && formFields.selects === 2,
+  formFields ? `${formFields.inputs} input · ${formFields.selects} select` : 'brak formularza'
+);
+
+await page.fill('.modal__body input[type="text"]', 'Pozycja po edycji');
+await page.fill('.modal__body input[type="number"]', '4200');
+await page.selectOption('.modal__body select >> nth=1', 'high');
+await confirmModal('ZAPISZ ZMIANY');
+
+const edited = await page.evaluate(() =>
+  window.__aed.recommendations.filter((r) => r.text === 'Pozycja po edycji').map((r) => `${r.cost}/${r.priority}`)
+);
+check('roadmapa: edycja zapisuje treść, koszt i ważność', edited[0] === '4200/high', String(edited));
+const editedOnBoard = await page.locator('.kanban__card h4:has-text("Pozycja po edycji")').count();
+check('roadmapa: zmiana widoczna na kafelku', editedOnBoard === 1, `${editedOnBoard} kafelków`);
+await page.screenshot({ path: join(SHOTS, 'interactions-roadmap-edit.png') });
+
+await page.locator('.topbar__undo').click();
+await page.waitForTimeout(900);
+check(
+  'Cofnij odwraca edycję pozycji',
+  (await page.locator('.kanban__card h4:has-text("Pozycja po edycji")').count()) === 0
+);
+
 await go('#/inventory');
 await page.screenshot({ path: join(SHOTS, 'interactions-inventory.png') });
 await go('#/analysis');
 await page.screenshot({ path: join(SHOTS, 'interactions-analysis.png') });
 
-// Mapbox jest w tym sandboksie odcięty — to właśnie dlatego renderuje się mapa
+// Mapbox jest w tym sandboksie odcięty – to właśnie dlatego renderuje się mapa
 // zapasowa, więc jego błędy sieciowe nie są usterką aplikacji.
 const realErrors = errors.filter((e) => !/mapbox|Failed to load resource|net::ERR|favicon/i.test(e));
 check('brak błędów w konsoli', realErrors.length === 0, realErrors.slice(0, 3).join(' | '));

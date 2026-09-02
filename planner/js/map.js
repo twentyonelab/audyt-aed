@@ -1,9 +1,9 @@
 /**
- * map.js — the map layer.
+ * map.js – the map layer.
  *
  * Two renderers behind one interface:
  *   • Mapbox GL JS when the library loaded and a real token is configured.
- *   • A schematic SVG renderer otherwise, so the makieta is never dead — it
+ *   • A schematic SVG renderer otherwise, so the makieta is never dead – it
  *     draws the same scene from the same data, just without a basemap.
  *
  * Views never touch either renderer directly. They build a `scene` object and
@@ -62,7 +62,7 @@ export function circlePolygon(lat, lon, radiusM, steps = 48) {
   return { type: 'Polygon', coordinates: [ring] };
 }
 
-/** Linear projection fitted to a bbox — used by every SVG rendering. */
+/** Linear projection fitted to a bbox – used by every SVG rendering. */
 export function makeProjection(bbox, width, height, pad = 12) {
   const [w, s, e, n] = bbox;
   const midLat = (s + n) / 2;
@@ -103,7 +103,7 @@ const COLORS = {
   near: '#e8b33c',
   highlight: 'rgba(76,175,125,0.12)',
   highlightLine: '#4caf7d',
-  // Trasy dojścia: ten sam odcień co obrys zasięgu, ale w pełnym nasyceniu —
+  // Trasy dojścia: ten sam odcień co obrys zasięgu, ale w pełnym nasyceniu –
   // krycie 50% nakłada się dopiero w atrybucie stroke-opacity, więc linia nie
   // gaśnie dwa razy (raz w kolorze, raz w kryciu).
   routeLine: '#4caf7d',
@@ -150,7 +150,7 @@ export function renderSceneSvg(scene, opts = {}) {
     }
   }
 
-  // Podświetlenie jednej dzielnicy (np. wybranej w filtrze) — działa też przy
+  // Podświetlenie jednej dzielnicy (np. wybranej w filtrze) – działa też przy
   // showDistricts: false, bo wtedy jest jedynym rysowanym wielokątem dzielnicy.
   if (scene.highlightDistrictId && scene.districts) {
     const f = scene.districts.features.find((d) => d.properties.id === scene.highlightDistrictId);
@@ -161,7 +161,7 @@ export function renderSceneSvg(scene, opts = {}) {
     }
   }
 
-  // Realne zasięgi dojścia (izochrony) — nieregularne obrysy po sieci pieszej.
+  // Realne zasięgi dojścia (izochrony) – nieregularne obrysy po sieci pieszej.
   if (scene.reach && opts.showReach !== false) {
     for (const r of scene.reach) {
       if (!r.ring || r.ring.length < 3) continue;
@@ -176,7 +176,7 @@ export function renderSceneSvg(scene, opts = {}) {
   }
 
   // Trasy, które narysowały obrys: przerywane, półprzejrzyste i w kolorze
-  // obrysu tego punktu — nie wprowadzają nowego koloru do legendy.
+  // obrysu tego punktu – nie wprowadzają nowego koloru do legendy.
   if (scene.routes && opts.showRoutes !== false) {
     for (const r of scene.routes) {
       const line = r && (r.line || r);
@@ -335,7 +335,7 @@ function createMapboxMap(container, opts) {
         'line-dasharray': [2, 1.5],
       },
     });
-    // Realny zasięg dojścia po sieci pieszej — pod punktami popytu,
+    // Realny zasięg dojścia po sieci pieszej – pod punktami popytu,
     // żeby kolory kropek pozostały czytelne.
     map.addLayer({
       id: 'reach-fill',
@@ -552,7 +552,7 @@ function createMapboxMap(container, opts) {
 
 /**
  * Schematic renderer used when Mapbox is unavailable. It is a real map, not a
- * placeholder: pan with the mouse, zoom with the wheel, drag pins — so the
+ * placeholder: pan with the mouse, zoom with the wheel, drag pins – so the
  * makieta stays usable offline and on a pendrive.
  */
 function createFallbackMap(container, opts) {
@@ -565,7 +565,7 @@ function createFallbackMap(container, opts) {
   notice.className = 'map-notice';
   notice.innerHTML = TOKEN_IS_REAL
     ? 'Mapa Mapbox nie wczytała się (brak połączenia). Poniżej schemat wektorowy tych samych danych.'
-    : 'Mapa schematyczna — podstaw własny token w <code>config.js</code> (MAPBOX_TOKEN), aby zobaczyć podkład Mapbox.';
+    : 'Mapa schematyczna – podstaw własny token w <code>config.js</code> (MAPBOX_TOKEN), aby zobaczyć podkład Mapbox.';
   container.appendChild(notice);
 
   let scene = {};
@@ -583,7 +583,7 @@ function createFallbackMap(container, opts) {
   let clickTimer = null;    // pending mapclick, cancelled by a dblclick
   // Pin przyciśnięty w tym gestcie. Przechwycenie wskaźnika przekierowuje
   // zdarzenie `click` na <svg>, więc listener na samym pinie by go nie zobaczył
-  // — o tym, że klik należy do pinu, decyduje ten zapis z pointerdown.
+  // – o tym, że klik należy do pinu, decyduje ten zapis z pointerdown.
   let pinPress = null;
 
   let rafId = 0;
@@ -621,7 +621,7 @@ function createFallbackMap(container, opts) {
     buildProjection();
 
     // Points are appended below as interactive nodes, so the static pass must
-    // not draw them too — otherwise every pin renders twice.
+    // not draw them too – otherwise every pin renders twice.
     holder.innerHTML = renderSceneSvg(
       { ...scene, points: [] },
       {
@@ -643,7 +643,7 @@ function createFallbackMap(container, opts) {
       const [x, y] = projection.project(l.lon, l.lat);
       const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       t.setAttribute('x', x.toFixed(1));
-      // Bez obrysów dzielnic podpis siada dokładnie tam, gdzie bywa pin —
+      // Bez obrysów dzielnic podpis siada dokładnie tam, gdzie bywa pin –
       // 14 px niżej mija się z nim, a biała otoczka trzyma go czytelnym.
       t.setAttribute('y', (y + 14).toFixed(1));
       t.setAttribute('text-anchor', 'middle');
@@ -719,7 +719,7 @@ function createFallbackMap(container, opts) {
 
       if (dragging && projection) {
         // Drobne drgnienie palca albo myszy nie może unieważnić kliknięcia,
-        // dlatego ruch liczy się dopiero od 3 px — tak samo jak przy panoramie.
+        // dlatego ruch liczy się dopiero od 3 px – tak samo jak przy panoramie.
         const px0 = ev.clientX - rect.left;
         const py0 = ev.clientY - rect.top;
         if (dragging.from) {
@@ -727,7 +727,7 @@ function createFallbackMap(container, opts) {
         } else {
           dragging.from = [px0, py0];
         }
-        // Pin bez `draggable` tylko notuje ruch — przesuwać się nie może.
+        // Pin bez `draggable` tylko notuje ruch – przesuwać się nie może.
         if (!dragging.draggable) return;
         const [lon, lat] = projection.unproject(ev.clientX - rect.left, ev.clientY - rect.top);
         const px = ev.clientX - rect.left;
@@ -745,7 +745,7 @@ function createFallbackMap(container, opts) {
 
       if (panning) {
         // Move the whole SVG with a transform and commit the offset on release
-        // — redrawing a thousand demand dots per pointermove would stutter.
+        // – redrawing a thousand demand dots per pointermove would stutter.
         panning.dx = ev.clientX - panning.x;
         panning.dy = ev.clientY - panning.y;
         if (Math.abs(panning.dx) > 2 || Math.abs(panning.dy) > 2) panning.moved = true;
@@ -760,7 +760,7 @@ function createFallbackMap(container, opts) {
         const { point, moved, draggable } = dragging;
         dragging = null;
         if (moved) {
-          // Gest zakończony ruchem nigdy nie jest kliknięciem — ani w pin,
+          // Gest zakończony ruchem nigdy nie jest kliknięciem – ani w pin,
           // ani w tło. Przeciągnięcie zapisujemy tylko dla pinów przesuwalnych.
           clickBlocked = true;
           if (draggable) bus.emit('pointdragend', { ...point, lat, lon });
@@ -809,7 +809,7 @@ function createFallbackMap(container, opts) {
       { passive: false }
     );
 
-    // Podwójny klik przybliża — tak samo jak w Mapboksie. Anuluje przy tym
+    // Podwójny klik przybliża – tak samo jak w Mapboksie. Anuluje przy tym
     // pojedynczy klik, żeby przybliżenie nie dołożyło przy okazji punktu.
     svg.addEventListener('dblclick', (ev) => {
       ev.preventDefault();
@@ -834,7 +834,7 @@ function createFallbackMap(container, opts) {
       if (clickTimer) clearTimeout(clickTimer);
       clickTimer = setTimeout(() => {
         clickTimer = null;
-        // Klik w pin nigdy nie dokłada punktu w tle — inaczej wybranie AED
+        // Klik w pin nigdy nie dokłada punktu w tle – inaczej wybranie AED
         // dorzucałoby przy okazji rekomendację pod nim.
         if (pin) bus.emit('pointclick', pin);
         else bus.emit('mapclick', { lat, lon, addMode });

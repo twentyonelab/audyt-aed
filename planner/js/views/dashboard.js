@@ -1,8 +1,8 @@
 /**
- * views/dashboard.js — pulpit projektów (SPEC §6.0, trasa '#/').
+ * views/dashboard.js – pulpit projektów (SPEC §6.0, trasa '#/').
  *
  * Bez steppera: top bar i sub bar rysuje router, widok wypełnia tylko
- * obszar roboczy. Wszystkie liczby pochodzą z model.js / state.js —
+ * obszar roboczy. Wszystkie liczby pochodzą z model.js / state.js –
  * nic nie jest wpisane na sztywno w HTML.
  */
 
@@ -25,7 +25,7 @@ export const meta = {
  * Lokalne stałe i drobne pomocniki (rdzenia nie ruszamy)
  * ------------------------------------------------------------------ */
 
-/** Kroki 0–5 z SPEC §3 — sześć segmentów paska postępu. */
+/** Kroki 0–5 z SPEC §3 – sześć segmentów paska postępu. */
 const STEP_COUNT = 6;
 
 const STATUS_META = {
@@ -47,7 +47,7 @@ function plural(n, forms) {
   return forms[2];
 }
 
-/** Rozmiar pliku — liczby przez fmtNum, żeby separatory były jednolite. */
+/** Rozmiar pliku – liczby przez fmtNum, żeby separatory były jednolite. */
 function fmtBytes(bytes) {
   if (bytes < 1024) return `${fmtNum(bytes)} B`;
   if (bytes < 1024 * 1024) return `${fmtNum(bytes / 1024, 1)} kB`;
@@ -55,7 +55,7 @@ function fmtBytes(bytes) {
 }
 
 function statusOf(project) {
-  return STATUS_META[project.status] || { label: String(project.status || '—').toUpperCase(), variant: '' };
+  return STATUS_META[project.status] || { label: String(project.status || '–').toUpperCase(), variant: '' };
 }
 
 /** Analiza stanu obecnego dla aktywnego projektu (SPEC §5). */
@@ -70,7 +70,7 @@ function analyzeCurrent() {
     population: project.population,
     scenario: 'now',
     mode: 'day',
-    // Ten sam zasięg co w kroku 2 — pulpit i setup nie mogą pokazywać
+    // Ten sam zasięg co w kroku 2 – pulpit i setup nie mogą pokazywać
     // innego pokrycia niż analiza.
     reach: reachMapSync(state.points),
   });
@@ -101,7 +101,7 @@ async function openNewAudit(navigate) {
       class: 'note',
       text:
         'Iteracja 2 pracuje na jednym zestawie danych demo. Kreator otworzy krok 0 '
-        + '(Setup projektu) z danymi Tychów — zakładanie własnych gmin wchodzi w iteracji 3.',
+        + '(Setup projektu) z danymi Tychów – zakładanie własnych gmin wchodzi w iteracji 3.',
     })
   );
 
@@ -116,7 +116,7 @@ async function openNewAudit(navigate) {
   const name = input.value.trim();
   toast(
     name
-      ? `W iteracji 2 dostępny jest wyłącznie projekt demo Tychy — „${name}” zapiszemy w iteracji 3.`
+      ? `W iteracji 2 dostępny jest wyłącznie projekt demo Tychy – „${name}” zapiszemy w iteracji 3.`
       : 'W iteracji 2 dostępny jest wyłącznie projekt demo Tychy.'
   );
   navigate('#/setup');
@@ -138,12 +138,12 @@ function projectCard(project, analysis, navigate) {
     ...Array.from({ length: STEP_COUNT }, (_, i) =>
       h('span', {
         class: `project-card__step${stepsDone.has(i) ? ' is-done' : ''}`,
-        title: `Krok ${i} — ${stepsDone.has(i) ? 'ukończony' : 'nierozpoczęty'}`,
+        title: `Krok ${i} – ${stepsDone.has(i) ? 'ukończony' : 'nierozpoczęty'}`,
       })
     )
   );
 
-  /* wiersz meta — realne liczby z danych projektu */
+  /* wiersz meta – realne liczby z danych projektu */
   let metaText;
   if (isActive) {
     const existing = state.points.filter((p) => p.kind === 'existing').length;
@@ -168,7 +168,7 @@ function projectCard(project, analysis, navigate) {
     : h(
         'div',
         { class: 'project-card__kpi' },
-        '—',
+        '–',
         h('small', { text: 'wskaźnik policzymy po wczytaniu danych' })
       );
 
@@ -228,7 +228,7 @@ function newProjectCard(navigate) {
 }
 
 /* ------------------------------------------------------------------ *
- * Ostatnie raporty — realne pakiety danych z exportProject()
+ * Ostatnie raporty – realne pakiety danych z exportProject()
  * ------------------------------------------------------------------ */
 
 function reportPackages() {
@@ -238,17 +238,17 @@ function reportPackages() {
 
   const packages = [
     {
-      name: `${label} — pakiet raportu (komplet danych)`,
+      name: `${label} – pakiet raportu (komplet danych)`,
       file: `sinecco-aed-${slug}-raport.json`,
       payload: base,
     },
     {
-      name: `${label} — załącznik: rejestr punktów`,
+      name: `${label} – załącznik: rejestr punktów`,
       file: `sinecco-aed-${slug}-punkty.json`,
       payload: { ...base, recommendations: [], candidates: [] },
     },
     {
-      name: `${label} — załącznik: rekomendacje i roadmapa`,
+      name: `${label} – załącznik: rekomendacje i roadmapa`,
       file: `sinecco-aed-${slug}-rekomendacje.json`,
       payload: { ...base, points: [], candidates: [], photos: [] },
     },
@@ -314,7 +314,7 @@ function presetCard(preset) {
 }
 
 /* ------------------------------------------------------------------ *
- * Stopka — przywracanie danych demo (realne działanie)
+ * Stopka – przywracanie danych demo (realne działanie)
  * ------------------------------------------------------------------ */
 
 async function confirmResetToDemo() {

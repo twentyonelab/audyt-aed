@@ -1,5 +1,5 @@
 /**
- * config.js — deployment configuration for the Sinecco AED Planner makieta.
+ * config.js – deployment configuration for the Sinecco AED Planner makieta.
  *
  * Put your own Mapbox public token in MAPBOX_TOKEN. Without it the app still
  * runs: the map falls back to a schematic vector rendering of the same data,
@@ -8,9 +8,9 @@
 
 /**
  * Public Mapbox token, resolved in this order:
- *   1. ?mbtoken=pk... in the page URL   — lets one link carry the token
- *   2. window.MAPBOX_TOKEN               — set by a host page or a deploy step
- *   3. the placeholder below             — falls back to the schematic map
+ *   1. ?mbtoken=pk... in the page URL   – lets one link carry the token
+ *   2. window.MAPBOX_TOKEN               – set by a host page or a deploy step
+ *   3. the placeholder below             – falls back to the schematic map
  *
  * Kept out of the repository on purpose. A pk.* token is public by design once
  * embedded in a page; the real protection is a URL restriction in the Mapbox
@@ -21,7 +21,7 @@ function resolveMapboxToken() {
     const fromUrl = new URLSearchParams(window.location.search).get('mbtoken');
     if (fromUrl && fromUrl.startsWith('pk.')) return fromUrl;
   } catch {
-    /* no URL access — fall through */
+    /* no URL access – fall through */
   }
   if (typeof window !== 'undefined' && typeof window.MAPBOX_TOKEN === 'string') {
     return window.MAPBOX_TOKEN;
@@ -49,7 +49,7 @@ export const PHOTO_MAX_EDGE = 1600;
 export const PHOTO_THUMB_EDGE = 300;
 export const PHOTO_QUALITY = 0.8;
 
-/** Reference "today" — fixed so the makieta shows stable overdue states. */
+/** Reference "today" – fixed so the makieta shows stable overdue states. */
 export const TODAY = '2026-07-29';
 
 /** Operator shown in the top bar. */

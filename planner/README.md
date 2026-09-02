@@ -1,7 +1,7 @@
-# Sinecco AED Planner — iteracja 2 (klikalna makieta)
+# Sinecco AED Planner – iteracja 2 (klikalna makieta)
 
 Narzędzie audytu i planowania sieci defibrylatorów AED dla gmin.
-Ta iteracja to **klikalna makieta całego procesu** — do pokazania klientowi,
+Ta iteracja to **klikalna makieta całego procesu** – do pokazania klientowi,
 klikania na spotkaniu i nanoszenia uwag bezpośrednio w niej.
 
 ## Uruchomienie
@@ -12,7 +12,7 @@ python3 -m http.server 8000
 # otwórz http://localhost:8000
 ```
 
-Nie otwieraj przez `file://` — aplikacja wczytuje dane przez `fetch`.
+Nie otwieraj przez `file://` – aplikacja wczytuje dane przez `fetch`.
 
 ### Mapa Mapbox
 
@@ -22,7 +22,7 @@ W `config.js` podstaw własny publiczny token:
 export const MAPBOX_TOKEN = 'pk.....';
 ```
 
-Bez tokenu (albo bez sieci) aplikacja **nadal w pełni działa** — mapa
+Bez tokenu (albo bez sieci) aplikacja **nadal w pełni działa** – mapa
 przełącza się na schematyczny render wektorowy tych samych danych, z notatką
 wyjaśniającą, co podstawić. Cała logika, KPI i interakcje pozostają te same.
 
@@ -32,7 +32,7 @@ Pulpit → 0 Setup → 1 Inwentaryzacja → 2 Analiza → 3 Karty → 4 Roadmapa
 Kliknięcie w dowolny krok w stepperze przenosi do niego (makieta nie blokuje kolejności).
 
 Nawigacja: „Pulpit" stoi na górze steppera (wyjście do projektów, nie krok).
-Roadmapa to sam kanban — tryb „Oś czasu" usunięty na życzenie klienta.
+Roadmapa to sam kanban – tryb „Oś czasu" usunięty na życzenie klienta.
 
 ### Praca na mapie
 
@@ -48,7 +48,7 @@ Kadr (przybliżenie i przesunięcie) przeżywa przerysowanie widoku, więc po
 przesunięciu pinu mapa zostaje tam, gdzie ją ustawiono. „DOPASUJ WIDOK" wraca
 do całego miasta.
 
-Obrysy dzielnic są w obu tych widokach wyłączone (`showDistricts: false`) —
+Obrysy dzielnic są w obu tych widokach wyłączone (`showDistricts: false`) –
 przy kilkunastu punktach zlewały się z pinami. Zostają nazwy dzielnic i granica
 miasta. Karta punktu, setup i raport rysują dzielnice dalej, bo tam są
 jedynym kontekstem.
@@ -67,20 +67,20 @@ okręgiem i 51% po sieci pieszej**. Model kołowy zawyżał o 11 punktów
 procentowych, bo zakładał, że przez tory da się przejść.
 
 Trzy źródła zasięgu, w tej kolejności (`js/reach.js`):
-1. `data/reach-tychy.json` — cache projektu (46 izochron, 21 wiązek tras,
+1. `data/reach-tychy.json` – cache projektu (46 izochron, 21 wiązek tras,
    124 KB): powtarzalny, offline, bez zużywania limitu API,
-2. zapytanie do Mapboksa w locie — dla punktów dodanych lub przesuniętych
+2. zapytanie do Mapboksa w locie – dla punktów dodanych lub przesuniętych
    przez operatora; wynik żyje w pamięci sesji,
-3. okrąg — gdy nie ma ani cache, ani sieci; widok mówi wprost, że to
+3. okrąg – gdy nie ma ani cache, ani sieci; widok mówi wprost, że to
    przybliżenie (`analysis.reachMode === 'radius'`).
 
 Cache odświeża `MAPBOX_TOKEN=pk.… node tools/fetch-reach.mjs` (pomija to,
-co już ma). Klucz cache to zaokrąglona współrzędna — `reachKey()` w model.js
+co już ma). Klucz cache to zaokrąglona współrzędna – `reachKey()` w model.js
 jest jedyną definicją, wspólną dla aplikacji i narzędzia.
 
 Kontury liczone są dla drabiny 2/3/5/8 min, więc jedno zapytanie obsługuje
 wszystkie standardy z setupu. Czas dojścia punktu popytu wypada w paśmie
-między konturami; wewnątrz pasma porządkuje go odległość w linii prostej —
+między konturami; wewnątrz pasma porządkuje go odległość w linii prostej –
 sieć daje pasmo, geometria kolejność w nim.
 
 ### Filtr dzielnicy (inwentaryzacja)
@@ -98,7 +98,7 @@ O opieka, R odporność na wandalizm). Progi werdyktu: ≥ 7,5 dobra ·
 5,0–7,4 zadowalająca · < 5,0 niska. Wagi w tej iteracji stałe
 (`EXPERT_CRITERIA` w model.js). Ocena zapisuje się przy pierwszym ruchu
 suwakiem, ma pole notatki i jest widoczna w panelu karty oraz w kolumnie
-„Ocena" listy kart. Punkty bez oceny pokazują „—", nie zaniżoną liczbę.
+„Ocena" listy kart. Punkty bez oceny pokazują „–", nie zaniżoną liczbę.
 
 Sekcje karty są zwijalne (klik w nagłówek); karta otwiera się zwinięta do
 przeglądu nagłówków ze statusami, przycisk „ROZWIŃ/ZWIŃ WSZYSTKIE SEKCJE"
@@ -107,15 +107,15 @@ przełącza całość. Stan zwinięcia przeżywa zapisy pól.
 ### Raport: dwie sekcje
 
 Krok 5 ma przełącznik **Raport ogólny | Karty punktów (załączniki)**:
-- raport ogólny — podgląd, konfiguracja sekcji i wydruk jak dotąd,
-- karty punktów — każda karta do pobrania jako **osobny PDF** w zamrożonej
+- raport ogólny – podgląd, konfiguracja sekcji i wydruk jak dotąd,
+- karty punktów – każda karta do pobrania jako **osobny PDF** w zamrożonej
   konwencji, plus „POBIERZ WSZYSTKIE" pakujące je w jeden ZIP.
 
 PDF-y generuje własny writer (`js/pdf.js`, zero zależności; Helvetica Base14
 z kodowaniem `/Differences` dla polskich znaków, obrazy JPEG przez XObject
 /DCTDecode), układ karty trzyma `js/cardpdf.js`, archiwum składa `js/zip.js`
 (ZIP bez kompresji). **Zdjęcia dodane do karty są osadzane w PDF-ie** jako
-miniatury z podpisami (rola · opis) — konwersję WebP/SVG→JPEG robi canvas
+miniatury z podpisami (rola · opis) – konwersję WebP/SVG→JPEG robi canvas
 w przeglądarce, więc eksport z Node powstaje bez miniatur (z listą plików).
 
 ### Cofnij
@@ -123,7 +123,7 @@ w przeglądarce, więc eksport z Node powstaje bez miniatur (z listą plików).
 Przycisk „↩ Cofnij" w lewym górnym rogu (albo Ctrl+Z poza polem tekstowym)
 odwraca ostatnią operację: dodanie punktu, przesunięcie pinu, usunięcie punktu,
 akceptację lub odrzucenie propozycji, wygenerowanie propozycji, import CSV.
-Stos ma 30 pozycji i żyje w pamięci sesji — przeładowanie strony go czyści.
+Stos ma 30 pozycji i żyje w pamięci sesji – przeładowanie strony go czyści.
 Edycje pól w karcie punktu nie trafiają na stos: zasypałyby operacje mapowe,
 o które w tym przycisku chodzi. Zdjęcia wracają jako metadane, ich bloby
 zostają w IndexedDB (nic ich potem nie czyta).
@@ -144,7 +144,7 @@ js/photos.js          pipeline zdjęć: EXIF → skalowanie → WebP → miniatu
 js/report.js          budowa treści raportu
 js/pdf.js             własny writer PDF (Base14 + polskie znaki, zero zależności)
 js/cardpdf.js         układ karty punktu jako PDF (zamrożona konwencja)
-js/zip.js             ZIP bez kompresji — eksport wszystkich kart naraz
+js/zip.js             ZIP bez kompresji – eksport wszystkich kart naraz
 js/views/*.js         osiem widoków
 data/                 dane demo Tychy + granice
 tools/generate-demo.mjs  generator danych z kontrolą KPI
@@ -173,23 +173,23 @@ node tools/generate-demo.mjs --report
 ```
 
 Generator importuje `js/model.js`, więc **strojenie danych liczy się dokładnie
-tym samym kodem co interfejs** — nie da się „dorysować" liczby, która nie
+tym samym kodem co interfejs** – nie da się „dorysować" liczby, która nie
 wychodzi z modelu.
 
 ### Skąd są dane
 
-- **Granica gminy** — Państwowy Rejestr Granic (prawdziwa).
-- **Dzielnice** — 16 realnych jednostek pomocniczych Tychów z OpenStreetMap
+- **Granica gminy** – Państwowy Rejestr Granic (prawdziwa).
+- **Dzielnice** – 16 realnych jednostek pomocniczych Tychów z OpenStreetMap
   (`admin_level=9`, © autorzy OpenStreetMap, ODbL). Cztery relacje
-  (Śródmieście, Cielmice, Paprocany, Urbanowice) są w OSM niedomknięte —
+  (Śródmieście, Cielmice, Paprocany, Urbanowice) są w OSM niedomknięte –
   luki domknięto najkrótszym odcinkiem (odnotowane w properties pliku).
   `data/districts-tychy.geojson` to dane źródłowe: generator ich NIE nadpisuje.
-- **Siatka popytu** — model demo: syntetyczne rdzenie gęstości zabudowy
+- **Siatka popytu** – model demo: syntetyczne rdzenie gęstości zabudowy
   (spirala złotego kąta, `DISTRICTS` w generatorze), zamrożona w
   `demo-tychy.json` jako `demandPoints`, z przypisaniem każdego punktu do
   realnej dzielnicy. W produkcji zastąpi ją siatka ludności GUS 1 km.
   Ludność per dzielnica to szacunki (suma = 127 500).
-- **Punkty AED, adresy, terminy, opiekunowie** — fikcyjne dane demo dostrojone
+- **Punkty AED, adresy, terminy, opiekunowie** – fikcyjne dane demo dostrojone
   tak, aby model zwracał liczby z materiałów dla klienta (62% → 79%).
 
 Ponieważ realne granice miewają szczeliny, `districtAt()` ma fallback:
@@ -208,7 +208,7 @@ o najbliższym centroidzie.
 | mediana dojścia | 3,2 → 2,4 min | 4,2 → 3,6 min |
 | AED / 10 tys. | 1,4 → 2,1 | 1,10 → 1,49 |
 
-Trzy ostatnie wiersze wymagają decyzji — patrz niżej.
+Trzy ostatnie wiersze wymagają decyzji – patrz niżej.
 
 ## Znane rozbieżności w specyfikacji
 
@@ -216,16 +216,16 @@ Część liczb z §8 nie może zachodzić jednocześnie przy przyjętym modelu
 (100 m/min, współczynnik 1,35). To nie jest błąd strojenia, tylko sprzeczność
 w samych celach:
 
-1. **AED / 10 tys.** — 14 punktów przy 127 500 mieszkańcach daje 1,10, nie 1,4.
-   Aby zobaczyć 1,4, potrzeba 18 punktów istniejących; aby 2,1 po planie —
+1. **AED / 10 tys.** – 14 punktów przy 127 500 mieszkańcach daje 1,10, nie 1,4.
+   Aby zobaczyć 1,4, potrzeba 18 punktów istniejących; aby 2,1 po planie –
    27 punktów, podczas gdy roadmapa finansuje 5 nowych. Kwoty roadmapy są
    spójne co do złotówki, więc to wskaźnik wymaga korekty w materiałach.
-2. **Luki wg dzielnic** — Paprocany 4 100 / Żwaków 2 800 / Stare Tychy 900 jako
+2. **Luki wg dzielnic** – Paprocany 4 100 / Żwaków 2 800 / Stare Tychy 900 jako
    trzy największe luki oznaczałyby, że poza zasięgiem jest łącznie ok. 8 tys.
    osób, czyli pokrycie ok. 92%, a nie 62%. Przy pokryciu 62% poza zasięgiem
    jest ok. 48 tys. osób i największe luki muszą być w gęstych dzielnicach
    śródmiejskich.
-3. **Mediana 3,2 min przy pokryciu 62%** — mediana 3,2 min to 237 m, więc
+3. **Mediana 3,2 min przy pokryciu 62%** – mediana 3,2 min to 237 m, więc
    połowa mieszkańców musiałaby mieszkać bliżej niż 237 m od AED, a
    jednocześnie tylko 62% bliżej niż 370 m. Wymagałoby to gęstości rzędu
    80 tys. os./km².
@@ -242,4 +242,4 @@ po stronie serwera · kont i logowania · monitoringu czujników · pełnego sol
 MCLP · integracji z Claude API do opisów.
 
 Wszystkie kontrolki odpowiadające tym funkcjom są w interfejsie wyszarzone
-z tooltipem — nie ma martwych przycisków.
+z tooltipem – nie ma martwych przycisków.

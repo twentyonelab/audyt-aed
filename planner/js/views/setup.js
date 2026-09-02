@@ -1,9 +1,9 @@
 /**
- * views/setup.js — Krok 0: Setup projektu (SPEC §6.1, trasa '#/setup').
+ * views/setup.js – Krok 0: Setup projektu (SPEC §6.1, trasa '#/setup').
  *
  * Formularz danych wejściowych (560 px) po lewej + podgląd mapy po prawej.
  * Każde pole realnie zapisuje się do `state.project` przez `save()`.
- * Kandydatów tu nie ma — pojawiają się dopiero w kroku 2 (SPEC §6.1).
+ * Kandydatów tu nie ma – pojawiają się dopiero w kroku 2 (SPEC §6.1).
  */
 
 import {
@@ -46,7 +46,7 @@ export const meta = {
  * Stałe widoku
  * ------------------------------------------------------------------ */
 
-/** Segmented control „standard czasu dojścia" (SPEC §5 — promień z modelu). */
+/** Segmented control „standard czasu dojścia" (SPEC §5 – promień z modelu). */
 const STANDARDS = [
   { minutes: 2, label: 'ERC ≤ 2 min' },
   { minutes: 3, label: 'Miejski ≤ 3 min' },
@@ -67,7 +67,7 @@ let districtsInfo = null; // {rows, population, source:'demo'|'csv', fileName}
 let importInfo = null; // {count, format}
 
 /* ------------------------------------------------------------------ *
- * Pomocniki lokalne (rdzenia nie ruszamy — brakujące rzeczy są tutaj)
+ * Pomocniki lokalne (rdzenia nie ruszamy – brakujące rzeczy są tutaj)
  * ------------------------------------------------------------------ */
 
 function field(labelText, ...children) {
@@ -110,14 +110,14 @@ function sumPopulation(districts) {
   return (districts || []).reduce((sum, d) => sum + (Number(d.population) || 0), 0);
 }
 
-/** „Tychy" → „TYCHY — Audyt 2026" (zachowuje istniejący dopisek etykiety). */
+/** „Tychy" → „TYCHY – Audyt 2026" (zachowuje istniejący dopisek etykiety). */
 function deriveLabel(name, previousLabel) {
   const suffix =
-    previousLabel && previousLabel.includes('—')
-      ? previousLabel.split('—').slice(1).join('—').trim()
+    previousLabel && previousLabel.includes('–')
+      ? previousLabel.split('–').slice(1).join('–').trim()
       : `Audyt ${String(TODAY).slice(0, 4)}`;
   const base = String(name || '').trim() || 'Projekt';
-  return `${base.toUpperCase()} — ${suffix}`;
+  return `${base.toUpperCase()} – ${suffix}`;
 }
 
 /* ------------------------------------------------------------------ *
@@ -190,7 +190,7 @@ function parsePointsGeoJson(text) {
 export async function render(root, ctx) {
   const project = state.project;
   if (!project) {
-    mount(root, h('div', { class: 'empty-state', text: 'Brak aktywnego projektu — wróć do pulpitu i otwórz audyt.' }));
+    mount(root, h('div', { class: 'empty-state', text: 'Brak aktywnego projektu – wróć do pulpitu i otwórz audyt.' }));
     return;
   }
 
@@ -204,7 +204,7 @@ export async function render(root, ctx) {
     population: project.population,
     scenario: 'now',
     mode: 'day',
-    // Ten sam zasięg co w kroku 2 — pulpit i setup nie mogą pokazywać
+    // Ten sam zasięg co w kroku 2 – pulpit i setup nie mogą pokazywać
     // innego pokrycia niż analiza.
     reach: reachMapSync(state.points),
   });
@@ -256,7 +256,7 @@ export async function render(root, ctx) {
       return;
     }
     boundaryStatusEl.textContent = state.boundary
-      ? `Granica jest wczytana wstępnie (${BOUNDARY_FILE}) — potwierdź pobraniem z rejestru.`
+      ? `Granica jest wczytana wstępnie (${BOUNDARY_FILE}) – potwierdź pobraniem z rejestru.`
       : 'Brak granicy gminy.';
   };
 
@@ -363,7 +363,7 @@ export async function render(root, ctx) {
         {
           class: 'btn',
           onclick: async () => {
-            // Demo: zestaw dzielnic jest już w projekcie — potwierdzamy go i przeliczamy ludność.
+            // Demo: zestaw dzielnic jest już w projekcie – potwierdzamy go i przeliczamy ludność.
             await applyDistricts(
               (project.districts || []).map((d) => ({ ...d })),
               'demo'
@@ -374,7 +374,7 @@ export async function render(root, ctx) {
       )
     ),
     districtsSummary,
-    hint('Geometria dzielnic pochodzi z districts-tychy.geojson — CSV aktualizuje nazwy i ludność.')
+    hint('Geometria dzielnic pochodzi z districts-tychy.geojson – CSV aktualizuje nazwy i ludność.')
   );
 
   const stopDrag = (e) => {
@@ -430,7 +430,7 @@ export async function render(root, ctx) {
       h('span', { class: 'muted num', text: `promień strefy: ${fmtNum(radiusM, 0)} m` })
     ),
     hint(
-      `Świadek biegnie po AED i wraca — ${fmtMin(project.standardMinutes, 0)} liczymy w jedną stronę ` +
+      `Świadek biegnie po AED i wraca – ${fmtMin(project.standardMinutes, 0)} liczymy w jedną stronę ` +
         `(100 m/min, korekta trasy 1,35).`
     )
   );
@@ -557,7 +557,7 @@ export async function render(root, ctx) {
       h('p', {
         class: 'note',
         text:
-          'Dane wejściowe są zapisywane od razu — krok 1 pracuje już na nich. ' +
+          'Dane wejściowe są zapisywane od razu – krok 1 pracuje już na nich. ' +
           'Pobieranie z PRG/GUS/OSM po sieci to iteracja 3; tutaj dane pochodzą z plików projektu.',
       })
     )

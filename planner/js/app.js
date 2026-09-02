@@ -1,5 +1,5 @@
 /**
- * app.js — bootstrap: load state, register routes, start the router.
+ * app.js – bootstrap: load state, register routes, start the router.
  */
 
 import { initState, state, subscribe } from './state.js';
@@ -20,7 +20,7 @@ registerRoute('#/field/:token', () => import('./views/field.js'));
 async function boot() {
   const root = document.getElementById('app');
   try {
-    // Zasięgi dojścia wczytujemy razem ze stanem — każdy krok liczy pokrycie
+    // Zasięgi dojścia wczytujemy razem ze stanem – każdy krok liczy pokrycie
     // tym samym modelem, więc plik musi być na miejscu przed pierwszym renderem.
     await Promise.all([initState(), loadReach()]);
   } catch (err) {
@@ -61,5 +61,5 @@ window.addEventListener('error', (e) => {
 
 boot().catch((err) => {
   console.error(err);
-  toast('Błąd startu aplikacji — szczegóły w konsoli.');
+  toast('Błąd startu aplikacji – szczegóły w konsoli.');
 });

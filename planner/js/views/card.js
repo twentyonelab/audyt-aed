@@ -1,20 +1,20 @@
 /**
- * views/card.js — Krok 3: Karta punktu (SPEC §6.5, trasa '#/card/:id').
+ * views/card.js – Krok 3: Karta punktu (SPEC §6.5, trasa '#/card/:id').
  *
  * Dwie kolumny: sekcje karty (przewijalne) + panel boczny.
  * Dziewięć sekcji, każda z paskiem statusu po lewej (.card-section--crit /
  * --warn / bez modyfikatora) i zwijana klikiem w nagłówek.
  *
  * Kolejność jest celowa: 1–6 to dane zbierane w terenie, 7–9 to podsumowanie
- * (preset i koszt, checklista zgodności, ocena ekspercka) — czyli wnioski
+ * (preset i koszt, checklista zgodności, ocena ekspercka) – czyli wnioski
  * z tych danych, a nie parametry wejściowe.
  *
- * Wszystkie liczby pochodzą z model.js — widok niczego nie liczy sam:
- *   • completeness()        — pasek kompletności i braki pól/zdjęć,
- *   • autoRecommendations() — checklist zgodności (sekcja 8),
- *   • coverageRadiusM()     — promień strefy na mini-mapie,
- *   • statusMeta()          — pigułka statusu punktu,
- *   • fmtPct/fmtNum/fmtCost/fmtMin — formatowanie.
+ * Wszystkie liczby pochodzą z model.js – widok niczego nie liczy sam:
+ *   • completeness()        – pasek kompletności i braki pól/zdjęć,
+ *   • autoRecommendations() – checklist zgodności (sekcja 8),
+ *   • coverageRadiusM()     – promień strefy na mini-mapie,
+ *   • statusMeta()          – pigułka statusu punktu,
+ *   • fmtPct/fmtNum/fmtCost/fmtMin – formatowanie.
  *
  * Zapis: każda zmiana pola trafia od razu do obiektu punktu w state (przez
  * upsertPoint), a save() jest wołany natychmiast dla select/checkbox/radio
@@ -33,6 +33,8 @@ import {
   removeRecommendation,
   recommendationsForPoint,
   markStepDone,
+  removePoint,
+  checkpoint,
 } from '../state.js';
 
 import {
@@ -79,7 +81,7 @@ export const meta = {
  * Stałe widoku
  * ------------------------------------------------------------------ */
 
-/** Opóźnienie zapisu pól tekstowych (SPEC §6.5 — „debounce ~400 ms"). */
+/** Opóźnienie zapisu pól tekstowych (SPEC §6.5 – „debounce ~400 ms"). */
 const TEXT_DEBOUNCE_MS = 400;
 
 /** Po tylu ms nie odtwarzamy już fokusu (użytkownik zdążył odejść od pola). */
@@ -115,7 +117,7 @@ const RULE_SECTION = {
   dispatcher: 7,
 };
 
-/** Etykiety pól wymaganych — używane na liście braków w panelu. */
+/** Etykiety pól wymaganych – używane na liście braków w panelu. */
 const FIELD_LABEL = {
   name: 'Nazwa punktu',
   address: 'Adres',
@@ -159,11 +161,11 @@ let focusMemo = null;
 let scrollMemo = null;
 let photosModulePromise = null;
 
-/** Numery wszystkich sekcji karty — do „rozwiń/zwiń wszystkie". */
+/** Numery wszystkich sekcji karty – do „rozwiń/zwiń wszystkie". */
 const ALL_SECTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 /**
- * Które sekcje są zwinięte — pamiętane per punkt między przerysowaniami
+ * Które sekcje są zwinięte – pamiętane per punkt między przerysowaniami
  * (zapis pola przerysowuje widok i nie może zamykać sekcji pod ręką).
  * Karta otwiera się zwinięta do przeglądu nagłówków, jak w makiecie W3b.
  */
@@ -207,7 +209,7 @@ function writePath(obj, path, value) {
   node[keys[keys.length - 1]] = value;
 }
 
-/** Puste pole trzymamy jako null — tak samo traktuje je completeness(). */
+/** Puste pole trzymamy jako null – tak samo traktuje je completeness(). */
 function normalizeText(raw) {
   return raw === '' ? null : raw;
 }
@@ -216,9 +218,9 @@ function fieldId(key) {
   return `card-f-${String(key).replace(/[^\w-]/g, '-')}`;
 }
 
-/** '2026-03' → 'marzec 2026'; puste → '—'. */
+/** '2026-03' → 'marzec 2026'; puste → '–'. */
 function monthLabel(value) {
-  if (!value) return '—';
+  if (!value) return '–';
   const [year, month] = String(value).slice(0, 7).split('-');
   const index = Number(month) - 1;
   if (!year || Number.isNaN(index) || !MONTHS_PL[index]) return String(value);
@@ -258,14 +260,14 @@ function rememberFocus(node, pointId) {
     start = node.selectionStart;
     end = node.selectionEnd;
   } catch (err) {
-    // input[type=month|number] nie wspiera zaznaczenia — to nie jest błąd
+    // input[type=month|number] nie wspiera zaznaczenia – to nie jest błąd
     start = null;
     end = null;
   }
   focusMemo = { pointId, key: node.dataset ? node.dataset.fkey : null, start, end, at: Date.now() };
 }
 
-/** To samo dla przewinięcia kolumny sekcji — inaczej zapis odrzucałby na górę karty. */
+/** To samo dla przewinięcia kolumny sekcji – inaczej zapis odrzucałby na górę karty. */
 function rememberScroll(node, pointId) {
   scrollMemo = { pointId, top: node.scrollTop };
 }
@@ -287,7 +289,7 @@ function restoreFocus(root, pointId) {
     try {
       node.setSelectionRange(memo.start, memo.end);
     } catch (err) {
-      /* pole bez zaznaczenia — wystarczy sam fokus */
+      /* pole bez zaznaczenia – wystarczy sam fokus */
     }
   }
 }
@@ -351,7 +353,7 @@ function textField({
   return field(label, control, hint, id);
 }
 
-/** Select podpięty do ścieżki w punkcie — zapis natychmiastowy. */
+/** Select podpięty do ścieżki w punkcie – zapis natychmiastowy. */
 function selectField({ point, path, label, hint, options, disabled = false, onPick = null }) {
   const id = fieldId(path);
   const value = readPath(point, path);
@@ -461,7 +463,7 @@ const SECTION_PILL = {
   '': { text: 'KOMPLET', variant: 'ok' },
 };
 
-/** Zwinięty zestaw bieżącej karty + odświeżacz etykiety przycisku — ustawiane w render(). */
+/** Zwinięty zestaw bieżącej karty + odświeżacz etykiety przycisku – ustawiane w render(). */
 let currentCollapsed = new Set();
 let refreshToggleLabel = () => {};
 
@@ -507,7 +509,7 @@ function note(text) {
 }
 
 /* ------------------------------------------------------------------ *
- * Rekomendacje — scalenie auto + zapisanych
+ * Rekomendacje – scalenie auto + zapisanych
  * ------------------------------------------------------------------ */
 
 /** Kopia rekomendacji bez pól pomocniczych widoku. */
@@ -520,7 +522,7 @@ function cleanRec(rec) {
  * autoRecommendations() + pozycje już zapisane w state, scalone po id.
  * Z zapisanej wersji zachowujemy `done`, `phase` i ramy czasowe roadmapy.
  * Pozycje auto, których reguła już nie obowiązuje, zostają na liście
- * oznaczone jako nieaktualne — nie kasujemy ich za plecami operatora.
+ * oznaczone jako nieaktualne – nie kasujemy ich za plecami operatora.
  */
 function mergeRecommendations(point, preset) {
   const stored = recommendationsForPoint(point.id);
@@ -633,7 +635,7 @@ export async function render(root, ctx) {
         h(
           'div',
           { class: 'empty-state' },
-          h('p', { text: `Nie znaleziono punktu o identyfikatorze „${(ctx.params && ctx.params.id) || '—'}".` }),
+          h('p', { text: `Nie znaleziono punktu o identyfikatorze „${(ctx.params && ctx.params.id) || '–'}".` }),
           h('p', { class: 'note', text: 'Punkt mógł zostać usunięty albo link jest nieaktualny.' }),
           h(
             'button',
@@ -741,7 +743,7 @@ export async function render(root, ctx) {
   }
 
   /* ================================================================ *
-   * SEKCJA 1 — Identyfikacja
+   * SEKCJA 1 – Identyfikacja
    * ================================================================ */
 
   const photoBox = h('div', { class: 'stack' });
@@ -760,7 +762,7 @@ export async function render(root, ctx) {
           })
         : null,
       missingRoles.length
-        ? h('div', { class: 'note', text: `Brakuje: ${missingRoles.join(', ')} — kompletność karty jest o to obniżona.` })
+        ? h('div', { class: 'note', text: `Brakuje: ${missingRoles.join(', ')} – kompletność karty jest o to obniżona.` })
         : null
     );
   };
@@ -781,7 +783,7 @@ export async function render(root, ctx) {
   }
 
   const districtOptions = [
-    { value: '', label: '— nie przypisano —' },
+    { value: '', label: '– nie przypisano –' },
     ...(project.districts || []).map((d) => ({ value: d.id, label: d.name })),
   ];
 
@@ -790,7 +792,7 @@ export async function render(root, ctx) {
     title: 'Identyfikacja',
     level: levelOf(1),
     children: [
-      textField({ point, path: 'name', label: 'Nazwa punktu', placeholder: 'np. SP nr 7 — hol główny' }),
+      textField({ point, path: 'name', label: 'Nazwa punktu', placeholder: 'np. SP nr 7 – hol główny' }),
       twoCols(
         textField({ point, path: 'address', label: 'Adres', placeholder: 'ul. Szkolna 3' }),
         selectField({ point, path: 'districtId', label: 'Dzielnica', options: districtOptions })
@@ -821,18 +823,18 @@ export async function render(root, ctx) {
         placeholder: 'np. hol główny, przy portierni, na wysokości 1,4 m',
       }),
       h('div', { class: 'divider' }),
-      h('span', { class: 'label-caps', text: 'Galeria zdjęć — dowody audytu (SPEC §7)' }),
+      h('span', { class: 'label-caps', text: 'Galeria zdjęć – dowody audytu (SPEC §7)' }),
       photoBox,
     ],
   });
 
   /* ================================================================ *
-   * SEKCJA 2 — Preset
+   * SEKCJA 2 – Preset
    * ================================================================ */
 
   const presetOptions = state.presets.map((p) => ({
     value: p.id,
-    label: `${p.id} — ${p.name} · ${fmtCost(p.cost)}`,
+    label: `${p.id} – ${p.name} · ${fmtCost(p.cost)}`,
   }));
 
   const requirementRow = (label, ok) =>
@@ -880,20 +882,20 @@ export async function render(root, ctx) {
                 requirementRow(photoRoleLabel(role), !comp.missingPhotos.includes(role))
               )
             ),
-            note(`Koszt jednostkowy presetu: ${fmtCost(preset.cost)} — trafia do wyceny roadmapy.`)
+            note(`Koszt jednostkowy presetu: ${fmtCost(preset.cost)} – trafia do wyceny roadmapy.`)
           )
-        : note('Punkt nie ma przypisanego presetu — bez niego nie da się policzyć kompletności ani kosztu.'),
+        : note('Punkt nie ma przypisanego presetu – bez niego nie da się policzyć kompletności ani kosztu.'),
     ],
   });
 
   /* ================================================================ *
-   * SEKCJE 3–6 — dane terenowe (dla propozycji wyszarzone)
+   * SEKCJE 3–6 – dane terenowe (dla propozycji wyszarzone)
    * ================================================================ */
 
   const inert = isProposed;
   const inertPills = inert ? [{ text: 'PO MONTAŻU', variant: 'phase3' }] : [];
   const inertNote = inert
-    ? note('Punkt jest jeszcze propozycją — te dane uzupełnia się po montażu urządzenia. Wytyczne wdrożeniowe znajdziesz w sekcji 6.')
+    ? note('Punkt jest jeszcze propozycją – te dane uzupełnia się po montażu urządzenia. Wytyczne wdrożeniowe znajdziesz w sekcji 6.')
     : null;
 
   const section3 = cardSection({
@@ -1011,28 +1013,28 @@ export async function render(root, ctx) {
       ),
       !inert && inspectionOverdue
         ? note(
-            `Termin przeglądu (${monthLabel(point.device.inspectionDue)}) minął względem daty odniesienia ${monthLabel(TODAY)} — ` +
+            `Termin przeglądu (${monthLabel(point.device.inspectionDue)}) minął względem daty odniesienia ${monthLabel(TODAY)} – ` +
               'sekcja 8 pokazuje rekomendację przeglądu z priorytetem wysokim.'
           )
         : null,
       !inert && padsOverdue
-        ? note(`Termin elektrod (${monthLabel(point.device.padsDue)}) minął — elektrody po dacie ważności nie gwarantują defibrylacji.`)
+        ? note(`Termin elektrod (${monthLabel(point.device.padsDue)}) minął – elektrody po dacie ważności nie gwarantują defibrylacji.`)
         : null,
     ],
   });
 
   /* ================================================================ *
-   * SEKCJA 7 — rejestracja w CPR / wytyczne montażu
+   * SEKCJA 7 – rejestracja w CPR / wytyczne montażu
    * ================================================================ */
 
   const section7 = isProposed
     ? cardSection({
         num: 6,
-        title: `Wytyczne montażu — preset ${preset ? preset.id : '—'}`,
+        title: `Wytyczne montażu – preset ${preset ? preset.id : '–'}`,
         level: preset && (preset.checklist || []).length ? '' : 'warn',
         pills: [{ text: 'SPECYFIKACJA WDROŻENIOWA', variant: 'phase3' }],
         children: [
-          note('Punkt proponowany — poniżej lista warunków, które muszą być spełnione przy montażu. Pochodzi z presetu.'),
+          note('Punkt proponowany – poniżej lista warunków, które muszą być spełnione przy montażu. Pochodzi z presetu.'),
           preset && (preset.checklist || []).length
             ? h(
                 'ul',
@@ -1046,7 +1048,7 @@ export async function render(root, ctx) {
                   `${(preset.requiredPhotos || []).map(photoRoleLabel).join(', ') || 'brak'}.`
               )
             : null,
-          note('Rejestrację urządzenia u dyspozytora CPR 112/999 zgłasza się po odbiorze montażu — pole pojawi się tutaj po zmianie punktu na istniejący.'),
+          note('Rejestrację urządzenia u dyspozytora CPR 112/999 zgłasza się po odbiorze montażu – pole pojawi się tutaj po zmianie punktu na istniejący.'),
         ],
       })
     : cardSection({
@@ -1061,14 +1063,14 @@ export async function render(root, ctx) {
           }),
           note(
             'Dyspozytor CPR może wskazać świadkowi najbliższe AED tylko wtedy, gdy urządzenie jest w jego bazie. ' +
-              'Punkt niezgłoszony nie działa w łańcuchu przeżycia — fizycznie istnieje, ale nie zostanie użyty w wezwaniu. ' +
+              'Punkt niezgłoszony nie działa w łańcuchu przeżycia – fizycznie istnieje, ale nie zostanie użyty w wezwaniu. ' +
               'Zgłoszenie jest bezkosztowe, dlatego reguła nadaje mu priorytet wysoki.'
           ),
         ],
       });
 
   /* ================================================================ *
-   * SEKCJA 8 — checklist zgodności i rekomendacje
+   * SEKCJA 8 – checklist zgodności i rekomendacje
    * ================================================================ */
 
   const openCost = openRecs.reduce((sum, r) => sum + (r.cost || 0), 0);
@@ -1128,7 +1130,7 @@ export async function render(root, ctx) {
           { class: 'row row--wrap', style: { marginTop: '4px' } },
           h('span', { html: pillHtml(PRIORITY_LABEL[rec.priority] || rec.priority, PRIORITY_VARIANT[rec.priority] || '') }),
           h('span', { class: 'list-row__meta num', text: fmtCost(rec.cost || 0) }),
-          h('span', { class: 'list-row__meta', text: `odp.: ${rec.owner || '—'}` }),
+          h('span', { class: 'list-row__meta', text: `odp.: ${rec.owner || '–'}` }),
           h('span', { class: 'list-row__meta', text: rec.auto ? 'z reguły' : 'ręczna' }),
           rec.phase && PHASE_META[rec.phase]
             ? h('span', { html: pillHtml(PHASE_META[rec.phase].label, `phase${rec.phase}`) })
@@ -1148,7 +1150,7 @@ export async function render(root, ctx) {
     children: [
       merged.length
         ? h('div', { class: 'stack', style: { gap: '0' } }, ...merged.map(recRow))
-        : h('div', { class: 'empty-state', text: 'Brak rekomendacji — punkt spełnia wszystkie reguły automatyczne.' }),
+        : h('div', { class: 'empty-state', text: 'Brak rekomendacji – punkt spełnia wszystkie reguły automatyczne.' }),
       h(
         'div',
         { class: 'row row--wrap', style: { marginTop: '6px' } },
@@ -1166,22 +1168,22 @@ export async function render(root, ctx) {
   });
 
   /* ================================================================ *
-   * SEKCJA 9 — ocena ekspercka lokalizacji
+   * SEKCJA 9 – ocena ekspercka lokalizacji
    * ================================================================ */
 
-  /** Wartości suwaków przed pierwszym zapisem — start neutralny (5). */
+  /** Wartości suwaków przed pierwszym zapisem – start neutralny (5). */
   const scoreDraft = {};
   for (const c of EXPERT_CRITERIA) {
     const saved = point.expert ? point.expert[c.key] : null;
     scoreDraft[c.key] = typeof saved === 'number' ? saved : 5;
   }
 
-  const scoreValueEl = h('span', { class: 'score-box__value num', text: score ? fmtNum(score.value, 1) : '—' });
+  const scoreValueEl = h('span', { class: 'score-box__value num', text: score ? fmtNum(score.value, 1) : '–' });
   const scoreVerdictEl = h('span', {
     html: score ? pillHtml(score.verdict.label, score.verdict.variant) : pillHtml('NIEOCENIONA', 'warn'),
   });
 
-  /** Podgląd wyniku na żywo w trakcie przesuwania — bez zapisu. */
+  /** Podgląd wyniku na żywo w trakcie przesuwania – bez zapisu. */
   const previewScore = () => {
     let sum = 0;
     for (const c of EXPERT_CRITERIA) sum += scoreDraft[c.key] * c.weight;
@@ -1238,7 +1240,7 @@ export async function render(root, ctx) {
       : { text: 'NIEOCENIONA', variant: 'warn' },
     children: [
       inert
-        ? note('Punkt jest propozycją — lokalizację ocenia się po wizji lokalnej albo montażu.')
+        ? note('Punkt jest propozycją – lokalizację ocenia się po wizji lokalnej albo montażu.')
         : null,
       h(
         'div',
@@ -1256,7 +1258,7 @@ export async function render(root, ctx) {
       h('div', { class: 'score-grid' }, ...EXPERT_CRITERIA.map(criterionRow)),
       score
         ? null
-        : note('Ocena zapisze się przy pierwszym ruchu dowolnym suwakiem — wtedy utrwala się komplet sześciu kryteriów.'),
+        : note('Ocena zapisze się przy pierwszym ruchu dowolnym suwakiem – wtedy utrwala się komplet sześciu kryteriów.'),
       textField({
         point,
         path: 'expert.note',
@@ -1311,7 +1313,7 @@ export async function render(root, ctx) {
       style: { fontSize: '12px', marginTop: '2px' },
       text:
         `${point.id} · ${isProposed ? 'specyfikacja wdrożeniowa' : 'specyfikacja'} · ` +
-        `${districtName(point.districtId)} · preset ${preset ? preset.id : '—'}`,
+        `${districtName(point.districtId)} · preset ${preset ? preset.id : '–'}`,
     })
   );
 
@@ -1327,11 +1329,11 @@ export async function render(root, ctx) {
     section6,
     section7,
     // …a dopiero potem wnioski. Preset i checklista to wynik tych danych,
-    // nie parametr wejściowy — klient słusznie zwrócił uwagę, że stały wyżej.
+    // nie parametr wejściowy – klient słusznie zwrócił uwagę, że stały wyżej.
     h('div', {
       class: 'label-caps',
       style: { margin: '18px 0 8px', color: 'var(--ink-2)' },
-      text: 'Podsumowanie — co z tych danych wynika',
+      text: 'Podsumowanie – co z tych danych wynika',
     }),
     section2,
     section8,
@@ -1348,9 +1350,9 @@ export async function render(root, ctx) {
     boundary: state.boundary,
     districts: state.districtsGeo,
     showDistricts: true,
-    // Dzielnica punktu podświetlona — mini-mapa mówi od razu „gdzie to jest".
+    // Dzielnica punktu podświetlona – mini-mapa mówi od razu „gdzie to jest".
     highlightDistrictId: point.districtId || null,
-    // Bez okręgu strefy — promień jest podany liczbowo pod mapką, a okrąg
+    // Bez okręgu strefy – promień jest podany liczbowo pod mapką, a okrąg
     // przy tym kadrze zasłaniał sam punkt.
     coverage: [],
     showCoverage: false,
@@ -1384,12 +1386,12 @@ export async function render(root, ctx) {
         const go = await modal({
           title: 'Przesuwanie punktu',
           body:
-            '<p class="note">Współrzędne zmienia się przeciągnięciem pinu na mapie w kroku 2 (Analiza dostępności) — ' +
+            '<p class="note">Współrzędne zmienia się przeciągnięciem pinu na mapie w kroku 2 (Analiza dostępności) – ' +
             'tam KPI przeliczają się na żywo w trakcie przeciągania.</p>' +
             `<p class="note">${
               isProposed
                 ? 'Ten punkt jest propozycją, więc jego pin jest przeciągalny.'
-                : 'Piny punktów istniejących są zablokowane — ich położenie pochodzi z inwentaryzacji (krok 1).'
+                : 'Piny punktów istniejących są zablokowane – ich położenie pochodzi z inwentaryzacji (krok 1).'
             }</p>`,
           confirmLabel: 'Przejdź do kroku 2',
           cancelLabel: 'Zostań w karcie',
@@ -1431,7 +1433,7 @@ export async function render(root, ctx) {
       onclick: async () => {
         const items = merged.filter((rec) => !rec.done && !rec.phase);
         if (!items.length) {
-          toast('Brak nieprzypisanych rekomendacji — wszystkie są już w roadmapie albo odhaczone.');
+          toast('Brak nieprzypisanych rekomendacji – wszystkie są już w roadmapie albo odhaczone.');
           return;
         }
         let cost = 0;
@@ -1458,6 +1460,47 @@ export async function render(root, ctx) {
     h('button', { class: 'btn btn--block' }, 'WYŚLIJ FORMULARZ TERENOWY'),
     'poza zakresem'
   );
+
+  /**
+   * Usunięcie rekomendacji z całej karty. Tylko dla punktów proponowanych –
+   * istniejące AED to zapis stanu faktycznego i z rejestru nie wypada tędy.
+   * Wraz z punktem lecą jego rekomendacje i zdjęcia (patrz removePoint).
+   */
+  const deleteBtn = isProposed
+    ? h(
+        'button',
+        {
+          class: 'btn btn--block btn--danger',
+          onclick: async () => {
+            const name = point.name || point.id;
+            const ok = await modal({
+              title: 'Usunąć rekomendację?',
+              body: h(
+                'div',
+                {},
+                h('p', { text: `Punkt „${name}" zniknie z mapy, z rejestru i z sum kosztów.` }),
+                h('p', {
+                  class: 'note',
+                  text:
+                    `Razem z nim usuniemy jego rekomendacje (${fmtNum(merged.length)} poz.) ` +
+                    `i zdjęcia (${fmtNum(pointPhotos.length)}).`,
+                }),
+                h('p', { class: 'note', text: 'Pomyłkę odwraca „Cofnij" w pasku górnym.' })
+              ),
+              confirmLabel: 'USUŃ PUNKT',
+            });
+            if (!ok) return;
+            checkpoint(`usunięcie rekomendacji „${name}”`);
+            removePoint(point.id);
+            if (state.ui.selectedPointId === point.id) state.ui.selectedPointId = null;
+            await saveNow();
+            toast(`Rekomendacja „${name}" usunięta.`);
+            ctx.navigate('#/analysis');
+          },
+        },
+        'USUŃ PUNKT'
+      )
+    : null;
 
   const panel = h(
     'aside',
@@ -1487,7 +1530,7 @@ export async function render(root, ctx) {
         h('div', {
           class: 'note',
           style: { marginTop: '4px' },
-          text: 'Przeciąganie pinu żyje w kroku 2 — Analiza dostępności.',
+          text: 'Przeciąganie pinu żyje w kroku 2 – Analiza dostępności.',
         }),
         h(
           'button',
@@ -1528,11 +1571,11 @@ export async function render(root, ctx) {
           { class: 'row' },
           h('span', {
             class: `score-badge${score ? ` score-badge--${score.verdict.variant}` : ''}`,
-            text: score ? fmtNum(score.value, 1) : '—',
+            text: score ? fmtNum(score.value, 1) : '–',
           }),
           score
             ? h('span', { html: pillHtml(score.verdict.label, score.verdict.variant) })
-            : h('span', { class: 'note', text: 'nieoceniona — sekcja 9 karty' })
+            : h('span', { class: 'note', text: 'nieoceniona – sekcja 9 karty' })
         )
       ),
       h(
@@ -1555,7 +1598,8 @@ export async function render(root, ctx) {
       { class: 'panel__foot', style: { flexDirection: 'column', gap: '8px' } },
       saveBtn,
       roadmapBtn,
-      fieldFormBtn
+      fieldFormBtn,
+      deleteBtn
     )
   );
 
@@ -1573,7 +1617,7 @@ export function destroy() {
   // Widok nie tworzy interaktywnej mapy (mini-mapa to statyczny SVG
   // z renderSceneSvg), więc nie ma czego zwalniać po stronie map.js.
   // Zaległy zapis pól tekstowych domykamy po cichu, żeby zmiana widoku
-  // nie zgubiła ostatnich znaków — dane są już w state, brakuje tylko IndexedDB.
+  // nie zgubiła ostatnich znaków – dane są już w state, brakuje tylko IndexedDB.
   if (saveTimer) {
     clearTimeout(saveTimer);
     saveTimer = null;

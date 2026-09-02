@@ -1,13 +1,13 @@
-# SPEC — Sinecco AED Planner · ITERACJA 2 (klikalna makieta)
+# SPEC – Sinecco AED Planner · ITERACJA 2 (klikalna makieta)
 
 **Dokument wykonawczy dla Claude Code.** Wersja 1.0 · 2026-07-29
-Źródła: makiety Figma (board „Sinecco — iteracja 1"), BRIEF_narzedzie_AED_v2.md
+Źródła: makiety Figma (board „Sinecco – iteracja 1"), BRIEF_narzedzie_AED_v2.md
 
 ---
 
 ## 0. Prompt startowy (wklej jako pierwszą wiadomość w Claude Code)
 
-> Buduję prototyp aplikacji webowej „Sinecco AED Planner" — narzędzie audytu i planowania sieci defibrylatorów AED dla gmin. Pełna specyfikacja jest w pliku `ITERACJA2_SPEC.md` w tym repo — przeczytaj go w całości przed pisaniem kodu.
+> Buduję prototyp aplikacji webowej „Sinecco AED Planner" – narzędzie audytu i planowania sieci defibrylatorów AED dla gmin. Pełna specyfikacja jest w pliku `ITERACJA2_SPEC.md` w tym repo – przeczytaj go w całości przed pisaniem kodu.
 >
 > To iteracja 2: **klikalna makieta**, nie produkcja. Ma działać w przeglądarce, z prawdziwą mapą Mapbox i danymi demo Tychów, żeby dało się ją pokazać klientowi i klikać cały proces od dashboardu do raportu.
 >
@@ -19,7 +19,7 @@
 
 ## 1. Czym jest ta iteracja
 
-**Cel:** klikalna makieta całego procesu audytu — do pokazania klientowi (Sinecco) i gminom, do zbierania uwag i do nanoszenia zmian bezpośrednio w niej.
+**Cel:** klikalna makieta całego procesu audytu – do pokazania klientowi (Sinecco) i gminom, do zbierania uwag i do nanoszenia zmian bezpośrednio w niej.
 
 | | Iteracja 2 (TA) | Iteracja 3 (później) |
 |---|---|---|
@@ -29,7 +29,7 @@
 | Raport | podgląd HTML + druk do PDF | generowany PDF z brandingiem |
 | Użytkownicy | brak logowania | operator Sinecco |
 
-**Kryterium sukcesu:** operator przechodzi całą ścieżkę 0→5, dodaje punkt, uzupełnia kartę ze zdjęciem, generuje propozycje, buduje roadmapę i widzi raport — bez ani jednego martwego przycisku.
+**Kryterium sukcesu:** operator przechodzi całą ścieżkę 0→5, dodaje punkt, uzupełnia kartę ze zdjęciem, generuje propozycje, buduje roadmapę i widzi raport – bez ani jednego martwego przycisku.
 
 ---
 
@@ -37,7 +37,7 @@
 
 - **Vanilla JS (moduły ES), HTML, CSS. Bez Reacta, bez bundlera, bez npm build.** Otwierasz `index.html` przez lokalny serwer (`python -m http.server`) i działa.
 - **Mapbox GL JS** z CDN. Token w `config.js` (placeholder `MAPBOX_TOKEN`, ja podstawię swój).
-- **Stan aplikacji:** jeden obiekt `state` w pamięci + zapis do **IndexedDB** (nie localStorage — potrzebne Bloby zdjęć).
+- **Stan aplikacji:** jeden obiekt `state` w pamięci + zapis do **IndexedDB** (nie localStorage – potrzebne Bloby zdjęć).
 - **Zdjęcia:** Blob w IndexedDB, referencja w danych punktu. Pipeline jak w §7.
 - **Zero zależności runtime** poza Mapbox GL JS.
 - Kod i nazwy zmiennych po angielsku, **cały interfejs po polsku** (z polskimi znakami).
@@ -71,7 +71,7 @@
 
 ---
 
-## 3. Design system (z makiet Figma — trzymać się dokładnie)
+## 3. Design system (z makiet Figma – trzymać się dokładnie)
 
 **Kolory**
 
@@ -102,7 +102,7 @@
 │ SINECCO · AED Planner   Projekt: TYCHY   Operator   [PDF]│
 ├──────────────────────────────────────────────────────────┤
 │ SUB BAR 48px  #F4F4F4                                    │
-│ Krok N z 5 · Nazwa — „podtytuł"      [przełączniki]      │
+│ Krok N z 5 · Nazwa – „podtytuł"      [przełączniki]      │
 ├────────────┬─────────────────────────────────────────────┤
 │ STEPPER    │  OBSZAR ROBOCZY                             │
 │ 232px      │  (mapa / tabela / karta / kanban / raport)   │
@@ -111,7 +111,7 @@
 └────────────┴─────────────────────────────────────────────┘
 ```
 
-Stepper: kółko 26 px z numerem + nazwa. Krok aktywny = ciemna pigułka, białe kółko. Kroki ukończone = szare wypełnienie kółka. **Kliknięcie w dowolny krok przenosi do niego** (bez blokad — to makieta).
+Stepper: kółko 26 px z numerem + nazwa. Krok aktywny = ciemna pigułka, białe kółko. Kroki ukończone = szare wypełnienie kółka. **Kliknięcie w dowolny krok przenosi do niego** (bez blokad – to makieta).
 
 ---
 
@@ -122,7 +122,7 @@ Stepper: kółko 26 px z numerem + nazwa. Krok aktywny = ciemna pigułka, białe
   "project": {
     "id": "tychy-2026",
     "name": "Tychy",
-    "label": "TYCHY — Audyt 2026",
+    "label": "TYCHY – Audyt 2026",
     "status": "w_toku",              // w_toku | oferta | zakonczony
     "population": 127500,
     "standardMinutes": 2,            // 2 = ERC | 3 = miejski | 5 = podstawowy
@@ -139,7 +139,7 @@ Stepper: kółko 26 px z numerem + nazwa. Krok aktywny = ciemna pigułka, białe
     "kind": "existing",              // existing | proposed
     "status": "verified_gaps",       // unverified | verified_ok | verified_gaps
                                      // proposed | accepted | rejected
-    "name": "SP nr 7 — hol główny",
+    "name": "SP nr 7 – hol główny",
     "address": "ul. Szkolna 3",
     "districtId": "zwakow",
     "lat": 50.1312, "lon": 18.9762,
@@ -196,7 +196,7 @@ Stepper: kółko 26 px z numerem + nazwa. Krok aktywny = ciemna pigułka, białe
 
   "presets": [{
     "id": "P1",
-    "name": "Wewnętrzny — budynek publiczny",
+    "name": "Wewnętrzny – budynek publiczny",
     "cost": 8500,
     "requiredFields": ["name","address","placement","access","keeper",
                        "signage.atDevice","signage.route","device.model",
@@ -207,13 +207,13 @@ Stepper: kółko 26 px z numerem + nazwa. Krok aktywny = ciemna pigułka, białe
 }
 ```
 
-**Presety (stałe):** P1 Wewnętrzny — budynek publiczny 8 500 zł · P2 Wewnętrzny — obiekt 24/7 9 000 zł · P3 Zewnętrzny — szafka na elewacji 15 000 zł · P4 Zewnętrzny — słupek wolnostojący 24 000 zł · P5 Sezonowy / mobilny 6 000 zł.
+**Presety (stałe):** P1 Wewnętrzny – budynek publiczny 8 500 zł · P2 Wewnętrzny – obiekt 24/7 9 000 zł · P3 Zewnętrzny – szafka na elewacji 15 000 zł · P4 Zewnętrzny – słupek wolnostojący 24 000 zł · P5 Sezonowy / mobilny 6 000 zł.
 
 ---
 
-## 5. Obliczenia (model.js) — dokładne wzory
+## 5. Obliczenia (model.js) – dokładne wzory
 
-**Czas dojścia** liczymy dla świadka biegnącego **do AED i z powrotem** do poszkodowanego — dlatego „w jedną stronę ≤ 2 min".
+**Czas dojścia** liczymy dla świadka biegnącego **do AED i z powrotem** do poszkodowanego – dlatego „w jedną stronę ≤ 2 min".
 
 ```js
 const WALK_SPEED = 100;      // m/min
@@ -230,11 +230,11 @@ dist = Math.hypot(dx, dy);
 walkTime = dist * DETOUR / WALK_SPEED;            // minuty w jedną stronę
 ```
 
-**Punkty popytu:** dla każdej dzielnicy rozrzuć `N` punktów (N ∝ ludność, np. `Math.max(20, population/200)`) w obrębie jej wielokąta, każdy z wagą `population / N`. Rozkład spiralny (golden angle) lub losowy z ziarnem — ważne, żeby był **deterministyczny** (te same dane = ten sam wynik).
+**Punkty popytu:** dla każdej dzielnicy rozrzuć `N` punktów (N ∝ ludność, np. `Math.max(20, population/200)`) w obrębie jej wielokąta, każdy z wagą `population / N`. Rozkład spiralny (golden angle) lub losowy z ziarnem – ważne, żeby był **deterministyczny** (te same dane = ten sam wynik).
 
 **Pokrycie:** punkt popytu jest pokryty, jeśli istnieje AED w promieniu `radius`. Filtr trybu nocnego: bierz tylko punkty z `access.always === true`.
 
-**KPI (panel „Wskaźniki — na żywo"):**
+**KPI (panel „Wskaźniki – na żywo"):**
 
 - `pokrycie` = suma wag pokrytych / suma wag × 100%
 - `aedNa10tys` = liczba punktów / (population / 10000)
@@ -266,21 +266,21 @@ walkTime = dist * DETOUR / WALK_SPEED;            // minuty w jedną stronę
 
 ---
 
-## 6. Widoki — co dokładnie zbudować
+## 6. Widoki – co dokładnie zbudować
 
 Każdy widok odwzorowuje makietę z Figmy. Poniżej elementy obowiązkowe i zachowania.
 
 ### 6.0 Dashboard (`#/`)
 Bez steppera. Top bar z „+ NOWY AUDYT". Kafelki projektów (Tychy / Brodnica / Człuchów) z: nazwą, statusem (`W TOKU` / `OFERTA`), paskiem postępu kroków 0–5, kluczowym wskaźnikiem, przyciskiem OTWÓRZ i akcjami Duplikuj / Archiwizuj. Czwarty kafelek = „+ NOWY AUDYT". Pod spodem dwie sekcje: **Ostatnie raporty** (lista z POBIERZ) i **Biblioteka presetów** (P1–P5 z kosztami, przycisk Edytuj presety).
 
-### 6.1 Setup projektu (`#/setup`) — krok 0
+### 6.1 Setup projektu (`#/setup`) – krok 0
 Formularz w jednej kolumnie (560 px) + podgląd mapy po prawej.
-Pola: nazwa gminy · granica (przycisk „Pobierz z rejestru PRG ⟳" — w makiecie: ładuje `boundary-tychy.geojson` z opóźnieniem 800 ms i pokazuje ✓) · ludność i dzielnice (CSV — akceptuj drop pliku, w demo wczytaj gotowy) · **standard czasu dojścia jako segmented control** (ERC ≤2 / miejski ≤3 / podstawowy ≤5 — zmiana natychmiast wpływa na `radius`) · import punktów AED (CSV / GeoJSON / OSM).
-**Kandydatów NIE ma w tym kroku** — pojawiają się dopiero w kroku 2.
+Pola: nazwa gminy · granica (przycisk „Pobierz z rejestru PRG ⟳" – w makiecie: ładuje `boundary-tychy.geojson` z opóźnieniem 800 ms i pokazuje ✓) · ludność i dzielnice (CSV – akceptuj drop pliku, w demo wczytaj gotowy) · **standard czasu dojścia jako segmented control** (ERC ≤2 / miejski ≤3 / podstawowy ≤5 – zmiana natychmiast wpływa na `radius`) · import punktów AED (CSV / GeoJSON / OSM).
+**Kandydatów NIE ma w tym kroku** – pojawiają się dopiero w kroku 2.
 Podgląd mapy pokazuje granicę i zaimportowane piny. Pod nim „PODSUMOWANIE DANYCH": `14 AED · 12 dzielnic · 127 500 mieszkańców`.
 CTA: „UTWÓRZ PROJEKT → KROK 1".
 
-### 6.2 Inwentaryzacja (`#/inventory`) — krok 1
+### 6.2 Inwentaryzacja (`#/inventory`) – krok 1
 Mapa (lewa, ~65%) + panel „Rejestr punktów" (prawa, 480 px).
 - Piny kolorowane statusem; **klik w pin → popup mini-karty** (nazwa, adres, preset, 3 znaczniki stanu, przycisk „OTWÓRZ KARTĘ →").
 - Przycisk „+ DODAJ PUNKT" → tryb dodawania: klik na mapie tworzy pin i otwiera mini-formularz (nazwa, preset, adres) → punkt trafia do rejestru ze statusem `unverified`.
@@ -290,50 +290,50 @@ Mapa (lewa, ~65%) + panel „Rejestr punktów" (prawa, 480 px).
 - Legenda na mapie (3 statusy).
 - „IMPORT / EKSPORT CSV" na dole panelu.
 
-### 6.3 Analiza dostępności (`#/analysis`) — krok 2
+### 6.3 Analiza dostępności (`#/analysis`) – krok 2
 Mapa (~1100 px) + panel wskaźników (380 px).
 - Warstwy: strefy pokrycia (wypełnienie 15% + obrys), cieniowanie luk z etykietą `LUKA: nazwa`, piny istniejące, **kwadratowe piny proponowane (przeciągalne)**.
-- Przełączniki w sub barze: **[Stan obecny | Plan]** i **[Dzień | Noc (24/7)]** — oba przeliczają mapę i KPI.
+- Przełączniki w sub barze: **[Stan obecny | Plan]** i **[Dzień | Noc (24/7)]** – oba przeliczają mapę i KPI.
 - Panel: 4 kafelki KPI (2×2) → sekcja **Luki wg dzielnic** (nazwa, „X os. poza · max Y min", pasek) → **Propozycje nowych punktów** (karta z nazwą, presetem, `+X% pokrycia`, przyciskami ✓ / ✕) → przycisk **„ZAPROPONUJ NOWE PUNKTY"** → nota o modelu.
 - Kandydaci pobierani (w demo: wczytywani z JSON) przy pierwszym uruchomieniu analizy.
 - Akceptacja propozycji → punkt zmienia status na `accepted` i pojawia się w krokach 3 i 4.
 
-### 6.4 Lista kart (`#/cards`) — krok 3
+### 6.4 Lista kart (`#/cards`) – krok 3
 Tabela pełnej szerokości. Kolumny: PUNKT (kropka + nazwa + typ) · PRESET · KOMPLETNOŚĆ (pasek + %) · REKOMENDACJE (liczba + priorytet) · STATUS (pigułka) · [OTWÓRZ].
 Pasek filtrów: [Wszystkie | Istniejące | Nowe], Preset ▾, Dzielnica ▾, ☐ tylko z brakami, Sortuj ▾.
 Pasek akcji zbiorczych na dole: zaznaczanie, EKSPORT CSV, WYŚLIJ FORMULARZ TERENOWY (nieaktywny, tooltip „opcja poza MVP").
 
-### 6.5 Karta punktu (`#/card/:id`) — krok 3
+### 6.5 Karta punktu (`#/card/:id`) – krok 3
 Dwie kolumny: sekcje karty (880 px) + panel boczny (520 px).
 Sekcje 1–7 wg modelu danych, **każda z paskiem statusu po lewej** (czerwony = brak krytyczny, żółty = braki, brak paska = OK):
-1 Identyfikacja (z galerią zdjęć wg slotów — §7) · 2 Preset (select) · 3 Dostępność · 4 Opiekun · 5 Oznakowanie · 6 Urządzenie · 7 **Rejestracja w systemie CPR 112/999** · 8 **Checklist zgodności + rekomendacje** (auto, z checkboxami, priorytetem i kosztem, edytowalne, możliwość dodania ręcznej).
+1 Identyfikacja (z galerią zdjęć wg slotów – §7) · 2 Preset (select) · 3 Dostępność · 4 Opiekun · 5 Oznakowanie · 6 Urządzenie · 7 **Rejestracja w systemie CPR 112/999** · 8 **Checklist zgodności + rekomendacje** (auto, z checkboxami, priorytetem i kosztem, edytowalne, możliwość dodania ręcznej).
 Panel boczny: mini-mapa z przeciąganym pinem · pasek kompletności („60% · pola obowiązkowe: 6/10") · pigułka statusu · przyciski **ZAPISZ** i **DODAJ REKOM. → ROADMAPA** · nieaktywny „WYŚLIJ FORMULARZ TERENOWY".
 Dla `kind:"proposed"` sekcje 3–6 puste, sekcja 7 pokazuje wytyczne montażu z presetu, nagłówek: „specyfikacja wdrożeniowa".
 
-### 6.6 Roadmapa (`#/roadmap`) — krok 4, **dwa tryby**
+### 6.6 Roadmapa (`#/roadmap`) – krok 4, **dwa tryby**
 Przełącznik w sub barze: **[Kanban | Oś czasu]**.
 
 **Kanban:** 3 kolumny faz (zielona / żółta / fioletowa listwa u góry), nagłówek z zakresem miesięcy, kosztem i efektem na pokrycie. Karty pozycji z uchwytem `⋮⋮`, nazwą, meta (`odpowiedzialny · koszt`) i efektem. **Drag & drop między fazami** przelicza sumy. Przycisk „+ pozycja". Pod spodem pasek mapy z punktami w kolorach faz i przycisk „ZATWIERDŹ → RAPORT".
 
 **Oś czasu (Gantt):** kolumna zadań (430 px) + oś 24 miesięcy w kwartałach (Q1 2026 … Q4 2027). Wiersze grupowane fazami, paski w kolorze fazy. Pod osią: **kamienie milowe** (trójkąty: „Zgodność podstawowa", „Pokrycie 71%", „Pokrycie 81%") i **krzywa pokrycia w czasie** (62% → 81%). W iteracji 2 wystarczy: przeciąganie paska zmienia `startMonth`, rozciąganie krawędzi zmienia `lengthMonths`.
 
-Zadania spoza kart (dodać do danych demo): „Zamówienie 3 szt. AED (przetarg uproszczony)", „Dokumentacja i uzgodnienia (PZT, OSD)", „Przetarg na roboty + dostawę" — to one, nie montaż, decydują o terminach.
+Zadania spoza kart (dodać do danych demo): „Zamówienie 3 szt. AED (przetarg uproszczony)", „Dokumentacja i uzgodnienia (PZT, OSD)", „Przetarg na roboty + dostawę" – to one, nie montaż, decydują o terminach.
 
-### 6.7 Raport (`#/report`) — krok 5
+### 6.7 Raport (`#/report`) – krok 5
 Trzy kolumny: miniatury stron (170 px) · podgląd strony A4 (620 px) · konfiguracja (562 px).
-- Miniatury: 8 sekcji (Okładka, Exec summary, Stan obecny, Analiza, Rekomendacje, Roadmapa, Metodyka, Karty — załącznik). Klik przewija podgląd.
-- Podgląd: nagłówek z brandingiem, **„PODSUMOWANIE DLA DECYDENTA — na jednej kartce"**: mapa jest/będzie + 5 KPI + zdanie kontekstowe: *„Karetka dojeżdża średnio w 8–15 min. Defibrylacja w 3–5 min daje 50–70% przeżywalności — każda minuta zwłoki to −10%."*
-- Konfiguracja: checkboxy sekcji, data i kontakt, **GENERUJ PDF — SNAPSHOT** (w iteracji 2: `window.print()` z arkuszem `@media print`), eksporty CSV/XLSX/GeoJSON (CSV i GeoJSON zaimplementuj realnie), historia wersji.
+- Miniatury: 8 sekcji (Okładka, Exec summary, Stan obecny, Analiza, Rekomendacje, Roadmapa, Metodyka, Karty – załącznik). Klik przewija podgląd.
+- Podgląd: nagłówek z brandingiem, **„PODSUMOWANIE DLA DECYDENTA – na jednej kartce"**: mapa jest/będzie + 5 KPI + zdanie kontekstowe: *„Karetka dojeżdża średnio w 8–15 min. Defibrylacja w 3–5 min daje 50–70% przeżywalności – każda minuta zwłoki to −10%."*
+- Konfiguracja: checkboxy sekcji, data i kontakt, **GENERUJ PDF – SNAPSHOT** (w iteracji 2: `window.print()` z arkuszem `@media print`), eksporty CSV/XLSX/GeoJSON (CSV i GeoJSON zaimplementuj realnie), historia wersji.
 - **5 KPI raportu:** pokrycie ≤2 min (62%→81%) · AED/10 tys. (1,4→2,1) · % 24/7 (43%) · % z opiekunem i ważnym przeglądem (57%) · koszt planu na mieszkańca objętego ochroną (3,10 zł).
 
-### 6.8 Formularz terenowy (`#/field/:token`) — opcja
+### 6.8 Formularz terenowy (`#/field/:token`) – opcja
 Widok mobilny (max 420 px), bez steppera i bez nawigacji: zdjęcia (min. 2 sloty), godziny dostępu, oznakowanie (radio), urządzenie, GPS auto, uwagi, „WYŚLIJ". Po wysłaniu: dane wpadają do karty z `verification.source = "formularz_terenowy"`. W iteracji 2 wystarczy działanie lokalne (bez realnego linku).
 
 ---
 
-## 7. Zdjęcia — implementacja
+## 7. Zdjęcia – implementacja
 
-**Sloty (role):** `device` (urządzenie) · `signage_device` (oznakowanie przy AED) · `signage_route` (oznakowanie dojścia) · `mounting_spot` (miejsce montażu — dla nowych) · `power` (punkt zasilania / trasa kabla) · `context` (otoczenie).
+**Sloty (role):** `device` (urządzenie) · `signage_device` (oznakowanie przy AED) · `signage_route` (oznakowanie dojścia) · `mounting_spot` (miejsce montażu – dla nowych) · `power` (punkt zasilania / trasa kabla) · `context` (otoczenie).
 
 Zdjęcia to **dowody przypisane do kryteriów audytu**, nie galeria: preset określa, które sloty są wymagane, brak zdjęcia obniża % kompletności karty i generuje rekomendację, a raport wstawia zdjęcie z danego slotu we właściwą sekcję.
 
@@ -345,36 +345,36 @@ Zdjęcia to **dowody przypisane do kryteriów audytu**, nie galeria: preset okre
 4. Policz SHA-256 → jeśli identyczne zdjęcie już istnieje przy punkcie, nie duplikuj.
 5. Zapisz Blob w IndexedDB (store `photos`), metadane w `state`.
 
-**W UI karty:** rząd slotów, każdy slot to kwadrat 106 px — miniatura albo pusty z etykietą i ikoną aparatu. Klik = podgląd/podmiana. Wymagane sloty bez zdjęcia mają żółte obramowanie.
+**W UI karty:** rząd slotów, każdy slot to kwadrat 106 px – miniatura albo pusty z etykietą i ikoną aparatu. Klik = podgląd/podmiana. Wymagane sloty bez zdjęcia mają żółte obramowanie.
 
-**Ważne:** ta sama struktura metadanych zostaje w iteracji 3 — zmienia się tylko warstwa zapisu (dysk zamiast IndexedDB). Trzymaj dostęp do plików za dwiema funkcjami: `savePhoto(blob, meta)` i `getPhotoUrl(key)`.
+**Ważne:** ta sama struktura metadanych zostaje w iteracji 3 – zmienia się tylko warstwa zapisu (dysk zamiast IndexedDB). Trzymaj dostęp do plików za dwiema funkcjami: `savePhoto(blob, meta)` i `getPhotoUrl(key)`.
 
 ---
 
 ## 8. Dane demo (`demo-tychy.json`)
 
-**Tychy, 127 500 mieszkańców, 12 dzielnic** (poglądowe wielokąty). Granica gminy — realna z PRG, jeśli dostępna; inaczej uproszczony wielokąt.
+**Tychy, 127 500 mieszkańców, 12 dzielnic** (poglądowe wielokąty). Granica gminy – realna z PRG, jeśli dostępna; inaczej uproszczony wielokąt.
 
 **14 punktów istniejących**, w tym nazwane z makiet (pozostałe dogeneruj wiarygodnie):
 
 | Nazwa | Preset | Status | Cechy |
 |---|---|---|---|
 | MOSiR, ul. Piłsudskiego 12 | P2 | verified_ok | 24/7, opiekun ✓, oznakowanie ✓, przegląd 05.2027, karta 90% |
-| SP nr 7 — hol główny | P1 | verified_gaps | pn–pt 8–16, opiekun ✗, przegląd przeterminowany 03.2026, dojście nieoznakowane, brak rejestracji 112, karta 60% |
+| SP nr 7 – hol główny | P1 | verified_gaps | pn–pt 8–16, opiekun ✗, przegląd przeterminowany 03.2026, dojście nieoznakowane, brak rejestracji 112, karta 60% |
 | UM Tychy, wejście A | P1 | verified_ok | 24/7, komplet, karta 100% |
 | Basen „Paprocany" | P5 | verified_gaps | sezonowy, brak godzin zimą, oznakowanie częściowe, karta 55% |
-| OSP Wilkowyje (z OSM) | — | unverified | brak danych, wymaga wizyty, karta 20% |
-| Galeria „Azet" (z OSM) | — | unverified | prywatny właściciel, karta 20% |
+| OSP Wilkowyje (z OSM) | – | unverified | brak danych, wymaga wizyty, karta 20% |
+| Galeria „Azet" (z OSM) | – | unverified | prywatny właściciel, karta 20% |
 
-**Kandydaci (~32):** 14 szkół, 6 obiektów sportowych, 5 urzędów/instytucji, 7 innych — z nazwami i współrzędnymi.
+**Kandydaci (~32):** 14 szkół, 6 obiektów sportowych, 5 urzędów/instytucji, 7 innych – z nazwami i współrzędnymi.
 
-**Wynik działania modelu ma dawać w przybliżeniu:** pokrycie 62% → 81%, AED/10 tys. 1,4 → 2,1, punkty 24/7 43%, mediana 3,2 → 2,4 min, luki: Paprocany 4 100 os. / max 7 min, Żwaków 2 800 / 6 min, Stare Tychy 900 / 4 min. **Dostrój rozkład punktów demo tak, żeby liczby się zgadzały** — te wartości są w makietach i w materiałach dla klienta.
+**Wynik działania modelu ma dawać w przybliżeniu:** pokrycie 62% → 81%, AED/10 tys. 1,4 → 2,1, punkty 24/7 43%, mediana 3,2 → 2,4 min, luki: Paprocany 4 100 os. / max 7 min, Żwaków 2 800 / 6 min, Stare Tychy 900 / 4 min. **Dostrój rozkład punktów demo tak, żeby liczby się zgadzały** – te wartości są w makietach i w materiałach dla klienta.
 
 Roadmapa demo: Faza 1 3 200 zł (opiekunowie, rejestracja 112, przeglądy, doznakowanie) · Faza 2 26 000 zł (SP nr 1, biblioteka, hala sportowa) · Faza 3 39 000 zł (totem Paprocany 24 000, szafka Żwaków 15 000). Suma 68 200 zł.
 
 ---
 
-## 9. Kolejność budowy (etapy — raportuj po każdym)
+## 9. Kolejność budowy (etapy – raportuj po każdym)
 
 1. **Szkielet + design system.** `index.html`, `app.css`, router, top bar, sub bar, stepper, puste widoki. Klikanie po krokach działa.
 2. **Stan i dane.** `state.js` + IndexedDB + wczytanie `demo-tychy.json`. Dashboard z prawdziwymi kafelkami. Eksport/import projektu do JSON.
@@ -384,7 +384,7 @@ Roadmapa demo: Faza 1 3 200 zł (opiekunowie, rejestracja 112, przeglądy, dozna
 6. **Zdjęcia.** `photos.js`: sloty, kompresja, EXIF, miniatury, IndexedDB, wpływ na kompletność.
 7. **Roadmapa.** Kanban z drag & drop, potem tryb Oś czasu z kamieniami milowymi i krzywą pokrycia.
 8. **Raport.** Podgląd HTML wszystkich sekcji, arkusz druku, eksport CSV i GeoJSON.
-9. **Domknięcie.** Setup projektu (krok 0), formularz terenowy, przegląd wszystkich przycisków — żaden nie może być martwy.
+9. **Domknięcie.** Setup projektu (krok 0), formularz terenowy, przegląd wszystkich przycisków – żaden nie może być martwy.
 
 ---
 
@@ -392,11 +392,11 @@ Roadmapa demo: Faza 1 3 200 zł (opiekunowie, rejestracja 112, przeglądy, dozna
 
 - **Żadnego martwego przycisku.** Element niezaimplementowany ma być wyszarzony z tooltipem „poza zakresem iteracji 2".
 - **Kolor tylko dla danych**, interfejs zostaje szary.
-- **Wszystkie liczby liczone z modelu**, nie wpisane na sztywno w HTML — klient będzie klikał i sprawdzał, czy KPI reagują.
+- **Wszystkie liczby liczone z modelu**, nie wpisane na sztywno w HTML – klient będzie klikał i sprawdzał, czy KPI reagują.
 - **Polskie znaki wszędzie**, żadnych „Analiza dostepnosci".
-- **Nie wprowadzaj bibliotek UI** (Tailwind, Bootstrap, React) — makieta ma być czytelna i modyfikowalna na żywo.
+- **Nie wprowadzaj bibliotek UI** (Tailwind, Bootstrap, React) – makieta ma być czytelna i modyfikowalna na żywo.
 - **Nie usuwaj EXIF przed odczytaniem GPS** (kolejność ma znaczenie).
-- Struktura danych z §4 jest kontraktem — iteracja 3 buduje na niej, więc nie zmieniaj nazw pól bez powodu.
+- Struktura danych z §4 jest kontraktem – iteracja 3 buduje na niej, więc nie zmieniaj nazw pól bez powodu.
 
 ---
 

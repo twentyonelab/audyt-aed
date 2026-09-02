@@ -1,5 +1,5 @@
 /**
- * ui.js — small DOM helpers shared by every view.
+ * ui.js – small DOM helpers shared by every view.
  *
  * Deliberately tiny: no framework, no virtual DOM. Views build markup with
  * `h()` or template strings and mount it with `mount()`.
@@ -239,7 +239,7 @@ export function parseCsv(text) {
  * Legenda mapy jako przycisk u dołu, rozwijający się w górę.
  *
  * Wcześniej legenda była stale rozłożona i przy analizie dublowała blok
- * „jak czytać" w panelu — te same treści w dwóch miejscach. Teraz jest jedna,
+ * „jak czytać" w panelu – te same treści w dwóch miejscach. Teraz jest jedna,
  * schowana pod przyciskiem, w tym samym rogu w każdym widoku z mapą.
  *
  * @param {string} title etykieta na przycisku i nagłówek rozwinięcia

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * fetch-reach.mjs — pobiera z Mapboksa realne zasięgi dojścia pieszego
+ * fetch-reach.mjs – pobiera z Mapboksa realne zasięgi dojścia pieszego
  * (izochrony) i trasy, które te zasięgi rysują, i zapisuje je jako cache
  * projektu w data/reach-tychy.json.
  *
@@ -9,17 +9,17 @@
  *
  * Po co cache, skoro aplikacja i tak umie pytać Mapboksa w locie:
  *   • demo i testy działają bez sieci i bez zużywania limitu API,
- *   • wyniki analizy są powtarzalne — ta sama karta i ten sam raport dziś
+ *   • wyniki analizy są powtarzalne – ta sama karta i ten sam raport dziś
  *     i za pół roku, niezależnie od tego, że sieć pieszą w OSM ktoś poprawił,
  *   • pierwsze wejście w krok 2 nie czeka na 50 zapytań sieciowych.
  * Cache jest kluczowany zaokrągloną współrzędną, więc przesunięcie pinu
- * o kilka metrów trafia w ten sam wpis, a realne przesunięcie — nie.
+ * o kilka metrów trafia w ten sam wpis, a realne przesunięcie – nie.
  */
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-// Ten sam klucz, którego używa aplikacja — inaczej cache nie trafiałby w punkty.
+// Ten sam klucz, którego używa aplikacja – inaczej cache nie trafiałby w punkty.
 import { reachKey } from '../js/model.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -44,7 +44,7 @@ const CONTOURS = [2, 3, 5, 8];
 /** Ile tras dojścia rysujemy pod obrysem po kliknięciu w punkt. */
 const ROUTE_SPOKES = 12;
 
-/** Zaokrąglenie współrzędnych w cache — 5 miejsc ≈ 1 m. */
+/** Zaokrąglenie współrzędnych w cache – 5 miejsc ≈ 1 m. */
 const round5 = (v) => Math.round(v * 1e5) / 1e5;
 const keyOf = reachKey;
 
@@ -72,7 +72,7 @@ async function getJson(url, label) {
 }
 
 /* ------------------------------------------------------------------ *
- * Upraszczanie geometrii — cache ma być mały, nie idealny
+ * Upraszczanie geometrii – cache ma być mały, nie idealny
  * ------------------------------------------------------------------ */
 
 /** Odległość punktu od odcinka w stopniach przeliczonych na metry. */
@@ -171,7 +171,7 @@ async function fetchRoute(from, to, label) {
   };
 }
 
-/** Równomiernie po kącie wybrane wierzchołki obrysu — po nich pójdą trasy. */
+/** Równomiernie po kącie wybrane wierzchołki obrysu – po nich pójdą trasy. */
 function pickSpokes(ring, from, count) {
   const buckets = new Array(count).fill(null);
   for (const [lon, lat] of ring) {
@@ -253,7 +253,7 @@ for (const site of unique.values()) {
 writeFileSync(OUT, JSON.stringify(out));
 const kb = Math.round(readFileSync(OUT).length / 1024);
 console.log(
-  `\nzapisano data/reach-tychy.json — ${kb} KB · ` +
+  `\nzapisano data/reach-tychy.json – ${kb} KB · ` +
     `${Object.keys(out.contours).length} izochron (${isoDone} nowych) · ` +
     `${Object.keys(out.routes).length} wiązek tras (${routeDone} nowych)\n`
 );

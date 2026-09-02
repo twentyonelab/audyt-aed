@@ -1,5 +1,5 @@
 /**
- * cardpdf.js — układ karty punktu jako PDF w „zamrożonej konwencji".
+ * cardpdf.js – układ karty punktu jako PDF w „zamrożonej konwencji".
  *
  * Konwencja jest częścią umowy z klientem: karta wysłana do gminy ma wyglądać
  * tak samo niezależnie od tego, kto i kiedy ją wygeneruje. Dlatego layout
@@ -7,7 +7,7 @@
  * stopce to TODAY z config.js (data odniesienia audytu, nie zegar komputera).
  *
  * Zdjęcia z audytu są osadzane w sekcji 1 jako miniatury JPEG (konwersja
- * WebP/SVG→JPEG przez canvas; wymaga przeglądarki — w Node karta powstaje
+ * WebP/SVG→JPEG przez canvas; wymaga przeglądarki – w Node karta powstaje
  * bez zdjęć, z samą listą plików).
  */
 
@@ -34,7 +34,7 @@ function tri(value) {
   return 'brak danych';
 }
 
-/** Nazwa pliku bez polskich znaków — bezpieczna dla każdego systemu plików. */
+/** Nazwa pliku bez polskich znaków – bezpieczna dla każdego systemu plików. */
 export function cardPdfFilename(point) {
   const translit = { ą: 'a', ć: 'c', ę: 'e', ł: 'l', ń: 'n', ó: 'o', ś: 's', ź: 'z', ż: 'z' };
   const slug = String(point.name || 'punkt')
@@ -48,7 +48,7 @@ export function cardPdfFilename(point) {
 
 /**
  * Blob zdjęcia (WebP/SVG/JPEG…) → JPEG do osadzenia w PDF.
- * Wymaga DOM — w środowisku bez przeglądarki zwraca null i karta powstaje
+ * Wymaga DOM – w środowisku bez przeglądarki zwraca null i karta powstaje
  * bez miniatur. Białe tło zamiast alfy, bo JPEG przezroczystości nie ma.
  */
 async function blobToJpeg(blob, maxSide = 640) {
@@ -153,7 +153,7 @@ export async function buildCardPdf(point) {
   /** Wiersz etykieta → wartość (wartość łamana). */
   const row = (label, value, opts = {}) => {
     const labelW = 150;
-    const val = value == null || value === '' ? '—' : String(value);
+    const val = value == null || value === '' ? '–' : String(value);
     const lines = pdf.wrap(val, 9.5, contentW - labelW - 10);
     breakIfNeeded(lines.length * 13 + 4);
     pdf.text(label, M, y, { size: 9, color: MUTED });
@@ -172,7 +172,7 @@ export async function buildCardPdf(point) {
   /* ---------------- strona 1: nagłówek karty ---------------- */
 
   header();
-  footer(); // stopka pierwszej strony — kolejne rysuje breakIfNeeded
+  footer(); // stopka pierwszej strony – kolejne rysuje breakIfNeeded
 
   pdf.text(point.name || 'Punkt bez nazwy', M, y, { size: 15, bold: true, maxWidth: contentW - 120 });
   pdf.text(status.label, W - M, y, {
@@ -183,7 +183,7 @@ export async function buildCardPdf(point) {
   });
   y += 18;
   pdf.text(
-    `${point.id} · ${isProposed ? 'specyfikacja wdrożeniowa (punkt proponowany)' : 'specyfikacja punktu istniejącego'} · ${districtName(point.districtId)} · preset ${preset ? preset.id : '—'}`,
+    `${point.id} · ${isProposed ? 'specyfikacja wdrożeniowa (punkt proponowany)' : 'specyfikacja punktu istniejącego'} · ${districtName(point.districtId)} · preset ${preset ? preset.id : '–'}`,
     M,
     y,
     { size: 9, color: MUTED }
@@ -227,7 +227,7 @@ export async function buildCardPdf(point) {
   }
 
   section(2, 'Preset punktu', preset ? fmtCost(preset.cost) : 'BRAK', preset ? INK : CRIT);
-  row('Preset', preset ? `${preset.id} — ${preset.name}` : 'nie przypisano');
+  row('Preset', preset ? `${preset.id} – ${preset.name}` : 'nie przypisano');
   if (preset) row('Koszt jednostkowy', fmtCost(preset.cost));
 
   if (!isProposed) {
@@ -262,7 +262,7 @@ export async function buildCardPdf(point) {
       color: point.dispatcherRegistered === false ? CRIT : INK,
     });
   } else {
-    section(3, `Wytyczne montażu — preset ${preset ? preset.id : '—'}`);
+    section(3, `Wytyczne montażu – preset ${preset ? preset.id : '–'}`);
     if (preset && (preset.checklist || []).length) {
       for (const item of preset.checklist) para(`• ${item}`, { color: INK, size: 9.5 });
     } else {
@@ -285,13 +285,13 @@ export async function buildCardPdf(point) {
 
   section(9, 'Checklist zgodności i rekomendacje', recs.length ? `${fmtNum(recs.length)} poz.` : 'brak', INK);
   if (!recs.length) {
-    para('Brak rekomendacji — punkt spełnia wszystkie reguły automatyczne.');
+    para('Brak rekomendacji – punkt spełnia wszystkie reguły automatyczne.');
   } else {
     for (const rec of recs) {
       const meta = [
         PRIORITY_LABEL[rec.priority] || rec.priority,
         fmtCost(rec.cost || 0),
-        `odp.: ${rec.owner || '—'}`,
+        `odp.: ${rec.owner || '–'}`,
         rec.phase && PHASE_META[rec.phase] ? PHASE_META[rec.phase].label : 'poza roadmapą',
       ].join(' · ');
       const box = rec.done ? '[x]' : '[  ]';
@@ -307,7 +307,7 @@ export async function buildCardPdf(point) {
   section(
     10,
     'Ocena ekspercka lokalizacji',
-    score ? `${fmtNum(score.value, 1)} / 10 — ${score.verdict.label}` : 'NIEOCENIONA',
+    score ? `${fmtNum(score.value, 1)} / 10 – ${score.verdict.label}` : 'NIEOCENIONA',
     score ? VERDICT_COLOR[score.verdict.variant] : WARN
   );
   para(EXPERT_FORMULA, { size: 8.5 });
@@ -315,7 +315,7 @@ export async function buildCardPdf(point) {
     for (const c of EXPERT_CRITERIA) {
       row(`[${c.key}] ${c.label} (${fmtNum(c.weight * 100, 0)}%)`, `${fmtNum(point.expert[c.key], 0)} / 10`);
     }
-    row('Wynik końcowy', `${fmtNum(score.value, 1)} / 10 — ${score.verdict.label}`, {
+    row('Wynik końcowy', `${fmtNum(score.value, 1)} / 10 – ${score.verdict.label}`, {
       color: VERDICT_COLOR[score.verdict.variant],
     });
   } else {

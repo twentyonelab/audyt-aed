@@ -1,19 +1,19 @@
 /**
- * views/report-view.js — Krok 5: Raport dla decydenta (SPEC §6.7, trasa '#/report').
+ * views/report-view.js – Krok 5: Raport dla decydenta (SPEC §6.7, trasa '#/report').
  *
  * Trzy kolumny (`.report-layout`): miniatury stron · podgląd A4 · konfiguracja.
- * Treść stron pochodzi w całości z `js/report.js` — ten plik odpowiada wyłącznie
+ * Treść stron pochodzi w całości z `js/report.js` – ten plik odpowiada wyłącznie
  * za powłokę widoku, interakcję i eksporty.
  *
  * Co tu naprawdę działa:
- *  • klik w miniaturę przewija podgląd do sekcji (a jeśli sekcja jest wyłączona —
+ *  • klik w miniaturę przewija podgląd do sekcji (a jeśli sekcja jest wyłączona –
  *    najpierw ją włącza, więc żaden przycisk nie jest martwy),
  *  • przewijanie podglądu podświetla właściwą miniaturę,
  *  • checkboxy sekcji zapisują się w `state.ui.reportSections` przez `save()`,
- *  • „GENERUJ PDF — SNAPSHOT" woła `window.print()` (arkusz @media print jest w app.css),
+ *  • „GENERUJ PDF – SNAPSHOT" woła `window.print()` (arkusz @media print jest w app.css),
  *  • eksport CSV i GeoJSON są realne; XLSX jest jawnie oznaczony jako poza zakresem.
  *
- * Widok nie tworzy mapy interaktywnej — mapy „jest / będzie" to statyczny SVG
+ * Widok nie tworzy mapy interaktywnej – mapy „jest / będzie" to statyczny SVG
  * z `renderSceneSvg()`, więc nie ma czego zwalniać poza nasłuchem przewijania.
  */
 
@@ -84,7 +84,7 @@ const REASON_OUT_OF_SCOPE = 'poza zakresem';
 const ACTIVE_PAGE_OFFSET = 60;
 
 /* ------------------------------------------------------------------ *
- * Stan lokalny widoku (nie są to dane projektu — nie trafia do state)
+ * Stan lokalny widoku (nie są to dane projektu – nie trafia do state)
  * ------------------------------------------------------------------ */
 
 /** Metryka dokumentu z panelu konfiguracji. Trzymana lokalnie, żeby pisanie
@@ -227,7 +227,7 @@ export async function render(root, ctx) {
           style: on ? null : { opacity: '0.5' },
           title: on
             ? `Przewiń podgląd do sekcji: ${section.title}`
-            : 'Sekcja wyłączona — kliknij, aby włączyć ją z powrotem',
+            : 'Sekcja wyłączona – kliknij, aby włączyć ją z powrotem',
           onclick: () => onThumbClick(section.id),
         },
         h('span', { class: 'report-thumb__no', text: `STRONA ${index + 1}` }),
@@ -249,7 +249,7 @@ export async function render(root, ctx) {
     if (!built.sections.length) {
       mount(
         preview,
-        h('div', { class: 'empty-state' }, 'Wszystkie sekcje są wyłączone — włącz przynajmniej jedną w panelu po prawej.')
+        h('div', { class: 'empty-state' }, 'Wszystkie sekcje są wyłączone – włącz przynajmniej jedną w panelu po prawej.')
       );
       return;
     }
@@ -276,7 +276,7 @@ export async function render(root, ctx) {
 
   buildPages(report);
 
-  /** Przebudowa samego podglądu — po zmianie daty lub kontaktu. */
+  /** Przebudowa samego podglądu – po zmianie daty lub kontaktu. */
   function refreshPreview() {
     const offset = preview.scrollTop;
     buildPages(buildReport(state, docMeta));
@@ -368,7 +368,7 @@ export async function render(root, ctx) {
         'button',
         {
           class: 'btn btn--sm',
-          title: 'Tylko okładka i podsumowanie — wersja na jedną kartkę',
+          title: 'Tylko okładka i podsumowanie – wersja na jedną kartkę',
           onclick: async () => {
             setSections(['cover', 'summary']);
             activeSectionId = 'cover';
@@ -424,7 +424,7 @@ export async function render(root, ctx) {
         class: 'btn btn--primary btn--block',
         onclick: () => window.print(),
       },
-      'GENERUJ PDF — SNAPSHOT'
+      'GENERUJ PDF – SNAPSHOT'
     ),
     h('p', {
       class: 'note',
@@ -519,7 +519,7 @@ export async function render(root, ctx) {
         population: project.population,
         standardMinutes: project.standardMinutes,
         exportedAt: docMeta.date,
-        source: 'Sinecco AED Planner — iteracja 2',
+        source: 'Sinecco AED Planner – iteracja 2',
       },
       features,
     };
@@ -565,7 +565,7 @@ export async function render(root, ctx) {
       h(
         'div',
         { class: 'row' },
-        h('strong', { text: 'v1 — bieżąca' }),
+        h('strong', { text: 'v1 – bieżąca' }),
         h('span', { class: 'spacer' }),
         h('span', { class: 'muted', text: docMeta.date })
       ),
@@ -587,7 +587,7 @@ export async function render(root, ctx) {
       class: 'note',
       style: { marginTop: '10px' },
       text:
-        'W iteracji 2 przechowywana jest jedna wersja robocza — ta, którą właśnie widzisz. ' +
+        'W iteracji 2 przechowywana jest jedna wersja robocza – ta, którą właśnie widzisz. ' +
         'Wersjonowanie raportów wchodzi razem z zapisem serwerowym.',
     })
   );
@@ -632,7 +632,7 @@ export async function render(root, ctx) {
       h(
         'button',
         { class: 'btn btn--sm btn--primary', onclick: () => window.print() },
-        'GENERUJ PDF — SNAPSHOT'
+        'GENERUJ PDF – SNAPSHOT'
       )
     );
   }
@@ -659,7 +659,7 @@ export async function render(root, ctx) {
 
 function renderCardsSection(root, ctx, tabSeg) {
   const project = state.project;
-  // Odrzucone propozycje nie idą do gminy — reszta punktów dostaje kartę.
+  // Odrzucone propozycje nie idą do gminy – reszta punktów dostaje kartę.
   const points = state.points.filter((p) => p.status !== 'rejected');
 
   const downloadOne = async (point) => {
@@ -668,7 +668,7 @@ function renderCardsSection(root, ctx, tabSeg) {
       toast(`Pobrano kartę ${point.id}.`);
     } catch (err) {
       console.error(err);
-      toast('Nie udało się wygenerować PDF — szczegóły w konsoli.');
+      toast('Nie udało się wygenerować PDF – szczegóły w konsoli.');
     }
   };
 
@@ -684,7 +684,7 @@ function renderCardsSection(root, ctx, tabSeg) {
       toast(`Spakowano ${fmtNum(files.length)} ${plural(files.length, ['kartę', 'karty', 'kart'])} PDF do jednego ZIP.`);
     } catch (err) {
       console.error(err);
-      toast('Nie udało się zbudować archiwum — szczegóły w konsoli.');
+      toast('Nie udało się zbudować archiwum – szczegóły w konsoli.');
     }
   };
 
@@ -700,11 +700,11 @@ function renderCardsSection(root, ctx, tabSeg) {
         class: 'row',
         html: `${dotHtml(status.level)}<span class="table__main">${point.name || point.id}</span>`,
       }), h('div', { class: 'table__sub', text: `${point.id} · ${districtName(point.districtId)}` })),
-      h('td', { text: preset ? preset.id : '—' }),
-      h('td', { class: 'num', text: comp.required ? fmtPct(comp.pct, 0) : '—' }),
+      h('td', { text: preset ? preset.id : '–' }),
+      h('td', { class: 'num', text: comp.required ? fmtPct(comp.pct, 0) : '–' }),
       h('td', {}, score
         ? h('span', { class: `score-badge score-badge--${score.verdict.variant}`, text: fmtNum(score.value, 1) })
-        : h('span', { class: 'muted', text: '—' })),
+        : h('span', { class: 'muted', text: '–' })),
       h('td', { html: pillHtml(status.label, status.variant) }),
       h(
         'td',
@@ -746,12 +746,12 @@ function renderCardsSection(root, ctx, tabSeg) {
         h(
           'div',
           null,
-          h('h2', { text: 'Karty punktów — załączniki do raportu' }),
+          h('h2', { text: 'Karty punktów – załączniki do raportu' }),
           h('p', {
             class: 'note',
             style: { marginTop: '4px', maxWidth: '640px' },
             text:
-              'Każdy punkt ma kartę PDF w zamrożonej konwencji — układ jest stały, więc karta wysłana ' +
+              'Każdy punkt ma kartę PDF w zamrożonej konwencji – układ jest stały, więc karta wysłana ' +
               'do gminy wygląda tak samo niezależnie od tego, kto i kiedy ją wygenerował. Raport ogólny ' +
               'opisuje działania zbiorczo, karty są jego załącznikami.',
           })
@@ -760,7 +760,7 @@ function renderCardsSection(root, ctx, tabSeg) {
         h(
           'button',
           { class: 'btn btn--primary', onclick: downloadAll },
-          `POBIERZ WSZYSTKIE — ${fmtNum(points.length)} PDF (ZIP)`
+          `POBIERZ WSZYSTKIE – ${fmtNum(points.length)} PDF (ZIP)`
         )
       )
     ),

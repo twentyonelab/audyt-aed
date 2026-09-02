@@ -1,15 +1,15 @@
 /**
- * views/cards.js — Krok 3: Lista kart punktów (SPEC §6.4, trasa '#/cards').
+ * views/cards.js – Krok 3: Lista kart punktów (SPEC §6.4, trasa '#/cards').
  *
  * Jedna tabela pełnej szerokości ze wszystkimi kartami audytu: kompletność,
  * liczba rekomendacji i status każdego punktu obok siebie. Stąd operator wchodzi
- * w konkretną kartę (`#/card/:id`) — klikiem w wiersz albo przyciskiem OTWÓRZ.
+ * w konkretną kartę (`#/card/:id`) – klikiem w wiersz albo przyciskiem OTWÓRZ.
  *
  * Wszystkie liczby pochodzą z modelu (`completeness`) i ze stanu
- * (`recommendationsForPoint`) — w HTML nie ma ani jednej wpisanej na sztywno.
+ * (`recommendationsForPoint`) – w HTML nie ma ani jednej wpisanej na sztywno.
  * Formatowanie wyłącznie przez fmtPct/fmtNum.
  *
- * Filtry przeliczają samo <tbody>, bez przerysowywania widoku — dlatego zmiana
+ * Filtry przeliczają samo <tbody>, bez przerysowywania widoku – dlatego zmiana
  * filtra zapisuje się przez `save({ silent: true })` (zapis do IndexedDB bez
  * notify, które wywołałoby pełny render i zgubiło pozycję przewijania).
  * Danych projektu ten widok nie zmienia, więc nie ma tu zwykłego `save()`.
@@ -55,7 +55,7 @@ export const meta = {
  * Stałe widoku
  * ------------------------------------------------------------------ */
 
-/** Kolumny eksportu CSV (wartości surowe — plik ma być czytany maszynowo). */
+/** Kolumny eksportu CSV (wartości surowe – plik ma być czytany maszynowo). */
 const CSV_HEADERS = [
   'id',
   'nazwa',
@@ -66,7 +66,7 @@ const CSV_HEADERS = [
   'status',
 ];
 
-/** Segmented control [Wszystkie | Istniejące | Nowe] — id trafia do state.ui.cardsFilter. */
+/** Segmented control [Wszystkie | Istniejące | Nowe] – id trafia do state.ui.cardsFilter. */
 const KIND_FILTERS = [
   { id: 'all', label: 'Wszystkie', test: () => true },
   { id: 'existing', label: 'Istniejące', test: (row) => row.point.kind === 'existing' },
@@ -90,7 +90,7 @@ const PCT_WARN = 60;
 const REASON_FIELD_FORM = 'opcja poza MVP';
 
 /* ------------------------------------------------------------------ *
- * Stan lokalny widoku (to nie są dane projektu — nie trafia do state)
+ * Stan lokalny widoku (to nie są dane projektu – nie trafia do state)
  * ------------------------------------------------------------------ */
 
 let presetFilter = 'all';
@@ -105,7 +105,7 @@ const selected = new Set();
 let refs = null;
 
 /* ------------------------------------------------------------------ *
- * Pomocniki lokalne (rdzenia nie ruszamy — brakujące rzeczy są tutaj)
+ * Pomocniki lokalne (rdzenia nie ruszamy – brakujące rzeczy są tutaj)
  * ------------------------------------------------------------------ */
 
 /** Polska odmiana rzeczownika po liczebniku. */
@@ -134,7 +134,7 @@ function barVariant(pct) {
   return 'crit';
 }
 
-/** Aktualny wariant segmentu — z odpornością na nieznaną wartość w stanie. */
+/** Aktualny wariant segmentu – z odpornością na nieznaną wartość w stanie. */
 function kindFilter() {
   const id = state.ui.cardsFilter;
   return KIND_FILTERS.some((f) => f.id === id) ? id : 'all';
@@ -143,7 +143,7 @@ function kindFilter() {
 /**
  * Wiersz tabeli policzony z modelu.
  *
- * Punkt bez presetu nie ma czego mierzyć — `completeness()` zwróciłoby dla
+ * Punkt bez presetu nie ma czego mierzyć – `completeness()` zwróciłoby dla
  * pustej listy wymagań 100%, co pokazywałoby niezweryfikowany punkt z OSM jako
  * komplet. Dlatego taki wiersz ma `pct === null` i jest wyłączony ze średniej.
  */
@@ -225,7 +225,7 @@ export async function render(root, ctx) {
   if (!project) {
     mount(
       root,
-      h('div', { class: 'empty-state', text: 'Brak aktywnego projektu — wróć do pulpitu i otwórz audyt.' })
+      h('div', { class: 'empty-state', text: 'Brak aktywnego projektu – wróć do pulpitu i otwórz audyt.' })
     );
     return;
   }
@@ -238,7 +238,7 @@ export async function render(root, ctx) {
       h(
         'div',
         { class: 'empty-state' },
-        h('p', { text: 'Rejestr punktów jest pusty — nie ma jeszcze żadnej karty do uzupełnienia.' }),
+        h('p', { text: 'Rejestr punktów jest pusty – nie ma jeszcze żadnej karty do uzupełnienia.' }),
         h('button', { class: 'btn', onclick: () => ctx.navigate('#/inventory') }, 'PRZEJDŹ DO INWENTARYZACJI')
       )
     );
@@ -248,7 +248,7 @@ export async function render(root, ctx) {
   const openCard = (id) => ctx.navigate(`#/card/${encodeURIComponent(id)}`);
 
   // Filtry przeżywają zmianę trasy, więc po podmianie danych (import, reset do
-  // demo) mogą wskazywać nieistniejący preset lub dzielnicę — normalizujemy je,
+  // demo) mogą wskazywać nieistniejący preset lub dzielnicę – normalizujemy je,
   // żeby lista nigdy nie wyszła pusta bez widocznej przyczyny.
   if (presetFilter !== 'all' && !state.presets.some((p) => p.id === presetFilter)) presetFilter = 'all';
   if (districtFilter !== 'all' && !(project.districts || []).some((d) => d.id === districtFilter)) {
@@ -444,7 +444,7 @@ export async function render(root, ctx) {
     fieldFormBtn
   );
 
-  /** Uchwyty tego przebiegu renderowania — domknięcie, nie zmienna globalna. */
+  /** Uchwyty tego przebiegu renderowania – domknięcie, nie zmienna globalna. */
   const view = { visible: [] };
   refs = view;
 
@@ -457,7 +457,7 @@ export async function render(root, ctx) {
     const visible = filterRows(allRows);
     view.visible = visible;
 
-    // zaznaczenie dotyczy tylko widocznych wierszy — zmiana filtra je przycina
+    // zaznaczenie dotyczy tylko widocznych wierszy – zmiana filtra je przycina
     const visibleIds = new Set(visible.map((row) => row.point.id));
     for (const id of [...selected]) if (!visibleIds.has(id)) selected.delete(id);
 
@@ -537,7 +537,7 @@ export async function render(root, ctx) {
             h('div', { text: row.preset.name }),
             h('div', { class: 'table__sub', text: row.preset.id })
           )
-        : h('td', { class: 'muted', text: '—' }),
+        : h('td', { class: 'muted', text: '–' }),
       completenessCell(row),
       recommendationsCell(row),
       expertCell(row),
@@ -548,7 +548,7 @@ export async function render(root, ctx) {
 
   function expertCell(row) {
     const score = expertScore(row.point);
-    if (!score) return h('td', { class: 'muted', title: 'lokalizacja nieoceniona', text: '—' });
+    if (!score) return h('td', { class: 'muted', title: 'lokalizacja nieoceniona', text: '–' });
     return h('td', {}, h('span', {
       class: `score-badge score-badge--${score.verdict.variant}`,
       title: score.verdict.label,
@@ -561,8 +561,8 @@ export async function render(root, ctx) {
       return h(
         'td',
         {},
-        h('div', { class: 'muted', text: '—' }),
-        h('div', { class: 'table__sub', text: 'brak presetu — nie ma czego mierzyć' })
+        h('div', { class: 'muted', text: '–' }),
+        h('div', { class: 'table__sub', text: 'brak presetu – nie ma czego mierzyć' })
       );
     }
     return h(
@@ -577,7 +577,7 @@ export async function render(root, ctx) {
   }
 
   function recommendationsCell(row) {
-    if (!row.recs.length) return h('td', { class: 'muted', text: '—' });
+    if (!row.recs.length) return h('td', { class: 'muted', text: '–' });
     return h(
       'td',
       {},
@@ -634,7 +634,7 @@ export async function render(root, ctx) {
     exportBtn.disabled = total === 0;
     exportBtn.classList.toggle('is-disabled', total === 0);
     exportBtn.title = total
-      ? 'Eksportuje zaznaczone wiersze, a bez zaznaczenia — wszystkie widoczne'
+      ? 'Eksportuje zaznaczone wiersze, a bez zaznaczenia – wszystkie widoczne'
       : 'Brak wierszy do eksportu przy tych filtrach';
   }
 
@@ -657,7 +657,7 @@ export async function render(root, ctx) {
     const chosen = view.visible.filter((row) => selected.has(row.point.id));
     const rows = chosen.length ? chosen : view.visible;
     if (!rows.length) {
-      toast('Nie ma czego eksportować — żadna karta nie pasuje do filtrów.');
+      toast('Nie ma czego eksportować – żadna karta nie pasuje do filtrów.');
       return;
     }
 
@@ -690,6 +690,6 @@ export async function render(root, ctx) {
 
 export function destroy() {
   // Mapy tu nie ma; zwalniamy tylko uchwyty DOM, żeby nie trzymać oderwanych
-  // węzłów. Zaznaczenie zostaje — powrót z karty punktu zastaje tę samą listę.
+  // węzłów. Zaznaczenie zostaje – powrót z karty punktu zastaje tę samą listę.
   refs = null;
 }
