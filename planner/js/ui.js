@@ -234,3 +234,36 @@ export function parseCsv(text) {
     .filter((r) => r.length && r.some(Boolean))
     .map((r) => Object.fromEntries(head.map((key, i) => [key, r[i] ?? ''])));
 }
+
+/**
+ * Legenda mapy jako przycisk u dołu, rozwijający się w górę.
+ *
+ * Wcześniej legenda była stale rozłożona i przy analizie dublowała blok
+ * „jak czytać" w panelu — te same treści w dwóch miejscach. Teraz jest jedna,
+ * schowana pod przyciskiem, w tym samym rogu w każdym widoku z mapą.
+ *
+ * @param {string} title etykieta na przycisku i nagłówek rozwinięcia
+ * @param {Array<Node>} children treść legendy
+ * @param {boolean} open czy rozwinięta na starcie
+ */
+export function mapLegend(title, children, { open = false } = {}) {
+  const body = h('div', { class: 'map-legend map-legend--pop' }, h('b', { text: title }), ...children.filter(Boolean));
+  body.hidden = !open;
+
+  const toggle = h(
+    'button',
+    {
+      class: 'btn btn--sm map-legend__toggle',
+      'aria-expanded': open ? 'true' : 'false',
+      onclick: () => {
+        const next = body.hidden;
+        body.hidden = !next;
+        toggle.setAttribute('aria-expanded', next ? 'true' : 'false');
+        toggle.textContent = next ? `${title.toUpperCase()} ✕` : `${title.toUpperCase()} ▲`;
+      },
+    },
+    open ? `${title.toUpperCase()} ✕` : `${title.toUpperCase()} ▲`
+  );
+
+  return h('div', { class: 'map-legend-wrap' }, body, toggle);
+}

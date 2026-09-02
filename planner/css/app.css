@@ -910,3 +910,30 @@ a { color: var(--ink); }
 .rec-kind { width: 9px; height: 9px; flex: none; margin-top: 3px; }
 .rec-kind--new { background: var(--phase-3); }
 .rec-kind--update { background: var(--ink-2); border-radius: 50%; }
+
+/* ---------- legenda mapy: przycisk u dołu, rozwijany w górę --------------- */
+
+.map-legend-wrap {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  max-width: min(420px, calc(100% - 24px));
+}
+/* Rozwinięcie stoi nad przyciskiem, więc legenda „wychodzi w górę". */
+.map-legend--pop { position: static; max-height: 60vh; overflow-y: auto; }
+.map-legend__toggle { background: var(--white); }
+
+/* ---------- aktywna karta punktu: zawsze pod belką panelu ---------------- */
+
+.panel__selected {
+  flex: 0 0 auto;
+  padding: 12px 14px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--section);
+}
+.panel__selected + .panel__body { padding-top: 14px; }

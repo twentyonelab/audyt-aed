@@ -43,6 +43,7 @@ import {
   toast,
   modal,
   disabledControl,
+  mapLegend,
   download,
   pickFile,
   toCsv,
@@ -288,6 +289,7 @@ export async function render(root, ctx) {
 
   const mapEl = h('div', { class: 'map-wrap' });
   const panelBody = h('div', { class: 'panel__body' });
+  const selectedBox = h('div', { class: 'panel__selected', style: { display: 'none' } });
 
   const panel = h(
     'aside',
@@ -301,6 +303,7 @@ export async function render(root, ctx) {
         text: `${fmtNum(counts.total)} ${plural(counts.total, ['pozycja', 'pozycje', 'pozycji'])}`,
       })
     ),
+    selectedBox,
     panelBody,
     h('div', { class: 'panel__foot' }, importBtn(), exportBtn())
   );
@@ -359,23 +362,13 @@ export async function render(root, ctx) {
     mount(clickPrompt);
   };
 
-  /* mini-karta punktu — własny popup w rogu kontenera mapy */
-  const popup = h('div', {
-    class: 'card map-popup',
-    style: {
-      position: 'absolute',
-      right: '12px',
-      top: '104px',
-      zIndex: '7',
-      width: '268px',
-      display: 'none',
-    },
-  });
-  mapEl.appendChild(popup);
-
+  /* Mini-karta aktywnego punktu. Stoi zawsze w tym samym miejscu — pod belką
+     panelu, nad rejestrem — a nie jako pływające okienko nad mapą. Analiza
+     dostępności używa dokładnie tego samego miejsca, więc oba widoki z mapą
+     zachowują się tak samo. */
   const hidePopup = () => {
-    popup.style.display = 'none';
-    mount(popup);
+    selectedBox.style.display = 'none';
+    mount(selectedBox);
   };
 
   const showPopup = (row) => {
@@ -406,7 +399,7 @@ export async function render(root, ctx) {
       : `Przegląd ważny do ${fmtYearMonth(device.inspectionDue)}`;
 
     mount(
-      popup,
+      selectedBox,
       h(
         'div',
         { class: 'row', style: { alignItems: 'flex-start' } },
@@ -465,7 +458,7 @@ export async function render(root, ctx) {
         )
       )
     );
-    popup.style.display = '';
+    selectedBox.style.display = '';
   };
 
   /* ---------------- tryb dodawania punktu ---------------- */
@@ -505,7 +498,7 @@ export async function render(root, ctx) {
       toast('Tryb dodawania punktu wyłączony.');
       return;
     }
-    if (popup.style.display !== 'none') hidePopup();
+    if (selectedBox.style.display !== 'none') hidePopup();
   };
   document.addEventListener('keydown', keyHandler);
 
@@ -1157,10 +1150,7 @@ export async function render(root, ctx) {
  * ------------------------------------------------------------------ */
 
 function legend(proposedCount) {
-  const node = h(
-    'div',
-    { class: 'map-legend' },
-    h('b', { text: 'Status punktu' }),
+  return mapLegend('Legenda', [
     h('div', { class: 'map-legend__row', html: `${dotHtml('ok')}<span>zweryfikowany, komplet danych</span>` }),
     h('div', { class: 'map-legend__row', html: `${dotHtml('warn')}<span>braki w karcie</span>` }),
     h('div', { class: 'map-legend__row', html: `${dotHtml('crit')}<span>niezweryfikowany</span>` }),
@@ -1169,9 +1159,13 @@ function legend(proposedCount) {
       html: `${dotHtml('square')}<span>rekomendacja — nowa lokalizacja${
         proposedCount > 0 ? ` (${fmtNum(proposedCount)})` : ''
       }</span>`,
-    })
-  );
-  return node;
+    }),
+    h('div', {
+      class: 'note',
+      style: { marginTop: '6px' },
+      text: 'Klik w mapę dodaje punkt, klik w pin pokazuje jego kartę w panelu obok.',
+    }),
+  ]);
 }
 
 /* ------------------------------------------------------------------ *

@@ -52,9 +52,10 @@ import {
   pillHtml,
   dotHtml,
   statusMeta,
+  mapLegend,
 } from '../ui.js';
 
-import { createMap } from '../map.js';
+import { createMap, circlePolygon } from '../map.js';
 import { reachMapFor, contoursFor, routesFor, reachCoverageOf } from '../reach.js';
 
 export const meta = {
@@ -370,48 +371,27 @@ export async function render(root, ctx) {
       h('div', { class: 'note', style: { marginLeft: '14px' }, text: why })
     );
 
-  const howToBox = h(
-    'div',
-    {},
-    h('p', {
-      class: 'note',
-      style: { marginTop: '0' },
-      text:
-        `Pytanie tej mapy brzmi: gdzie mieszkaniec NIE zdąży dobiec do AED w ${fmtMin(standardMinutes, 0)} ` +
-        'i wrócić. Każda kropka to skupisko ludności, obrys to realny zasięg jednego AED.',
-    }),
-    legendRow(dotHtml('ok'), 'zielona kropka', 'skupisko w zasięgu — ktoś zdąży przynieść AED na czas'),
-    legendRow(dotHtml('warn'), 'żółta kropka', 'na granicy standardu — wystarczy jedna zamknięta brama, żeby wypadło'),
-    legendRow(dotHtml('crit'), 'czerwona kropka', 'poza zasięgiem — to są ludzie, których nie obsługuje żadne AED'),
-    legendRow(dotHtml('square'), 'fioletowy kwadrat', 'propozycja nowej lokalizacji — przeciągnij, licznik przeliczy się na żywo'),
-    h('p', {
-      class: 'note',
-      text: 'Kliknij w punkt, żeby zobaczyć trasy dojścia, które wyznaczyły jego zasięg. Drugi klik otwiera kartę.',
-    })
-  );
-
-  /** Panel wybranego punktu — wypełniany po kliknięciu w pin. */
-  const selectedBox = h('div', {});
+  /** Aktywna karta punktu — to samo miejsce co w inwentaryzacji: pod belką panelu. */
+  const selectedBox = h('div', { class: 'panel__selected', style: { display: 'none' } });
 
   const paintSelected = () => {
-    if (!selectedReachId) {
+    const hide = () => {
+      selectedBox.style.display = 'none';
       mount(selectedBox);
-      return;
-    }
+    };
+    if (!selectedReachId) return hide();
     const point = (analysis.activePoints || []).find((p) => p.id === selectedReachId);
-    if (!point) {
-      mount(selectedBox);
-      return;
-    }
+    if (!point) return hide();
+    selectedBox.style.display = '';
     const routes = routesFor(point.lat, point.lon) || [];
     const hasReach = !!(contoursFor(point.lat, point.lon) || {})[standardMinutes];
     const longest = routes.reduce((best, r) => (r.distanceM > (best?.distanceM || 0) ? r : best), null);
 
     mount(
       selectedBox,
-      section(
-        'Wybrany punkt',
-        h('div', { style: { fontWeight: '600', fontSize: '12.5px' }, text: point.name || point.id }),
+      h('span', { class: 'label-caps', style: { display: 'block', marginBottom: '6px' }, text: 'Aktywny punkt' }),
+      h('div', {},
+        h('div', { style: { fontWeight: '600', fontSize: '13px' }, text: point.name || point.id }),
         h('p', {
           class: 'note',
           text: hasReach
@@ -477,12 +457,11 @@ export async function render(root, ctx) {
       h('span', { html: pillHtml(scenario === 'plan' ? 'PLAN' : 'STAN OBECNY') }),
       h('span', { html: pillHtml(mode === 'night' ? 'NOC' : 'DZIEŃ') })
     ),
+    selectedBox,
     h(
       'div',
       { class: 'panel__body' },
-      section('Jak czytać tę mapę', howToBox),
       section('Wskaźniki — teraz → po planie', kpiBox),
-      selectedBox,
       section('Luki wg dzielnic', gapsBox),
       section('Propozycje nowych punktów', proposalsBox),
       section(
@@ -826,25 +805,30 @@ export async function render(root, ctx) {
   );
 
   mapEl.appendChild(
-    h(
-      'div',
-      { class: 'map-legend' },
-      h('b', { text: 'Analiza dostępności' }),
-      h('div', { class: 'map-legend__row', html: `${dotHtml('ok')}<span>punkt popytu w zasięgu</span>` }),
-      h('div', { class: 'map-legend__row', html: `${dotHtml('warn')}<span>blisko granicy standardu</span>` }),
-      h('div', { class: 'map-legend__row', html: `${dotHtml('crit')}<span>poza zasięgiem</span>` }),
-      h('div', { class: 'map-legend__row', html: `${dotHtml('square')}<span>propozycja (przeciągalna)</span>` }),
-      h('div', {
+    mapLegend('Legenda', [
+      h('p', {
         class: 'note',
-        style: { marginTop: '4px' },
+        style: { marginTop: '2px' },
+        text:
+          `Pytanie tej mapy: gdzie mieszkaniec NIE zdąży dobiec do AED w ${fmtMin(standardMinutes, 0)} i wrócić. ` +
+          'Każda kropka to skupisko ludności, obrys to realny zasięg jednego AED.',
+      }),
+      legendRow(dotHtml('ok'), 'zielona kropka', 'w zasięgu — ktoś zdąży przynieść AED na czas'),
+      legendRow(dotHtml('warn'), 'żółta kropka', 'na granicy standardu'),
+      legendRow(dotHtml('crit'), 'czerwona kropka', 'poza zasięgiem — nie obsługuje ich żadne AED'),
+      legendRow(dotHtml('square'), 'fioletowy kwadrat', 'propozycja — przeciągnij, licznik przeliczy się na żywo'),
+      h('p', {
+        class: 'note',
         text:
           analysis.reachMode === 'radius'
-            ? `Kryterium: ${fmtNum(analysis.radiusM, 0)} m w linii prostej od czynnego AED ` +
-              `(${fmtMin(standardMinutes, 0)} dojścia) — przybliżenie, brak danych o sieci pieszej.`
-            : `Kryterium: ${fmtMin(standardMinutes, 0)} marszu do AED po realnych chodnikach i ulicach. ` +
-              'Obrys to izochrona, nie okrąg.',
-      })
-    )
+            ? `Kryterium: ${fmtNum(analysis.radiusM, 0)} m w linii prostej — przybliżenie, brak danych o sieci pieszej.`
+            : `Kryterium: ${fmtMin(standardMinutes, 0)} marszu po realnych chodnikach i ulicach. Obrys to izochrona, nie okrąg.`,
+      }),
+      h('p', {
+        class: 'note',
+        text: 'Klik w pin pokazuje trasy dojścia i kartę punktu w panelu obok; drugi klik otwiera pełną kartę.',
+      }),
+    ])
   );
 
   const reachStats = reachCoverageOf(analysis.activePoints || [], reach);
@@ -926,8 +910,10 @@ export async function render(root, ctx) {
     (analysis.activePoints || [])
       .map((p) => {
         const contours = contoursFor(p.lat, p.lon);
-        const ring = contours && contours[standardMinutes];
-        if (!ring) return null;
+        const ring = (contours && contours[standardMinutes]) ||
+          // Bez izochrony rysujemy okrąg, którym model i tak ten punkt liczy —
+          // lepiej pokazać przybliżenie z adnotacją niż pustą mapę.
+          circlePolygon(p.lat, p.lon, analysis.radiusM).coordinates[0];
         return {
           id: p.id,
           kind: p.kind === 'proposed' ? 'proposed' : 'existing',

@@ -415,7 +415,19 @@ export async function render(root, ctx) {
   const deleteItem = async (rec) => {
     const confirmed = await modal({
       title: 'Usunąć pozycję roadmapy?',
-      body: h('p', { text: `„${rec.text}" zniknie z planu i z sum kosztów.` }),
+      body: h(
+        'div',
+        {},
+        h('p', { text: `„${rec.text}" zniknie z planu i z sum kosztów.` }),
+        rec.auto
+          ? h('p', {
+              class: 'note',
+              text:
+                'To pozycja z reguły — wróci na listę, dopóki brak w karcie punktu, ' +
+                'który ją wywołał, nie zostanie uzupełniony albo odhaczony.',
+            })
+          : null
+      ),
       confirmLabel: 'USUŃ',
     });
     if (!confirmed) return;
@@ -769,21 +781,22 @@ function kanbanCard(rec, onDelete) {
       }),
       gain > 0 ? h('div', { class: 'kanban__effect num', text: `+${fmtPct(gain, 1)} pokrycia` }) : null
     ),
-    rec.auto
-      ? null
-      : h(
-          'button',
-          {
-            class: 'btn btn--sm btn--ghost btn--danger',
-            title: 'Usuń pozycję dodaną ręcznie',
-            'aria-label': 'Usuń pozycję',
-            onclick: (e) => {
-              e.stopPropagation();
-              onDelete(rec);
-            },
-          },
-          '✕'
-        )
+    h(
+      'button',
+      {
+        class: 'btn btn--sm btn--ghost btn--danger',
+        // Także pozycje z reguł: audytor bywa mądrzejszy od reguły i musi móc
+        // zdjąć z planu coś, czego gmina nie zrobi. Okno potwierdzenia mówi,
+        // że pozycja z reguły wróci, dopóki brak w karcie nie zostanie usunięty.
+        title: rec.auto ? 'Usuń pozycję z planu' : 'Usuń pozycję dodaną ręcznie',
+        'aria-label': 'Usuń pozycję',
+        onclick: (e) => {
+          e.stopPropagation();
+          onDelete(rec);
+        },
+      },
+      '✕'
+    )
   );
 
   card.addEventListener('dragstart', (e) => {

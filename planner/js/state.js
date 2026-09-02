@@ -247,6 +247,14 @@ export async function initState({ reset = false } = {}) {
 
   const demo = await fetchJson(DEMO_PROJECT_FILE);
 
+  // Zapisany projekt sprzed zmiany danych demo (inne współrzędne punktów) nie
+  // trafiałby w cache izochron i mapa pokazywałaby pustkę. Stempel wersji
+  // rozstrzyga to jednoznacznie: rozjazd = wracamy do świeżego demo.
+  if (stored && stored.project && stored.project.dataVersion !== demo.project.dataVersion) {
+    console.info('Dane demo są nowsze niż zapisany projekt — wczytuję je od nowa.');
+    stored = null;
+  }
+
   if (stored) {
     Object.assign(state, {
       project: stored.project,

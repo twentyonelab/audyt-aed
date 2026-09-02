@@ -677,6 +677,19 @@ for (const p of [...points, ...candidates]) {
 
 const recommendations = buildRecommendations(points);
 
+/** Krótki odcisk wszystkiego, co unieważnia zapisany stan projektu. */
+const dataFingerprint = (() => {
+  const payload = JSON.stringify([
+    points.map((p) => [p.id, p.lat, p.lon]),
+    districtsGeo.features.map((f) => f.properties.id),
+    demandPoints.length,
+    STANDARD_MINUTES,
+  ]);
+  let hash = 0;
+  for (let i = 0; i < payload.length; i++) hash = (Math.imul(31, hash) + payload.charCodeAt(i)) | 0;
+  return `${(hash >>> 0).toString(36)}-${demandPoints.length}`;
+})();
+
 const demo = {
   project: {
     id: 'tychy-2026',
@@ -692,6 +705,10 @@ const demo = {
       name: f.properties.name,
       population: f.properties.population,
     })),
+    // Odcisk danych wejściowych. Zapisany w przeglądarce projekt sprzed zmiany
+    // współrzędnych nie trafiałby w cache izochron (klucz to współrzędna), więc
+    // aplikacja porównuje ten stempel i odświeża demo, gdy się rozjedzie.
+    dataVersion: dataFingerprint,
     stepsDone: [0, 1, 2],
     updatedAt: '2026-07-29',
     center: [19.0, 50.118],
