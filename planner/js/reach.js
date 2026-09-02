@@ -35,6 +35,8 @@ let cache = null; // {meta, contours, routes}
 let loading = null;
 const live = new Map(); // klucz → {contours} dopytane w locie
 const pending = new Map(); // klucz → Promise, żeby nie pytać dwa razy o to samo
+const liveRoutes = new Map(); // klucz → trasy dojścia dociągnięte w tej sesji
+const pendingRoutes = new Map();
 
 export async function loadReach() {
   if (cache) return cache;
@@ -66,9 +68,10 @@ export function contoursFor(lat, lon) {
   return (cache && cache.contours && cache.contours[key]) || null;
 }
 
-/** Trasy dojścia, które narysowały obrys — tylko z cache projektu. */
+/** Trasy dojścia, które narysowały obrys: cache projektu albo dociągnięte w tej sesji. */
 export function routesFor(lat, lon) {
   const key = reachKey(lat, lon);
+  if (liveRoutes.has(key)) return liveRoutes.get(key);
   return (cache && cache.routes && cache.routes[key]) || null;
 }
 
@@ -165,6 +168,68 @@ export async function reachMapFor(sites, { allowFetch = true, onLater = null } =
   }
 
   return out;
+}
+
+/**
+ * Trasy dojścia dla lokalizacji spoza cache — dociągane z Directions API
+ * na żądanie (po kliknięciu w punkt). Dwanaście kierunków rozłożonych po
+ * kącie, każdy do najdalszego wierzchołka konturu w swoim wycinku, więc
+ * linie realnie obrysowują zasięg, a nie idą losowo.
+ *
+ * Zwraca [] przy braku tokenu, sieci albo konturu — widok pokaże sam obrys.
+ */
+export async function fetchRoutes(lat, lon, ring, count = 12) {
+  const key = reachKey(lat, lon);
+  if (liveRoutes.has(key)) return liveRoutes.get(key);
+  if (!tokenUsable() || !Array.isArray(ring) || ring.length < 3) return [];
+  if (pendingRoutes.has(key)) return pendingRoutes.get(key);
+
+  // Najdalszy wierzchołek konturu w każdym z `count` wycinków kąta.
+  const buckets = new Array(count).fill(null);
+  for (const [rlon, rlat] of ring) {
+    const angle = Math.atan2(rlat - lat, rlon - lon);
+    const idx = Math.floor(((angle + Math.PI) / (2 * Math.PI)) * count) % count;
+    const d = Math.hypot(rlon - lon, rlat - lat);
+    if (!buckets[idx] || d > buckets[idx].d) buckets[idx] = { pt: [rlon, rlat], d };
+  }
+  const targets = buckets.filter(Boolean).map((b) => b.pt);
+
+  const one = async (target) => {
+    const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+    const timer = ctrl ? setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS) : null;
+    try {
+      const url =
+        `https://api.mapbox.com/directions/v5/mapbox/walking/` +
+        `${lon.toFixed(5)},${lat.toFixed(5)};${target[0].toFixed(5)},${target[1].toFixed(5)}` +
+        `?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
+      const res = await fetch(url, ctrl ? { signal: ctrl.signal } : undefined);
+      if (!res.ok) return null;
+      const json = await res.json();
+      const route = json.routes && json.routes[0];
+      if (!route || !route.geometry) return null;
+      return {
+        line: route.geometry.coordinates,
+        distanceM: Math.round(route.distance),
+        durationMin: Math.round((route.duration / 60) * 10) / 10,
+      };
+    } catch {
+      return null;
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  };
+
+  const task = Promise.all(targets.map(one))
+    .then((rs) => {
+      const out = rs.filter(Boolean);
+      liveRoutes.set(key, out);
+      return out;
+    })
+    .catch(() => [])
+    .finally(() => pendingRoutes.delete(key));
+
+  pendingRoutes.set(key, task);
+  return task;
 }
 
 /**

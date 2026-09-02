@@ -371,6 +371,15 @@ export async function render(root, ctx) {
     mount(selectedBox);
   };
 
+  /** Zamknięcie karty odklikuje też punkt na mapie — inaczej pin zostawałby zaznaczony. */
+  const clearSelection = () => {
+    hidePopup();
+    state.ui.selectedPointId = null;
+    if (map) map.setScene({ selectedId: null });
+    paintRows();
+    save({ silent: true });
+  };
+
   const showPopup = (row) => {
     const { point, preset, pct } = row;
     const access = point.access || {};
@@ -404,7 +413,7 @@ export async function render(root, ctx) {
         'div',
         { class: 'row', style: { alignItems: 'flex-start' } },
         h('h4', { style: { flex: '1' }, text: point.name }),
-        h('button', { class: 'btn btn--sm btn--ghost', title: 'Zamknij mini-kartę', onclick: hidePopup }, '✕')
+        h('button', { class: 'btn btn--sm btn--ghost', title: 'Zamknij kartę i odkliknij punkt', onclick: clearSelection }, '✕')
       ),
       h(
         'div',
@@ -498,7 +507,8 @@ export async function render(root, ctx) {
       toast('Tryb dodawania punktu wyłączony.');
       return;
     }
-    if (selectedBox.style.display !== 'none') hidePopup();
+    // Esc zamyka kartę tak samo jak ✕ — łącznie z odkliknięciem pinu na mapie.
+    if (selectedBox.style.display !== 'none') clearSelection();
   };
   document.addEventListener('keydown', keyHandler);
 

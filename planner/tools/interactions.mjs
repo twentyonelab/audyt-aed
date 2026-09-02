@@ -319,6 +319,166 @@ await go('#/inventory', 900);
 const firstStep = await page.locator('.stepper .stepper__item').first().innerText();
 check('Pulpit jest pierwszą pozycją nawigacji', /pulpit/i.test(firstStep), firstStep.replace(/\s+/g, ' '));
 
+/* ---------------------------------------------------------------- *
+ * 12. Aktywna karta punktu w analizie: to samo miejsce co w inwentaryzacji,
+ *     ✕ odklikuje punkt, trasy dojścia rysują się przerywane.
+ * ---------------------------------------------------------------- */
+
+await go('#/analysis', 1400);
+
+/** Ile przerywanych linii dojścia jest na mapie zapasowej. */
+const routeLines = () =>
+  page.locator('.map-fallback svg path[stroke-dasharray="4 3"][stroke-opacity="0.5"]').count();
+
+const cardPlace = () =>
+  page.evaluate(() => {
+    const box = document.querySelector('.panel .panel__selected');
+    if (!box || box.style.display === 'none') return null;
+    const panel = box.parentElement;
+    const head = panel.querySelector('.panel__head');
+    const body = panel.querySelector('.panel__body');
+    const cs = getComputedStyle(box);
+    return {
+      afterHead: head && head.nextElementSibling === box,
+      beforeBody: body && box.nextElementSibling === body,
+      gapBelow: Math.round(box.getBoundingClientRect().bottom * 10) / 10,
+      bodyTop: body ? Math.round(body.getBoundingClientRect().top * 10) / 10 : null,
+      marginBottom: parseFloat(cs.marginBottom),
+      paddingTop: parseFloat(cs.paddingTop),
+      paddingRight: parseFloat(cs.paddingRight),
+      proposed: box.classList.contains('panel__selected--proposed'),
+      text: box.innerText.replace(/\s+/g, ' '),
+    };
+  });
+
+check('analiza: karta punktu ukryta, dopóki nic nie wybrano', (await cardPlace()) === null);
+check('analiza: bez wyboru nie ma linii dojścia', (await routeLines()) === 0);
+
+await page.locator('.map-fallback svg circle[r="6"]').first().click();
+await page.waitForTimeout(1200);
+
+const place = await cardPlace();
+check(
+  'analiza: aktywna karta stoi pod belką panelu, nad rejestrem',
+  !!place && place.afterHead && place.beforeBody,
+  place ? `afterHead=${place.afterHead} beforeBody=${place.beforeBody}` : 'brak karty'
+);
+check(
+  'analiza: wyraźna przerwa między kartą a danymi niżej (10–20 px)',
+  !!place && place.marginBottom >= 10 && place.marginBottom <= 20,
+  place ? `margin-bottom ${place.marginBottom}px` : 'brak karty'
+);
+check(
+  'analiza: karta ma margines górny i prawy w środku',
+  !!place && place.paddingTop >= 8 && place.paddingRight >= 8,
+  place ? `padding ${place.paddingTop}/${place.paddingRight}px` : 'brak karty'
+);
+
+const linesAfterClick = await routeLines();
+check(
+  'analiza: klik w punkt rysuje przerywane trasy dojścia (50% krycia)',
+  linesAfterClick > 0,
+  `${linesAfterClick} linii`
+);
+
+const routeStroke = await page
+  .locator('.map-fallback svg path[stroke-dasharray="4 3"][stroke-opacity="0.5"]')
+  .first()
+  .getAttribute('stroke');
+check(
+  'analiza: linie dojścia w kolorze granicy zasięgu (zielone)',
+  routeStroke === '#4caf7d',
+  String(routeStroke)
+);
+
+await page.screenshot({ path: join(SHOTS, 'interactions-analysis-selected.png') });
+
+const closeBtn = page.locator('.panel .panel__selected button[title*="Zamknij"]');
+check('analiza: karta ma ✕ do zamknięcia', (await closeBtn.count()) === 1);
+await closeBtn.first().click();
+await page.waitForTimeout(700);
+check('✕ zamyka kartę i odklikuje punkt', (await cardPlace()) === null);
+check('✕ gasi też linie dojścia', (await routeLines()) === 0);
+
+/* ---------------------------------------------------------------- *
+ * 13. Nowy fioletowy punkt: własny obrys, podświetlone pole, wpływ na pokrycie
+ * ---------------------------------------------------------------- */
+
+/** Fioletowe obrysy zasięgu (propozycje) — kreskowane, w odróżnieniu od zielonych. */
+const planRings = () =>
+  page.locator('.map-fallback svg path[stroke-dasharray="3 2"][fill="rgba(138,111,199,0.16)"]').count();
+const ringsBefore = await planRings();
+box = await mapBox();
+await page.mouse.click(box.x + box.width * 0.45, box.y + box.height * 0.5);
+await page.waitForTimeout(1400);
+
+const newPlace = await cardPlace();
+check(
+  'nowa rekomendacja od razu jest aktywna w karcie',
+  !!newPlace && /rekomendacja/i.test(newPlace.text),
+  newPlace ? newPlace.text.slice(0, 70) : 'brak karty'
+);
+check(
+  'pole karty nowego punktu podświetlone na fioletowo',
+  !!newPlace && newPlace.proposed,
+  newPlace ? `klasa --proposed=${newPlace.proposed}` : 'brak karty'
+);
+check(
+  'karta nowego punktu pokazuje wpływ na pokrycie',
+  !!newPlace && /\+[\d,]+%\s*pokrycia/.test(newPlace.text),
+  newPlace ? (newPlace.text.match(/\+[\d,]+% pokrycia[^·]*·[^A-Z]*/) || [''])[0].trim() : 'brak karty'
+);
+
+const ringsAfter = await planRings();
+check(
+  'nowy punkt dorysowuje własny fioletowy obrys zasięgu',
+  ringsAfter === ringsBefore + 1,
+  `${ringsBefore} → ${ringsAfter} obrysów`
+);
+await page.screenshot({ path: join(SHOTS, 'interactions-analysis-proposal.png') });
+
+// Sprzątamy po sobie, żeby kolejne uruchomienie startowało z tych samych danych.
+await page.locator('.topbar__undo').click();
+await page.waitForTimeout(800);
+
+/* ---------------------------------------------------------------- *
+ * 14. Ta sama interakcja w inwentaryzacji: klik w pin, karta pod belką, ✕
+ * ---------------------------------------------------------------- */
+
+await go('#/inventory', 1300);
+// Wybór punktu jest zapisany w projekcie, więc po wcześniejszych sekcjach
+// karta może być już otwarta — zamykamy ją, żeby test startował z czystego stanu.
+if (await cardPlace()) {
+  await page.locator('.panel .panel__selected button[title*="Zamknij"]').first().click();
+  await page.waitForTimeout(600);
+}
+check('inwentaryzacja: karta ukryta, dopóki nic nie wybrano', (await cardPlace()) === null);
+
+await page.locator('.map-fallback svg circle[r="6"]').first().click();
+await page.waitForTimeout(900);
+const invPlace = await cardPlace();
+check(
+  'inwentaryzacja: karta punktu stoi pod belką panelu, nad rejestrem',
+  !!invPlace && invPlace.afterHead && invPlace.beforeBody,
+  invPlace ? invPlace.text.slice(0, 60) : 'brak karty'
+);
+check(
+  'inwentaryzacja: ta sama przerwa i marginesy co w analizie',
+  !!invPlace && invPlace.marginBottom >= 10 && invPlace.marginBottom <= 20 && invPlace.paddingTop >= 8,
+  invPlace ? `margin ${invPlace.marginBottom}px · padding ${invPlace.paddingTop}/${invPlace.paddingRight}px` : 'brak karty'
+);
+
+const invSelected = await page.locator('.map-fallback svg circle[stroke="#1e1e1e"]').count();
+check('inwentaryzacja: wybrany pin ma ciemną obwódkę', invSelected === 1, `${invSelected} pinów`);
+
+await page.locator('.panel .panel__selected button[title*="Zamknij"]').first().click();
+await page.waitForTimeout(700);
+check('inwentaryzacja: ✕ zamyka kartę', (await cardPlace()) === null);
+check(
+  'inwentaryzacja: ✕ odklikuje pin na mapie',
+  (await page.locator('.map-fallback svg circle[stroke="#1e1e1e"]').count()) === 0
+);
+
 await go('#/inventory');
 await page.screenshot({ path: join(SHOTS, 'interactions-inventory.png') });
 await go('#/analysis');

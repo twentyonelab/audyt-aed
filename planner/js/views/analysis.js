@@ -56,7 +56,7 @@ import {
 } from '../ui.js';
 
 import { createMap, circlePolygon } from '../map.js';
-import { reachMapFor, contoursFor, routesFor, reachCoverageOf } from '../reach.js';
+import { reachMapFor, contoursFor, routesFor, fetchRoutes, reachCoverageOf } from '../reach.js';
 
 export const meta = {
   step: 2,
@@ -377,56 +377,84 @@ export async function render(root, ctx) {
   const paintSelected = () => {
     const hide = () => {
       selectedBox.style.display = 'none';
+      selectedBox.className = 'panel__selected';
       mount(selectedBox);
     };
-    if (!selectedReachId) return hide();
-    const point = (analysis.activePoints || []).find((p) => p.id === selectedReachId);
-    if (!point) return hide();
-    selectedBox.style.display = '';
-    const routes = routesFor(point.lat, point.lon) || [];
-    const hasReach = !!(contoursFor(point.lat, point.lon) || {})[standardMinutes];
+    const sel = findSelected();
+    if (!sel) return hide();
+
+    const { site, kind, pending } = sel;
+    const routes = routesFor(site.lat, site.lon) || [];
+    const hasReach = !!(contoursFor(site.lat, site.lon) || {})[standardMinutes];
     const longest = routes.reduce((best, r) => (r.distanceM > (best?.distanceM || 0) ? r : best), null);
+    const proposal = kind === 'proposed';
+
+    // Zysk liczony na żywo tym samym coverageGainFor(), którego używa
+    // optymalizator — a nie wartością zapamiętaną przy dodaniu punktu.
+    const gain = proposal ? gainFor(site, state.points, pending ? null : site.id) : null;
+
+    selectedBox.style.display = '';
+    selectedBox.className = `panel__selected${proposal ? ' panel__selected--proposed' : ''}`;
 
     mount(
       selectedBox,
-      h('span', { class: 'label-caps', style: { display: 'block', marginBottom: '6px' }, text: 'Aktywny punkt' }),
-      h('div', {},
-        h('div', { style: { fontWeight: '600', fontSize: '13px' }, text: point.name || point.id }),
-        h('p', {
-          class: 'note',
-          text: hasReach
-            ? routes.length
-              ? `Obrys wyznaczyło ${fmtNum(routes.length)} tras dojścia po realnych chodnikach i ulicach; ` +
-                `najdłuższa ma ${fmtNum(longest.distanceM, 0)} m i ${fmtMin(longest.durationMin, 1)} marszu.`
-              : 'Zasięg policzony po sieci pieszej. Trasy poglądowe dla tego punktu nie są jeszcze w cache projektu.'
-            : 'Dla tego punktu nie udało się pobrać zasięgu z sieci — pokazany obszar jest przybliżeniem kołowym.',
-        }),
+      h(
+        'div',
+        { class: 'row', style: { alignItems: 'flex-start' } },
         h(
           'div',
-          { class: 'row', style: { gap: '6px' } },
-          h(
-            'button',
-            {
-              class: 'btn btn--sm btn--primary',
-              onclick: () => ctx.navigate(`#/card/${encodeURIComponent(point.id)}`),
+          { style: { flex: '1', minWidth: '0' } },
+          h('span', { class: 'label-caps', text: proposal ? 'Aktywna rekomendacja' : 'Aktywny punkt' }),
+          h('div', { style: { fontWeight: '600', fontSize: '13px' }, text: site.name || site.id })
+        ),
+        h(
+          'button',
+          {
+            class: 'btn btn--sm btn--ghost',
+            title: 'Zamknij kartę i odkliknij punkt',
+            onclick: () => {
+              selectedReachId = null;
+              paintScene();
+              paintSelected();
             },
-            'OTWÓRZ KARTĘ'
-          ),
-          h(
-            'button',
-            {
-              class: 'btn btn--sm',
-              onclick: () => {
-                selectedReachId = null;
-                paintScene();
-                paintSelected();
-              },
-            },
-            'Ukryj trasy'
-          )
+          },
+          '✕'
         )
+      ),
+      gain
+        ? h('div', {
+            class: 'num',
+            style: { fontWeight: '700', fontSize: '15px', marginTop: '4px', color: 'var(--phase-3)' },
+            text: `+${fmtPct(gain.gainPct, 1)} pokrycia · ${fmtNum(gain.gainWeight)} os. więcej w zasięgu`,
+          })
+        : null,
+      h('p', {
+        class: 'note',
+        text: hasReach
+          ? routes.length
+            ? `Obrys wyznaczyło ${fmtNum(routes.length)} tras dojścia po realnych chodnikach i ulicach; ` +
+              `najdłuższa ma ${fmtNum(longest.distanceM, 0)} m i ${fmtMin(longest.durationMin, 1)} marszu.`
+            : 'Zasięg policzony po sieci pieszej. Trasy dojścia dociągam z Mapboksa…'
+          : 'Zasięg tego punktu nie przyszedł jeszcze z sieci — pokazany obszar jest przybliżeniem kołowym.',
+      }),
+      h(
+        'div',
+        { class: 'row', style: { gap: '6px' } },
+        pending
+          ? h('span', { html: pillHtml('CZEKA NA DECYZJĘ', 'warn') })
+          : h(
+              'button',
+              {
+                class: 'btn btn--sm btn--primary',
+                onclick: () => ctx.navigate(`#/card/${encodeURIComponent(site.id)}`),
+              },
+              'OTWÓRZ KARTĘ'
+            )
       )
     );
+
+    // Brakujące trasy dociągamy w tle — karta odświeży się sama.
+    ensureRoutes(sel);
   };
 
   /* ---------------- Metodyka (adaptuje się do źródła zasięgu) ---------------- */
@@ -817,6 +845,13 @@ export async function render(root, ctx) {
       legendRow(dotHtml('warn'), 'żółta kropka', 'na granicy standardu'),
       legendRow(dotHtml('crit'), 'czerwona kropka', 'poza zasięgiem — nie obsługuje ich żadne AED'),
       legendRow(dotHtml('square'), 'fioletowy kwadrat', 'propozycja — przeciągnij, licznik przeliczy się na żywo'),
+      legendRow(
+        '<svg width="14" height="8" aria-hidden="true"><line x1="0" y1="4" x2="14" y2="4" ' +
+          'stroke="#4caf7d" stroke-width="1.6" stroke-opacity="0.5" stroke-dasharray="4 3"/></svg>',
+        'przerywane linie',
+        'trasy dojścia, które wyznaczyły obrys wybranego punktu — od pinu do granicy zasięgu ' +
+          '(fioletowe dla propozycji)'
+      ),
       h('p', {
         class: 'note',
         text:
@@ -826,7 +861,9 @@ export async function render(root, ctx) {
       }),
       h('p', {
         class: 'note',
-        text: 'Klik w pin pokazuje trasy dojścia i kartę punktu w panelu obok; drugi klik otwiera pełną kartę.',
+        text:
+          'Klik w pin — także w fioletową propozycję — pokazuje jej obrys, trasy dojścia i zysk pokrycia ' +
+          'w karcie w panelu obok; drugi klik otwiera pełną kartę punktu.',
       }),
     ])
   );
@@ -906,30 +943,77 @@ export async function render(root, ctx) {
    * Obrysy realnego zasięgu dojścia dla czynnych AED bieżącego scenariusza.
    * Wybrany punkt dostaje mocniejszy obrys — reszta zostaje tłem.
    */
+  /**
+   * Wybrany punkt: szukamy w punktach projektu, a potem w propozycjach
+   * czekających na decyzję. Świeżo dołożona rekomendacja nie jest jeszcze
+   * „czynnym AED", a operator i tak chce zobaczyć jej zasięg i zysk.
+   */
+  const findSelected = () => {
+    if (!selectedReachId) return null;
+    const point = state.points.find((p) => p.id === selectedReachId);
+    if (point) {
+      return {
+        site: point,
+        kind: point.kind === 'proposed' ? 'proposed' : 'existing',
+        pending: false,
+        pinId: point.id,
+      };
+    }
+    // Propozycja czekająca na decyzję nie ma jeszcze id punktu — na mapie
+    // identyfikuje ją id pinu, więc to ono jest tu kluczem.
+    const proposal = state.pendingProposals.find((pr) => pendingPinId(pr) === selectedReachId);
+    if (proposal) return { site: proposal, kind: 'proposed', pending: true, pinId: selectedReachId };
+    return null;
+  };
+
+  /** Czynne AED scenariusza plus wybrany punkt, choćby jeszcze nie liczył się do pokrycia. */
+  const shapeSites = () => {
+    const list = (analysis.activePoints || []).map((p) => ({
+      site: p,
+      kind: p.kind === 'proposed' ? 'proposed' : 'existing',
+      pinId: p.id,
+    }));
+    const sel = findSelected();
+    if (sel && !list.some((x) => x.pinId === sel.pinId)) {
+      list.push({ site: sel.site, kind: sel.kind, pinId: sel.pinId });
+    }
+    return list;
+  };
+
   const buildReachShapes = () =>
-    (analysis.activePoints || [])
-      .map((p) => {
+    shapeSites()
+      .map(({ site: p, kind, pinId }) => {
         const contours = contoursFor(p.lat, p.lon);
         const ring = (contours && contours[standardMinutes]) ||
           // Bez izochrony rysujemy okrąg, którym model i tak ten punkt liczy —
           // lepiej pokazać przybliżenie z adnotacją niż pustą mapę.
           circlePolygon(p.lat, p.lon, analysis.radiusM).coordinates[0];
-        return {
-          id: p.id,
-          kind: p.kind === 'proposed' ? 'proposed' : 'existing',
-          ring,
-          emphasis: p.id === selectedReachId,
-        };
+        return { id: pinId, kind, ring, emphasis: pinId === selectedReachId };
       })
       .filter(Boolean);
 
-  /** Trasy dojścia wybranego punktu — pokazywane tylko dla niego. */
+  /** Trasy dojścia wybranego punktu — w kolorze jego obrysu. */
   const buildRouteLines = () => {
-    if (!selectedReachId) return [];
-    const point = (analysis.activePoints || []).find((p) => p.id === selectedReachId);
-    if (!point) return [];
-    const routes = routesFor(point.lat, point.lon);
-    return routes ? routes.map((r) => r.line) : [];
+    const sel = findSelected();
+    if (!sel) return [];
+    const routes = routesFor(sel.site.lat, sel.site.lon);
+    return routes ? routes.map((r) => ({ line: r.line, kind: sel.kind })) : [];
+  };
+
+  /**
+   * Trasy dla punktu spoza cache (np. świeżo dołożonej rekomendacji)
+   * dociągamy z Mapboksa po kliknięciu i wtedy przemalowujemy mapę.
+   */
+  const ensureRoutes = async (sel) => {
+    if (!sel || routesFor(sel.site.lat, sel.site.lon)) return;
+    const contours = contoursFor(sel.site.lat, sel.site.lon);
+    const ring = contours && contours[standardMinutes];
+    if (!ring) return;
+    const got = await fetchRoutes(sel.site.lat, sel.site.lon, ring);
+    if (got.length && selectedReachId === sel.pinId) {
+      paintScene();
+      paintSelected();
+    }
   };
 
   const paintScene = () => {
@@ -968,11 +1052,14 @@ export async function render(root, ctx) {
   // bierze się zasięg tego AED — obrys na mocno i trasy dojścia, które go
   // narysowały. Do karty prowadzi przycisk w panelu i drugi klik w ten sam pin.
   map.on('pointclick', (pin) => {
-    if (isPendingPin(pin.id)) {
-      toast('Propozycja czeka na decyzję — po ✓ dostanie własną kartę punktu.');
-      return;
-    }
+    // Propozycja czekająca na decyzję zachowuje się tak samo jak punkt
+    // istniejący: pokazuje swój obrys, trasy dojścia i zysk pokrycia.
+    // Karty punktu jeszcze nie ma, więc drugi klik jej nie otwiera.
     if (selectedReachId === pin.id) {
+      if (isPendingPin(pin.id)) {
+        toast('Propozycja czeka na decyzję — po ✓ dostanie własną kartę punktu.');
+        return;
+      }
       ctx.navigate(`#/card/${encodeURIComponent(pin.id)}`);
       return;
     }
@@ -1011,6 +1098,11 @@ export async function render(root, ctx) {
 
     checkpoint('dodanie rekomendacji na mapie');
     upsertPoint(point);
+    // Nowy punkt od razu staje się aktywny: operator widzi jego obrys zasięgu,
+    // trasy dojścia i wpływ na pokrycie bez dodatkowego kliknięcia.
+    // Izochrona dla świeżej lokalizacji dochodzi z Mapboksa w tle — do tego
+    // czasu obrys jest kołowy, a karta mówi o tym wprost.
+    selectedReachId = point.id;
     await save();
     toast(`Rekomendacja ${point.id} · +${fmtPct(gain.gainPct, 1)} pokrycia. Zaakceptuj ją albo cofnij.`);
   });

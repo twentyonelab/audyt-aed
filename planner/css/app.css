@@ -932,8 +932,24 @@ a { color: var(--ink); }
 
 .panel__selected {
   flex: 0 0 auto;
-  padding: 12px 14px 14px;
-  border-bottom: 1px solid var(--line);
+  /* Karta jest wsunięta w panel i ma własny margines — dzięki temu widać
+     wyraźną przerwę między nią a rejestrem punktów poniżej. */
+  margin: 12px 14px 16px;
+  padding: 12px 14px 12px 12px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--bar);
   background: var(--section);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
-.panel__selected + .panel__body { padding-top: 14px; }
+/* Aktywna rekomendacja (nowy, fioletowy punkt) — pole podświetlone kolorem pinu. */
+.panel__selected--proposed {
+  border-color: #cdc0e8;
+  border-left-color: var(--phase-3);
+  background: var(--phase-3-wash);
+}
+.panel__selected > :first-child { margin-top: 0; }
+.panel__selected > :last-child { margin-bottom: 0; }
+/* Linia pod przerwą oddziela kartę od danych, a nie przykleja jej do nich. */
+.panel__selected + .panel__body { padding-top: 14px; border-top: 1px solid var(--line); }

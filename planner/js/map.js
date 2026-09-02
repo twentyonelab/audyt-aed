@@ -103,7 +103,11 @@ const COLORS = {
   near: '#e8b33c',
   highlight: 'rgba(76,175,125,0.12)',
   highlightLine: '#4caf7d',
-  route: '#2f6f8f',
+  // Trasy dojścia: ten sam odcień co obrys zasięgu, ale w pełnym nasyceniu —
+  // krycie 50% nakłada się dopiero w atrybucie stroke-opacity, więc linia nie
+  // gaśnie dwa razy (raz w kolorze, raz w kryciu).
+  routeLine: '#4caf7d',
+  routePlanLine: '#8a6fc7',
 };
 
 function ringPath(ring, project) {
@@ -171,17 +175,23 @@ export function renderSceneSvg(scene, opts = {}) {
     }
   }
 
-  // Trasy, które narysowały obrys — cienkie, żeby nie konkurowały z danymi.
+  // Trasy, które narysowały obrys: przerywane, półprzejrzyste i w kolorze
+  // obrysu tego punktu — nie wprowadzają nowego koloru do legendy.
   if (scene.routes && opts.showRoutes !== false) {
-    for (const line of scene.routes) {
+    for (const r of scene.routes) {
+      const line = r && (r.line || r);
       if (!line || line.length < 2) continue;
+      const stroke = r && r.kind === 'proposed' ? COLORS.routePlanLine : COLORS.routeLine;
       const d = line
         .map(([lon, lat], i) => {
           const [x, y] = project(lon, lat);
           return `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`;
         })
         .join('');
-      parts.push(`<path d="${d}" fill="none" stroke="${COLORS.route}" stroke-width="1.1" stroke-opacity="0.65"/>`);
+      parts.push(
+        `<path d="${d}" fill="none" stroke="${stroke}" stroke-width="1.6" stroke-opacity="0.5" ` +
+          `stroke-dasharray="4 3" stroke-linecap="round"/>`
+      );
     }
   }
 
@@ -350,7 +360,12 @@ function createMapboxMap(container, opts) {
       type: 'line',
       source: 'routes',
       layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': '#2f6f8f', 'line-width': 1.8, 'line-opacity': 0.7 },
+      paint: {
+        'line-color': ['case', ['==', ['get', 'kind'], 'proposed'], '#8a6fc7', '#4caf7d'],
+        'line-width': 2,
+        'line-opacity': 0.5,
+        'line-dasharray': [3, 2],
+      },
     });
     map.addLayer({
       id: 'demand-dots',
@@ -426,11 +441,12 @@ function createMapboxMap(container, opts) {
     src('routes', {
       type: 'FeatureCollection',
       features: (scene.showRoutes === false ? [] : scene.routes || [])
-        .filter((line) => line && line.length > 1)
-        .map((line) => ({
+        .map((r) => ({ line: (r && (r.line || r)) || null, kind: (r && r.kind) || 'existing' }))
+        .filter((r) => r.line && r.line.length > 1)
+        .map((r) => ({
           type: 'Feature',
-          properties: {},
-          geometry: { type: 'LineString', coordinates: line },
+          properties: { kind: r.kind },
+          geometry: { type: 'LineString', coordinates: r.line },
         })),
     });
 
@@ -561,10 +577,14 @@ function createFallbackMap(container, opts) {
   /** Pan/zoom applied on top of the fitted projection. */
   const view = { scale: opts.viewScale || 1, tx: opts.viewTx || 0, ty: opts.viewTy || 0 };
 
-  let dragging = null;   // { point, node, moved }
+  let dragging = null;   // { point, node, moved, draggable }
   let panning = null;    // { x, y, tx, ty }
   let clickBlocked = false; // set after any drag so the trailing click is ignored
   let clickTimer = null;    // pending mapclick, cancelled by a dblclick
+  // Pin przyciśnięty w tym gestcie. Przechwycenie wskaźnika przekierowuje
+  // zdarzenie `click` na <svg>, więc listener na samym pinie by go nie zobaczył
+  // — o tym, że klik należy do pinu, decyduje ten zapis z pointerdown.
+  let pinPress = null;
 
   let rafId = 0;
   /** Coalesce redraws so a wheel or resize burst costs one repaint, not twenty. */
@@ -661,28 +681,16 @@ function createFallbackMap(container, opts) {
       if (p.dimmed) node.setAttribute('opacity', '0.2');
       node.style.cursor = p.draggable ? 'grab' : 'pointer';
 
-      node.addEventListener('click', (ev) => {
+      node.addEventListener('pointerdown', (ev) => {
         ev.stopPropagation();
-        // A click that closes a drag must not also open anything.
-        if (clickBlocked) {
-          clickBlocked = false;
-          return;
+        ev.preventDefault();
+        try {
+          svg.setPointerCapture(ev.pointerId);
+        } catch {
+          /* capture is best-effort */
         }
-        bus.emit('pointclick', p);
+        dragging = { point: p, node, moved: false, draggable: !!p.draggable };
       });
-
-      if (p.draggable) {
-        node.addEventListener('pointerdown', (ev) => {
-          ev.stopPropagation();
-          ev.preventDefault();
-          try {
-            svg.setPointerCapture(ev.pointerId);
-          } catch {
-            /* capture is best-effort */
-          }
-          dragging = { point: p, node, moved: false };
-        });
-      }
 
       const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
       title.textContent = p.name || p.id;
@@ -693,7 +701,7 @@ function createFallbackMap(container, opts) {
     /* ---- panning the background ---- */
     // Any fresh gesture clears a pending suppression, so a drag whose trailing
     // click never arrives cannot swallow the next real click.
-    svg.addEventListener('pointerdown', () => { clickBlocked = false; }, true);
+    svg.addEventListener('pointerdown', () => { clickBlocked = false; pinPress = null; }, true);
 
     svg.addEventListener('pointerdown', (ev) => {
       if (dragging || addMode) return;
@@ -710,8 +718,18 @@ function createFallbackMap(container, opts) {
       const rect = svg.getBoundingClientRect();
 
       if (dragging && projection) {
+        // Drobne drgnienie palca albo myszy nie może unieważnić kliknięcia,
+        // dlatego ruch liczy się dopiero od 3 px — tak samo jak przy panoramie.
+        const px0 = ev.clientX - rect.left;
+        const py0 = ev.clientY - rect.top;
+        if (dragging.from) {
+          if (Math.hypot(px0 - dragging.from[0], py0 - dragging.from[1]) > 3) dragging.moved = true;
+        } else {
+          dragging.from = [px0, py0];
+        }
+        // Pin bez `draggable` tylko notuje ruch — przesuwać się nie może.
+        if (!dragging.draggable) return;
         const [lon, lat] = projection.unproject(ev.clientX - rect.left, ev.clientY - rect.top);
-        dragging.moved = true;
         const px = ev.clientX - rect.left;
         const py = ev.clientY - rect.top;
         if (dragging.node.tagName === 'rect') {
@@ -739,12 +757,15 @@ function createFallbackMap(container, opts) {
       if (dragging) {
         const rect = svg.getBoundingClientRect();
         const [lon, lat] = projection.unproject(ev.clientX - rect.left, ev.clientY - rect.top);
-        const payload = { ...dragging.point, lat, lon };
-        const moved = dragging.moved;
+        const { point, moved, draggable } = dragging;
         dragging = null;
         if (moved) {
+          // Gest zakończony ruchem nigdy nie jest kliknięciem — ani w pin,
+          // ani w tło. Przeciągnięcie zapisujemy tylko dla pinów przesuwalnych.
           clickBlocked = true;
-          bus.emit('pointdragend', payload);
+          if (draggable) bus.emit('pointdragend', { ...point, lat, lon });
+        } else {
+          pinPress = point;
         }
         return;
       }
@@ -801,6 +822,8 @@ function createFallbackMap(container, opts) {
     });
 
     svg.addEventListener('click', (ev) => {
+      const pin = pinPress;
+      pinPress = null;
       if (clickBlocked) {
         clickBlocked = false;
         return;
@@ -811,7 +834,10 @@ function createFallbackMap(container, opts) {
       if (clickTimer) clearTimeout(clickTimer);
       clickTimer = setTimeout(() => {
         clickTimer = null;
-        bus.emit('mapclick', { lat, lon, addMode });
+        // Klik w pin nigdy nie dokłada punktu w tle — inaczej wybranie AED
+        // dorzucałoby przy okazji rekomendację pod nim.
+        if (pin) bus.emit('pointclick', pin);
+        else bus.emit('mapclick', { lat, lon, addMode });
       }, CLICK_DELAY_MS);
     });
   }
