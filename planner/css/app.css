@@ -939,6 +939,23 @@ a { color: var(--ink); }
 .map-legend--pop { position: static; max-height: 60vh; overflow-y: auto; }
 .map-legend__toggle { background: var(--white); }
 
+/* ---------- trasy dojścia: kreski płyną od punktu do granicy ------------- */
+
+/* dasharray "4 3" ma okres 7 jednostek, więc przesunięcie o -7 zamyka pełny
+   cykl i pętla nie skacze. Ujemny offset przesuwa kreski W KIERUNKU rysowania
+   trasy, czyli od pinu na zewnątrz – tak, jak biegnie pieszy. */
+@keyframes route-flow {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -7; }
+}
+.route-flow { animation: route-flow 0.9s linear infinite; }
+
+/* Ruch na mapie bywa męczący i bywa wyłączony na poziomie systemu –
+   wtedy zostaje sama kreskowana linia, bez animacji. */
+@media (prefers-reduced-motion: reduce) {
+  .route-flow { animation: none; }
+}
+
 /* ---------- aktywna karta punktu: zawsze pod belką panelu ---------------- */
 
 .panel__selected {

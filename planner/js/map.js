@@ -110,6 +110,46 @@ const COLORS = {
   routePlanLine: '#8a6fc7',
 };
 
+/**
+ * Drabinka wzorów kreskowania dla płynących tras dojścia w Mapboksie.
+ *
+ * `line-dasharray` jest własnością dyskretną – nie interpoluje się, więc
+ * animacji nie da się zrobić przejściem. Zamiast tego przechodzimy krok po
+ * kroku przez wzory, w których kreska „wysuwa się" z przerwy, a po pełnym
+ * okresie (4 + 3 = 7 jednostek, jak w renderze zapasowym) wzór wraca do
+ * wyjściowego. Efekt: kreski przesuwają się w kierunku rysowania trasy,
+ * czyli od pinu do granicy zasięgu.
+ */
+const ROUTE_FLOW_STEPS = [
+  [0, 4, 3],
+  [0.5, 4, 2.5],
+  [1, 4, 2],
+  [1.5, 4, 1.5],
+  [2, 4, 1],
+  [2.5, 4, 0.5],
+  [3, 4, 0],
+  [0, 0.5, 3, 3.5],
+  [0, 1, 3, 3],
+  [0, 1.5, 3, 2.5],
+  [0, 2, 3, 2],
+  [0, 2.5, 3, 1.5],
+  [0, 3, 3, 1],
+  [0, 3.5, 3, 0.5],
+];
+
+/** Co ile ms kolejna klatka kreskowania. 14 kroków × 64 ms ≈ 0,9 s na cykl –
+ *  tyle samo, ile trwa animacja CSS w renderze zapasowym. */
+const ROUTE_FLOW_MS = 64;
+
+/** Czy system prosi o ograniczenie ruchu – wtedy trasy zostają statyczne. */
+function prefersReducedMotion() {
+  return (
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+}
+
 function ringPath(ring, project) {
   return `${ring
     .map(([lon, lat], i) => {
@@ -188,9 +228,12 @@ export function renderSceneSvg(scene, opts = {}) {
           return `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`;
         })
         .join('');
+      // Klasa .route-flow animuje stroke-dashoffset w CSS: kreski płyną od
+      // pinu (pierwszy punkt trasy) w stronę granicy zasięgu. Animacja żyje
+      // w arkuszu, nie w JS, więc nic nie odlicza klatek, gdy mapa stoi.
       parts.push(
-        `<path d="${d}" fill="none" stroke="${stroke}" stroke-width="1.6" stroke-opacity="0.5" ` +
-          `stroke-dasharray="4 3" stroke-linecap="round"/>`
+        `<path class="route-flow" d="${d}" fill="none" stroke="${stroke}" stroke-width="1.6" ` +
+          `stroke-opacity="0.5" stroke-dasharray="4 3" stroke-linecap="round"/>`
       );
     }
   }
@@ -296,12 +339,45 @@ function createMapboxMap(container, opts) {
   let addMode = false;
   // A click that terminates a pin drag must not open anything.
   let dragged = false;
+  /** Klatka animacji tras dojścia (patrz startRouteFlow). */
+  let routeFlowTimer = null;
 
   const src = (id, data) => {
     if (map.getSource(id)) map.getSource(id).setData(data);
     else map.addSource(id, { type: 'geojson', data });
   };
   const emptyFc = { type: 'FeatureCollection', features: [] };
+
+  /**
+   * Płynąca linia przerywana na trasach dojścia.
+   *
+   * `line-dasharray` w Mapboksie nie da się animować przejściem – to własność
+   * dyskretna, bez interpolacji. Robi się to więc krokowo: co ROUTE_FLOW_MS
+   * podmieniamy wzór kresek na kolejny z drabinki, w której kreska rośnie,
+   * a przerwa maleje. Po pełnym cyklu wzór wraca do wyjściowego, więc ruch
+   * jest ciągły i wygląda jak przesuwanie się kresek od pinu do granicy.
+   *
+   * Zegar chodzi tylko wtedy, gdy na mapie faktycznie są trasy – po ich
+   * zgaszeniu jest zatrzymywany, żeby nie budzić przerysowań w tle.
+   */
+  const startRouteFlow = () => {
+    if (routeFlowTimer || prefersReducedMotion()) return;
+    let step = 0;
+    routeFlowTimer = setInterval(() => {
+      if (!ready || !map.getLayer('routes-line')) return;
+      step = (step + 1) % ROUTE_FLOW_STEPS.length;
+      map.setPaintProperty('routes-line', 'line-dasharray', ROUTE_FLOW_STEPS[step]);
+    }, ROUTE_FLOW_MS);
+  };
+
+  const stopRouteFlow = () => {
+    if (!routeFlowTimer) return;
+    clearInterval(routeFlowTimer);
+    routeFlowTimer = null;
+    if (ready && map.getLayer('routes-line')) {
+      map.setPaintProperty('routes-line', 'line-dasharray', ROUTE_FLOW_STEPS[0]);
+    }
+  };
 
   map.on('load', () => {
     src('boundary', emptyFc);
@@ -359,12 +435,14 @@ function createMapboxMap(container, opts) {
       id: 'routes-line',
       type: 'line',
       source: 'routes',
-      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      // Końcówka prosta, nie okrągła: drabinka animacji zawiera kreski
+      // o długości zero, a te z okrągłą końcówką rysowałyby się jako kropki.
+      layout: { 'line-join': 'round' },
       paint: {
         'line-color': ['case', ['==', ['get', 'kind'], 'proposed'], '#8a6fc7', '#4caf7d'],
         'line-width': 2,
         'line-opacity': 0.5,
-        'line-dasharray': [3, 2],
+        'line-dasharray': ROUTE_FLOW_STEPS[0],
       },
     });
     map.addLayer({
@@ -438,17 +516,18 @@ function createMapboxMap(container, opts) {
         })),
     });
 
-    src('routes', {
-      type: 'FeatureCollection',
-      features: (scene.showRoutes === false ? [] : scene.routes || [])
-        .map((r) => ({ line: (r && (r.line || r)) || null, kind: (r && r.kind) || 'existing' }))
-        .filter((r) => r.line && r.line.length > 1)
-        .map((r) => ({
-          type: 'Feature',
-          properties: { kind: r.kind },
-          geometry: { type: 'LineString', coordinates: r.line },
-        })),
-    });
+    const routeFeatures = (scene.showRoutes === false ? [] : scene.routes || [])
+      .map((r) => ({ line: (r && (r.line || r)) || null, kind: (r && r.kind) || 'existing' }))
+      .filter((r) => r.line && r.line.length > 1)
+      .map((r) => ({
+        type: 'Feature',
+        properties: { kind: r.kind },
+        geometry: { type: 'LineString', coordinates: r.line },
+      }));
+    src('routes', { type: 'FeatureCollection', features: routeFeatures });
+    // Zegar animacji chodzi tylko wtedy, gdy trasy są na mapie.
+    if (routeFeatures.length) startRouteFlow();
+    else stopRouteFlow();
 
     src('demand', {
       type: 'FeatureCollection',
@@ -539,6 +618,7 @@ function createMapboxMap(container, opts) {
     },
     destroy() {
       if (clickTimer) clearTimeout(clickTimer);
+      stopRouteFlow();
       markers.forEach((m) => m.remove());
       labelMarkers.forEach((m) => m.remove());
       map.remove();

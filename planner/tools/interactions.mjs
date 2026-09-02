@@ -391,6 +391,29 @@ check(
   String(routeStroke)
 );
 
+/* Kreski mają płynąć od pinu do granicy: animacja rusza stroke-dashoffset.
+   Mierzymy go dwa razy – jeśli stoi, animacji nie ma. */
+const dashOffsetNow = () =>
+  page.evaluate(() => {
+    const el = document.querySelector('.map-fallback svg path.route-flow');
+    if (!el) return null;
+    const cs = getComputedStyle(el);
+    return { offset: parseFloat(cs.strokeDashoffset), name: cs.animationName, dur: cs.animationDuration };
+  });
+const flowA = await dashOffsetNow();
+await page.waitForTimeout(280);
+const flowB = await dashOffsetNow();
+check(
+  'analiza: trasy dojścia są animowane (kreski płyną)',
+  !!flowA && flowA.name === 'route-flow' && flowB.offset !== flowA.offset,
+  flowA ? `${flowA.name} ${flowA.dur} · offset ${flowA.offset} → ${flowB.offset}` : 'brak trasy'
+);
+check(
+  'analiza: kreski płyną od pinu na zewnątrz (offset maleje)',
+  !!flowA && flowB.offset <= 0 && flowA.offset <= 0,
+  flowA ? `${flowA.offset} → ${flowB.offset}` : 'brak trasy'
+);
+
 await page.screenshot({ path: join(SHOTS, 'interactions-analysis-selected.png') });
 
 const closeBtn = page.locator('.panel .panel__selected button[title*="Zamknij"]');

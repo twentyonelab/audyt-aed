@@ -151,6 +151,7 @@ tools/generate-demo.mjs  generator danych z kontrolą KPI
 tools/fetch-reach.mjs    pobiera izochrony i trasy z Mapboksa do cache projektu
 tools/smoke.mjs          test przeglądarkowy całej ścieżki
 tools/interactions.mjs   test interakcji mapy (klik, przeciąganie, cofnij, kadr)
+tools/routeflow.mjs      test animacji tras dojścia na ścieżce Mapboksa (atrapa biblioteki)
 CONTRACT.md           interfejsy modułów (wiążące)
 ITERACJA2_SPEC.md     specyfikacja produktu
 ```
@@ -159,7 +160,8 @@ ITERACJA2_SPEC.md     specyfikacja produktu
 
 ```bash
 node tools/smoke.mjs          # 35 sprawdzeń: cała ścieżka 0→5, zero błędów konsoli
-node tools/interactions.mjs   # 31 sprawdzeń: interakcje mapy, filtr dzielnicy, ocena, PDF/ZIP
+node tools/interactions.mjs   # 72 sprawdzenia: interakcje mapy, karta punktu, PDF/ZIP, roadmapa
+node tools/routeflow.mjs      # 9 sprawdzeń: kreskowanie tras w Mapboksie (setPaintProperty)
 ```
 
 Oba potrzebują Chromium (Playwright) i same podnoszą lokalny serwer.
