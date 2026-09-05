@@ -10,7 +10,8 @@
  * Spec reference: ITERACJA2_SPEC.md §3 (shell), §6 (routes).
  */
 
-import { h, mount, clear, toast } from './ui.js';
+import { h, mount, clear, toast, icon } from './ui.js';
+import { wordmarkSvg } from './logo.js';
 import { state, canUndo, undo, undoLabel } from './state.js';
 import { OPERATOR } from '../config.js';
 
@@ -82,15 +83,10 @@ function undoButton() {
       onclick: undoLast,
       title: enabled ? `Cofnij: ${undoLabel()} (Ctrl+Z)` : 'Nie ma czego cofnąć',
     },
-    '↩ Cofnij'
+    icon('arrow-left', 14),
+    'Cofnij'
   );
 }
-
-/** Znak marki – błyskawica z księgi Sinecco, w kolorze dziedziczonym z CSS. */
-const MARK_SVG =
-  '<svg viewBox="0 0 296.533 400" aria-hidden="true"><path fill="currentColor" ' +
-  'd="M83.035 218.064L0 218.064L92.348 0L222.031 0L83.035 218.064ZM157.537 400L74.502 400' +
-  'L166.763 181.936L296.533 181.936L157.537 400Z"/></svg>';
 
 /**
  * Belka górna wg design systemu: znak i wordmark, kreska, nazwa projektu,
@@ -122,16 +118,23 @@ function topbar(activeStep) {
     h(
       'button',
       { class: 'topbar__brand', onclick: () => navigate('#/'), title: 'Wróć do pulpitu' },
-      h('span', { class: 'topbar__mark', html: MARK_SVG }),
-      h('span', { class: 'topbar__wordmark', text: 'sinecco' })
+      // Design system jest w tej sprawie kategoryczny: „Never redrawn, never
+      // recoloured" – logotyp idzie z oryginalnego wektora, w jednym tonie,
+      // w wysokości 30 px, którą TopBar ustawia domyślnie.
+      h('span', { class: 'topbar__wordmark', html: wordmarkSvg(30) })
     ),
     project ? h('span', { class: 'topbar__rule' }) : null,
     project
       ? h(
           'span',
           { class: 'topbar__project' },
-          h('small', { text: 'Projekt' }),
-          h('strong', { text: project.label || project.name })
+          h(
+            'span',
+            { class: 'topbar__project-text' },
+            h('small', { text: 'Projekt' }),
+            h('strong', { text: project.label || project.name })
+          ),
+          icon('chevron-down', 18, { class: 'topbar__project-chev' })
         )
       : null,
     h('nav', { class: 'topbar__nav', 'aria-label': 'Kroki audytu' }, ...tabs),
@@ -148,7 +151,7 @@ function topbar(activeStep) {
           title: 'Przejdź do raportu i wygeneruj PDF',
           'aria-label': 'Raport i PDF',
         },
-        '⌸'
+        icon('printer', 20)
       )
     )
   );
@@ -204,16 +207,18 @@ export async function render() {
     class: meta.layout === 'scroll' ? 'workspace workspace--scroll' : 'workspace',
   });
 
-  const stepLabel = meta.step !== undefined && meta.step !== null ? `Krok ${meta.step} z 5 · ` : '';
+  // Pasek podtytułu 1:1 z PlannerChrome: numer kroku wersalikami, pionowa
+  // kreska, tytuł półgruby, podtytuł w cudzysłowie, licznik dosunięty w prawo.
+  const hasStep = meta.step !== undefined && meta.step !== null;
   const subbar = h(
     'div',
     { class: 'subbar' },
-    h('span', {
-      class: 'subbar__title',
-      html: `${stepLabel}${meta.title || ''}${meta.subtitle ? ` <em>– „${meta.subtitle}”</em>` : ''}`,
-    }),
-    subbarMeta,
+    hasStep ? h('span', { class: 'subbar__step', text: `Krok ${meta.step} z 5` }) : null,
+    hasStep ? h('span', { class: 'subbar__rule' }) : null,
+    h('span', { class: 'subbar__title', text: meta.title || '' }),
+    meta.subtitle ? h('span', { class: 'subbar__sub', text: `– „${meta.subtitle}”` }) : null,
     h('span', { class: 'subbar__spacer' }),
+    subbarMeta,
     subbarControls
   );
 

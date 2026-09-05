@@ -5,6 +5,8 @@
  * `h()` or template strings and mount it with `mount()`.
  */
 
+import { iconSvg } from './icons.js';
+
 /* ------------------------------------------------------------------ *
  * DOM construction
  * ------------------------------------------------------------------ */
@@ -33,6 +35,32 @@ function appendAll(node, children) {
     if (child === null || child === undefined || child === false) continue;
     node.appendChild(child instanceof Node ? child : document.createTextNode(String(child)));
   }
+}
+
+/* ------------------------------------------------------------------ *
+ * Ikony
+ * ------------------------------------------------------------------ */
+
+/**
+ * Ikona z zestawu marki jako element.
+ *
+ * Kontur dziedziczy currentColor, więc kolor ustawia rodzic – dokładnie tak
+ * jak w prototypie. Nieznana nazwa daje pusty span zamiast wyjątku: brak
+ * ikony nie może wywrócić widoku.
+ */
+export function icon(name, size = 16, props = {}) {
+  return h('span', {
+    ...props,
+    class: `icon${props.class ? ` ${props.class}` : ''}`,
+    style: { width: `${size}px`, height: `${size}px`, ...(props.style || {}) },
+    html: iconSvg(name, size),
+    'aria-hidden': 'true',
+  });
+}
+
+/** Ta sama ikona jako łańcuch HTML – do miejsc, które składają szablony. */
+export function iconHtml(name, size = 16) {
+  return `<span class="icon" style="width:${size}px;height:${size}px">${iconSvg(name, size)}</span>`;
 }
 
 /** Parse an HTML string into a single element. */

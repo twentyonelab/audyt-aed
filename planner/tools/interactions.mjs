@@ -54,7 +54,7 @@ const go = async (hash, wait = 1000) => {
   await page.waitForTimeout(wait);
 };
 
-/** Count of lime recommendation squares currently in state. */
+/** Count of lime recommendation markers currently in state. */
 const proposedCount = () =>
   page.evaluate(() => window.__aed.points.filter((p) => p.kind === 'proposed' && p.status !== 'rejected').length);
 
@@ -91,8 +91,8 @@ const lastKind = await page.evaluate(() => {
 });
 check('analiza: nowy punkt to propozycja NEW-', /^NEW-\d+\/proposed\/proposed$/.test(lastKind), lastKind);
 
-const squares = await page.locator('.map-fallback svg rect[fill="#c9ee54"]').count();
-check('analiza: rekomendacje rysują się jako limonkowe kwadraty', squares >= after, `${squares} kwadratów`);
+const squares = await page.locator('.map-fallback svg .pin--proposed').count();
+check('analiza: rekomendacje rysują się jako limonkowe znaczniki', squares >= after, `${squares} znaczników`);
 
 /* Podwójny klik przybliża – i nie dokłada przy okazji dwóch punktów. */
 const beforeDbl = await proposedCount();
@@ -134,9 +134,9 @@ const spread = () =>
   });
 
 const spreadFitted = await spread();
-// Zoom wokół pierwszego limonkowego kwadratu – zoom celowany w kursor trzyma
-// ten punkt w miejscu, więc kwadrat nie ucieknie poza kadr przed przeciąganiem.
-const zoomAnchor = await page.locator('.map-fallback svg rect[fill="#c9ee54"]').first().boundingBox();
+// Zoom wokół pierwszego limonkowego znacznika – zoom celowany w kursor trzyma
+// ten punkt w miejscu, więc znacznik nie ucieknie poza kadr przed przeciąganiem.
+const zoomAnchor = await page.locator('.map-fallback svg .pin--proposed').first().boundingBox();
 box = await mapBox();
 await page.mouse.move(
   zoomAnchor ? zoomAnchor.x + zoomAnchor.width / 2 : box.x + box.width / 2,
@@ -152,14 +152,14 @@ check(
   `${spreadFitted} → ${scaleBefore}`
 );
 
-// Przeciągnij pierwszą propozycję (limonkowy kwadrat) o kawałek.
+// Przeciągnij pierwszą propozycję (limonkowy znacznik) o kawałek.
 const coordsOf = () =>
   page.evaluate(() => {
     const all = [...window.__aed.points, ...window.__aed.pendingProposals];
     return all.map((p) => `${p.lat},${p.lon}`).join('|');
   });
 const coordsBefore = await coordsOf();
-const sq = page.locator('.map-fallback svg rect[fill="#c9ee54"]').first();
+const sq = page.locator('.map-fallback svg .pin--proposed').first();
 const sqBox = await sq.boundingBox();
 if (sqBox) {
   await page.mouse.move(sqBox.x + sqBox.width / 2, sqBox.y + sqBox.height / 2);
@@ -194,7 +194,7 @@ const moveBtn = page.locator('button', { hasText: /PRZESU/i }).first();
 if (await moveBtn.count()) {
   await moveBtn.click();
   await page.waitForTimeout(600);
-  const pin = page.locator('.map-fallback svg circle[stroke], .map-fallback svg rect[stroke]').first();
+  const pin = page.locator('.map-fallback svg .pin').first();
   const pinBox = await pin.boundingBox();
   if (pinBox) {
     await page.mouse.move(pinBox.x + pinBox.width / 2, pinBox.y + pinBox.height / 2);
@@ -231,7 +231,7 @@ check('inwentaryzacja: pogrubiona etykieta Dzielnica:', (await page.locator('.ch
 await districtSelect.selectOption({ index: 1 });
 await page.waitForTimeout(600);
 
-const dimmedPins = await page.locator('.map-fallback svg [stroke][opacity="0.2"]').count();
+const dimmedPins = await page.locator('.map-fallback svg .pin[data-dimmed]').count();
 check('filtr dzielnicy wygasza punkty spoza niej do 20%', dimmedPins > 0, `${dimmedPins} wygaszonych`);
 const highlight = await page.locator('.map-fallback svg path[stroke="#0c9331"]').count();
 check('wybrana dzielnica jest podświetlona na mapie', highlight > 0, `${highlight} obrysów`);
@@ -360,7 +360,7 @@ const cardPlace = () =>
 check('analiza: karta punktu ukryta, dopóki nic nie wybrano', (await cardPlace()) === null);
 check('analiza: bez wyboru nie ma linii dojścia', (await routeLines()) === 0);
 
-await page.locator('.map-fallback svg circle[r="6"]').first().click();
+await page.locator('.map-fallback svg .pin:not(.pin--proposed)').first().click();
 await page.waitForTimeout(1200);
 
 const place = await cardPlace();
@@ -483,7 +483,7 @@ if (await cardPlace()) {
 }
 check('inwentaryzacja: karta ukryta, dopóki nic nie wybrano', (await cardPlace()) === null);
 
-await page.locator('.map-fallback svg circle[r="6"]').first().click();
+await page.locator('.map-fallback svg .pin:not(.pin--proposed)').first().click();
 await page.waitForTimeout(900);
 const invPlace = await cardPlace();
 check(
@@ -497,15 +497,15 @@ check(
   invPlace ? `margin ${invPlace.marginBottom}px · padding ${invPlace.paddingTop}/${invPlace.paddingRight}px` : 'brak karty'
 );
 
-const invSelected = await page.locator('.map-fallback svg circle[stroke="#000000"]').count();
-check('inwentaryzacja: wybrany pin ma ciemną obwódkę', invSelected === 1, `${invSelected} pinów`);
+const invSelected = await page.locator('.map-fallback svg .pin.is-selected').count();
+check('inwentaryzacja: wybrany pin jest wyróżniony', invSelected === 1, `${invSelected} pinów`);
 
 await page.locator('.panel .panel__selected button[title*="Zamknij"]').first().click();
 await page.waitForTimeout(700);
 check('inwentaryzacja: ✕ zamyka kartę', (await cardPlace()) === null);
 check(
   'inwentaryzacja: ✕ odklikuje pin na mapie',
-  (await page.locator('.map-fallback svg circle[stroke="#000000"]').count()) === 0
+  (await page.locator('.map-fallback svg .pin.is-selected').count()) === 0
 );
 
 /* ---------------------------------------------------------------- *
@@ -534,8 +534,8 @@ const confirmModal = async (label) => {
   await page.waitForTimeout(900);
 };
 
-// Zaznacz limonkowy kwadrat propozycji i usuń go z mini-karty.
-await page.locator('.map-fallback svg rect[fill="#c9ee54"]').first().click();
+// Zaznacz limonkowy znacznik propozycji i usuń go z mini-karty.
+await page.locator('.map-fallback svg .pin--proposed').first().click();
 await page.waitForTimeout(1200);
 const delBtn = page.locator('.panel .panel__selected button:has-text("USUŃ PUNKT")');
 check('analiza: karta rekomendacji ma USUŃ PUNKT', (await delBtn.count()) === 1);
@@ -557,7 +557,7 @@ await page.waitForTimeout(900);
 check('Cofnij przywraca usuniętą rekomendację', (await proposedCount()) === beforeDel, `${await proposedCount()}`);
 
 // Punkt istniejący takiego przycisku nie dostaje.
-await page.locator('.map-fallback svg circle[r="6"]').first().click();
+await page.locator('.map-fallback svg .pin:not(.pin--proposed)').first().click();
 await page.waitForTimeout(1100);
 check(
   'analiza: punkt istniejący NIE ma USUŃ PUNKT',
@@ -566,7 +566,7 @@ check(
 
 // Ta sama akcja w inwentaryzacji.
 await go('#/inventory', 1300);
-await page.locator('.map-fallback svg rect[fill="#c9ee54"]').first().click();
+await page.locator('.map-fallback svg .pin--proposed').first().click();
 await page.waitForTimeout(900);
 const invDel = page.locator('.panel .panel__selected button:has-text("USUŃ")');
 check('inwentaryzacja: karta rekomendacji ma USUŃ', (await invDel.count()) === 1);

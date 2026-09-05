@@ -14,11 +14,15 @@
 
 import { MAPBOX_TOKEN, MAP_STYLE, MAP_DEFAULT } from '../config.js';
 import { metresPerDegLon } from './model.js';
+import { ICON_PATHS, iconSvg } from './icons.js';
 
 const TOKEN_IS_REAL = typeof MAPBOX_TOKEN === 'string' && MAPBOX_TOKEN.startsWith('pk.');
 
 /** Ile klik na mapie czeka na ewentualny dblclick, zanim zostanie wysłany. */
 const CLICK_DELAY_MS = 260;
+
+/** Rozmiar znacznika AED na mapie roboczej – jak MapMarker size={28}. */
+const MARKER_SIZE = 28;
 
 export function mapboxAvailable() {
   return TOKEN_IS_REAL && typeof window !== 'undefined' && typeof window.mapboxgl !== 'undefined';
@@ -160,6 +164,66 @@ function prefersReducedMotion() {
   );
 }
 
+/* ------------------------------------------------------------------ *
+ * Znacznik AED – kropla z design systemu marki
+ * ------------------------------------------------------------------ */
+
+/**
+ * Ton i ikona znacznika dla poziomu punktu.
+ *
+ * Wprost z komponentu MapMarker: zweryfikowany zielony z pulsem, do sprawdzenia
+ * żółty z trójkątem ostrzegawczym, niezweryfikowany czerwony z pulsem,
+ * rekomendacja limonkowa z plusem. Rekomendacja jest jedyną, która niesie
+ * plus – bo jest propozycją dołożenia, a nie stanem faktycznym.
+ */
+const MARKER_STYLE = {
+  ok: { fill: () => COLORS.covered, icon: 'heart-pulse', ink: false },
+  warn: { fill: () => COLORS.near, icon: 'triangle-alert', ink: true },
+  crit: { fill: () => COLORS.uncovered, icon: 'heart-pulse', ink: false },
+  proposed: { fill: () => COLORS.proposed, icon: 'plus', ink: true },
+};
+
+function markerStyle(level) {
+  return MARKER_STYLE[level] || MARKER_STYLE.crit;
+}
+
+/**
+ * Ścieżka kropli o rozmiarze `size`, wyśrodkowana w (0, 0).
+ *
+ * Odpowiednik `border-radius: 50% 50% 50% 50% / 55% 55% 45% 45%`: górna połowa
+ * to łuk elipsy o promieniu pionowym 0,55 wysokości, dolna 0,45. Najszersze
+ * miejsce leży więc powyżej środka i kształt siada na mapie „cięższym" dołem.
+ */
+function markerPath(size) {
+  const rx = size / 2;
+  const top = size * 0.55;
+  const bottom = size * 0.45;
+  const y = top - size / 2; // środek pudełka jest w połowie wysokości
+  return (
+    `M${(-rx).toFixed(2)} ${y.toFixed(2)}` +
+    `a${rx.toFixed(2)} ${top.toFixed(2)} 0 0 1 ${size.toFixed(2)} 0` +
+    `a${rx.toFixed(2)} ${bottom.toFixed(2)} 0 0 1 ${(-size).toFixed(2)} 0Z`
+  );
+}
+
+/** Znacznik jako grupa SVG gotowa do wstawienia w renderze zapasowym. */
+function markerSvg(level, size, { dimmed = false, selected = false } = {}) {
+  const st = markerStyle(level);
+  const iconSize = Math.round(size * 0.52);
+  const k = iconSize / 24;
+  const glyph = ICON_PATHS[st.icon] || '';
+  return (
+    `<g${dimmed ? ' opacity="0.2"' : ''}>` +
+    `<path d="${markerPath(size)}" fill="${st.fill()}" stroke="${
+      selected ? COLORS.pinStrokeSelected : COLORS.pinStroke
+    }" stroke-width="${selected ? 2 : 1.4}"/>` +
+    `<g transform="translate(${(-iconSize / 2).toFixed(2)} ${(-iconSize / 2).toFixed(2)}) scale(${k.toFixed(4)})" ` +
+    `fill="none" stroke="${st.ink ? COLORS.pinStrokeSelected : COLORS.pinStroke}" stroke-width="2.4" ` +
+    `stroke-linecap="round" stroke-linejoin="round">${glyph}</g>` +
+    `</g>`
+  );
+}
+
 function ringPath(ring, project) {
   return `${ring
     .map(([lon, lat], i) => {
@@ -271,18 +335,16 @@ export function renderSceneSvg(scene, opts = {}) {
     }
   }
 
+  // Znaczniki: kropla z ikoną, ten sam kształt co w prototypie. W miniaturach
+  // (raport, mini-mapa karty) rysujemy je mniejsze, żeby nie zjadły kadru.
+  const markerSize = opts.markerSize || 18;
   for (const p of scene.points || []) {
     const [x, y] = project(p.lon, p.lat);
-    const fill =
-      p.level === 'ok' ? COLORS.covered : p.level === 'warn' ? COLORS.near : p.level === 'proposed' ? COLORS.proposed : COLORS.uncovered;
-    const dim = p.dimmed ? ' opacity="0.2"' : '';
-    if (p.level === 'proposed') {
-      parts.push(
-        `<rect x="${(x - 4.5).toFixed(1)}" y="${(y - 4.5).toFixed(1)}" width="9" height="9" fill="${fill}" stroke="#fff" stroke-width="1.6"${dim}/>`
-      );
-    } else {
-      parts.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4.5" fill="${fill}" stroke="#fff" stroke-width="1.6"${dim}/>`);
-    }
+    parts.push(
+      `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)})">` +
+        markerSvg(p.level, markerSize, { dimmed: p.dimmed }) +
+        `</g>`
+    );
   }
 
   if (opts.showLabels && scene.labels) {
@@ -553,10 +615,21 @@ function createMapboxMap(container, opts) {
 
     markers.forEach((m) => m.remove());
     markers = (scene.points || []).map((p) => {
+      // Znacznik to kropla z ikoną – ten sam kształt i te same ikony co
+      // w renderze zapasowym, tyle że tu rysuje je CSS na elemencie DOM.
+      const st = markerStyle(p.level);
       const node = document.createElement('div');
       node.className = `pin pin--${p.level}${p.id === scene.selectedId ? ' is-selected' : ''}`;
+      node.style.background = st.fill();
+      node.style.color = st.ink ? COLORS.pinStrokeSelected : COLORS.pinStroke;
+      node.innerHTML = iconSvg(st.icon, Math.round(MARKER_SIZE * 0.52));
+      node.dataset.level = p.level;
+      node.dataset.pin = p.id;
       node.title = p.name || '';
-      if (p.dimmed) node.style.opacity = '0.2';
+      if (p.dimmed) {
+        node.style.opacity = '0.2';
+        node.dataset.dimmed = 'true';
+      }
       node.addEventListener('pointerdown', () => {
         dragged = false;
       });
@@ -751,24 +824,20 @@ function createFallbackMap(container, opts) {
 
     for (const p of scene.points || []) {
       const [x, y] = projection.project(p.lon, p.lat);
-      const isProposed = p.level === 'proposed';
-      const node = document.createElementNS('http://www.w3.org/2000/svg', isProposed ? 'rect' : 'circle');
-      const fill =
-        p.level === 'ok' ? COLORS.covered : p.level === 'warn' ? COLORS.near : isProposed ? COLORS.proposed : COLORS.uncovered;
-      if (isProposed) {
-        node.setAttribute('x', (x - 6).toFixed(1));
-        node.setAttribute('y', (y - 6).toFixed(1));
-        node.setAttribute('width', '12');
-        node.setAttribute('height', '12');
-      } else {
-        node.setAttribute('cx', x.toFixed(1));
-        node.setAttribute('cy', y.toFixed(1));
-        node.setAttribute('r', '6');
-      }
-      node.setAttribute('fill', fill);
-      node.setAttribute('stroke', p.id === scene.selectedId ? COLORS.pinStrokeSelected : COLORS.pinStroke);
-      node.setAttribute('stroke-width', p.id === scene.selectedId ? '2.4' : '2');
-      if (p.dimmed) node.setAttribute('opacity', '0.2');
+      // Znacznik to grupa: kropla plus ikona. Zdarzenia wiszą na grupie, więc
+      // przeciąganie i klikanie działa tak samo jak przy dawnym kółku.
+      const node = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      node.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)})`);
+      // Zaczepy dla testów i dla stylowania: kształt znacznika może się jeszcze
+      // zmienić, stan punktu nie.
+      node.setAttribute('class', `pin pin--${p.level}${p.id === scene.selectedId ? ' is-selected' : ''}`);
+      node.setAttribute('data-level', p.level);
+      node.setAttribute('data-pin', p.id);
+      if (p.dimmed) node.setAttribute('data-dimmed', 'true');
+      node.innerHTML = markerSvg(p.level, MARKER_SIZE, {
+        dimmed: p.dimmed,
+        selected: p.id === scene.selectedId,
+      });
       node.style.cursor = p.draggable ? 'grab' : 'pointer';
 
       node.addEventListener('pointerdown', (ev) => {
@@ -822,13 +891,7 @@ function createFallbackMap(container, opts) {
         const [lon, lat] = projection.unproject(ev.clientX - rect.left, ev.clientY - rect.top);
         const px = ev.clientX - rect.left;
         const py = ev.clientY - rect.top;
-        if (dragging.node.tagName === 'rect') {
-          dragging.node.setAttribute('x', (px - 6).toFixed(1));
-          dragging.node.setAttribute('y', (py - 6).toFixed(1));
-        } else {
-          dragging.node.setAttribute('cx', px.toFixed(1));
-          dragging.node.setAttribute('cy', py.toFixed(1));
-        }
+        dragging.node.setAttribute('transform', `translate(${px.toFixed(1)} ${py.toFixed(1)})`);
         bus.emit('pointdrag', { ...dragging.point, lat, lon });
         return;
       }

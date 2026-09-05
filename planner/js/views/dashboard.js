@@ -10,7 +10,7 @@ import { reachMapSync } from '../reach.js';
 import { analyze, fmtPct, fmtMin, fmtNum, fmtCost } from '../model.js';
 import { state, exportProject, resetToDemo } from '../state.js';
 import {
-  h, el, mount, pillHtml, toast, modal, disabledControl, download,
+  h, el, mount, pillHtml, toast, modal, disabledControl, download, icon,
 } from '../ui.js';
 
 export const meta = {
@@ -460,5 +460,32 @@ export async function render(root, ctx) {
     )
   );
 
-  mount(root, h('div', { class: 'dash' }, projectsSection, reportsSection, presetsSection, footerSection));
+  /* --- pasmo otwierające: fotografia i zaproszenie do nowego audytu --- */
+
+  // HeroBanner z design systemu: zdjęcie z ciemnym scrimem po lewej, drugie
+  // zdjęcie w kolumnie 470 px po prawej, nagłówek 64 px na scrimie. To jedyne
+  // miejsce w aplikacji, gdzie fotografia niesie treść, a nie dekoruje.
+  const hero = h(
+    'div',
+    { class: 'hero' },
+    h('div', { class: 'hero__photo' }, h('div', { class: 'hero__scrim' })),
+    h(
+      'div',
+      { class: 'hero__body' },
+      h('div', { class: 'hero__eyebrow', text: 'Sinecco · AED Planner' }),
+      h('h1', { class: 'hero__headline', text: 'Bezpieczeństwo zaczyna się od dobrego planu.' }),
+      h(
+        'button',
+        { class: 'btn btn--signal btn--lg btn--bolt', onclick: () => openNewAudit(navigate) },
+        h('span', { text: 'Nowy audyt' })
+      )
+    ),
+    h('div', { class: 'hero__inset' })
+  );
+
+  mount(
+    root,
+    hero,
+    h('div', { class: 'dash' }, projectsSection, reportsSection, presetsSection, footerSection)
+  );
 }

@@ -21,13 +21,23 @@ OUT = ROOT / "dist" / "aed-planner-standalone.html"
 
 # Load order is irrelevant – the registry evaluates lazily – but listing them
 # explicitly keeps the bundle deterministic and makes a missing file loud.
+# Kolejność jest kolejnością zależności: moduł musi stać za wszystkim,
+# co importuje. Lista jest pełna – brak choćby jednego pliku wywala
+# aplikację w pliku samodzielnym, a nie w wersji serwowanej, więc łatwo
+# tego nie zauważyć. Test tools/bundlecheck.mjs pilnuje, żeby się zgadzała.
 MODULES = [
     "config.js",
     "js/model.js",
+    "js/icons.js",
+    "js/logo.js",
     "js/ui.js",
+    "js/reach.js",
     "js/state.js",
     "js/map.js",
     "js/photos.js",
+    "js/pdf.js",
+    "js/zip.js",
+    "js/cardpdf.js",
     "js/report.js",
     "js/router.js",
     "js/views/dashboard.js",
@@ -47,6 +57,10 @@ DATA_FILES = [
     "data/districts-tychy.geojson",
     "data/presets.json",
     "data/demo-tychy.json",
+    # Zasięgi po sieci pieszej. Bez nich plik samodzielny liczyłby pokrycie
+    # okręgami i pokazywałby inne liczby niż wersja serwowana – a to ten sam
+    # audyt. Waży ok. 124 kB i jedzie razem z resztą.
+    "data/reach-tychy.json",
 ]
 
 IMPORT_RE = re.compile(
@@ -58,6 +72,10 @@ EXPORT_RE = re.compile(
     r"^export\s+(?P<kind>const|let|var|function|async\s+function)\s+(?P<name>[A-Za-z_$][\w$]*)",
     re.MULTILINE,
 )
+# `export { a, b as c };` – reeksport nazw zaimportowanych wyżej w tym pliku.
+# W module ES to zwykła składnia, w sklejce trzeba ją zamienić na dopisanie
+# tych nazw do eksportów, bo samo `export {}` nie ma tu żadnego znaczenia.
+EXPORT_LIST_RE = re.compile(r"^export\s*\{(?P<names>[^}]*)\}\s*;?\s*$", re.MULTILINE)
 
 
 def _norm(base: pathlib.PurePosixPath, rel: str) -> str:
@@ -104,6 +122,15 @@ def transform(key: str, source: str) -> str:
         exported.append(m.group("name"))
     code = EXPORT_RE.sub(lambda m: f"{m.group('kind')} {m.group('name')}", code)
 
+    for m in EXPORT_LIST_RE.finditer(code):
+        for raw in m.group("names").split(","):
+            item = raw.strip()
+            if not item:
+                continue
+            alias = re.match(r"^(\S+)\s+as\s+(\S+)$", item)
+            exported.append(alias.group(2) if alias else item)
+    code = EXPORT_LIST_RE.sub("", code)
+
     if re.search(r"^\s*(import|export)\s", code, re.MULTILINE):
         leftovers = [
             line for line in code.splitlines()
@@ -113,6 +140,32 @@ def transform(key: str, source: str) -> str:
 
     returns = ", ".join(sorted(set(exported)))
     return f"__defs['{key}'] = function () {{\n{code}\nreturn {{ {returns} }};\n}};"
+
+
+def inline_css_assets(css: str) -> str:
+    """Wstawia zdjęcia z url(...) jako data URI.
+
+    Bez tego plik samodzielny traciłby fotografie z pasma otwierającego:
+    przeglądarka szukałaby ich obok pliku HTML, a tam ich nie ma. Zdjęcia
+    są w formacie PNG i ważą ok. 0,6 MB łącznie – to cena za jeden plik,
+    który działa bez serwera.
+    """
+    import base64
+    import re
+
+    def repl(m: "re.Match[str]") -> str:
+        rel = m.group(1).lstrip("./")
+        while rel.startswith("../"):
+            rel = rel[3:]
+        path = ROOT / rel
+        if not path.exists():
+            print(f"  uwaga: brak {rel}, zostawiam url() bez zmian")
+            return m.group(0)
+        mime = "image/png" if path.suffix == ".png" else "image/svg+xml"
+        data = base64.b64encode(path.read_bytes()).decode("ascii")
+        return f"url('data:{mime};base64,{data}')"
+
+    return re.sub(r"url\(['\"]?([^'\")]+\.(?:png|svg))['\"]?\)", repl, css)
 
 
 def main() -> None:
@@ -125,13 +178,14 @@ def main() -> None:
     )
     data = {p: json.loads((ROOT / p).read_text(encoding="utf-8")) for p in DATA_FILES}
     css = (ROOT / "css" / "app.css").read_text(encoding="utf-8")
+    css = inline_css_assets(css)
 
     html = f"""<!doctype html>
 <html lang="pl">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sinecco · AED Planner – makieta iteracji 2</title>
+<title>Sinecco · AED Planner</title>
 <style>
 {css}
 </style>

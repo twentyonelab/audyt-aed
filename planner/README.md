@@ -1,8 +1,40 @@
-# Sinecco AED Planner – v2 (design system marki)
+# Sinecco AED Planner – v3 (design system marki, z grafiką)
 
 Narzędzie audytu i planowania sieci defibrylatorów AED dla gmin.
 Działający prototyp całego procesu – do pokazania klientowi, klikania na
 spotkaniu i nanoszenia uwag bezpośrednio w nim.
+
+## Co zmienia v3
+
+v3 dokłada do v2 **warstwę graficzną z prototypu widoków**: to, czego nie da
+się odtworzyć z samych tokenów.
+
+- **47 ikon** z zestawu marki (Lucide, licencja ISC) zamiast glifów tekstowych.
+  Siedzą w `js/icons.js` jako treść `<svg>`, a nie jako osobne pliki – maska CSS
+  wskazująca na `url()` nie przetrwałaby sklejenia do pliku samodzielnego.
+  Źródła zostają w `assets/icons/`.
+- **Oryginalny logotyp** z wektorów marki (`js/logo.js`, źródła w `assets/logo/`)
+  zamiast napisu w zastępczym kroju. Design system jest w tej sprawie
+  kategoryczny: „never redrawn, never recoloured", więc znak idzie w jednym
+  tonie, w wysokości 30 px, którą ustawia `TopBar`.
+- **Znaczniki mapy z komponentu `MapMarker`**: kropla (górna połowa o promieniu
+  pionowym 55% wysokości, dolna 45%) z ikoną w środku. Zweryfikowany zielony
+  z pulsem, do sprawdzenia żółty z trójkątem, niezweryfikowany czerwony
+  z pulsem, rekomendacja limonkowa z plusem. Ten sam kształt w Mapboksie
+  (CSS na elemencie DOM) i w renderze zapasowym (grupa SVG).
+- **Pasmo fotograficzne `HeroBanner`** na pulpicie: zdjęcie z ciemnym scrimem
+  po lewej, drugie zdjęcie w kolumnie 470 px, nagłówek 64 px w wadze zwykłej
+  i limonkowy przycisk ze znakiem marki. Fotografie (`assets/img/`) jadą
+  w pliku samodzielnym jako data URI.
+- **Pasek podtytułu 1:1 z `PlannerChrome`**: szara wstawka zamiast białej belki,
+  numer kroku wersalikami, pionowa kreska, licznik dosunięty w prawo.
+
+Przy okazji naprawiona usterka, która siedziała w repozytorium od kilku tur:
+`tools/bundle.py` nie miał na liście `js/reach.js` ani `data/reach-tychy.json`,
+więc **plik samodzielny nie uruchamiał się w ogóle**, a wersja serwowana
+działała dalej. Nowy test `tools/bundlecheck.mjs` otwiera sklejkę z `file://`,
+przechodzi po wszystkich ośmiu widokach i pilnuje, żeby lista modułów
+zgadzała się z zawartością `js/`.
 
 ## Co zmienia v2
 
@@ -175,6 +207,7 @@ tools/smoke.mjs          test przeglądarkowy całej ścieżki
 tools/interactions.mjs   test interakcji mapy (klik, przeciąganie, cofnij, kadr)
 tools/routeflow.mjs      test animacji tras dojścia na ścieżce Mapboksa (atrapa biblioteki)
 tools/routetrim.mjs      test przycinania tras do obrysu i do czasu standardu (dane z cache)
+tools/bundlecheck.mjs    test pliku samodzielnego z dist/ (wszystkie widoki, grafiki, ikony)
 CONTRACT.md           interfejsy modułów (wiążące)
 ITERACJA2_SPEC.md     specyfikacja produktu
 ```
@@ -186,6 +219,8 @@ node tools/smoke.mjs          # 35 sprawdzeń: cała ścieżka 0→5, zero błę
 node tools/interactions.mjs   # 72 sprawdzenia: interakcje mapy, karta punktu, PDF/ZIP, roadmapa
 node tools/routeflow.mjs      # 9 sprawdzeń: kreskowanie tras w Mapboksie (setPaintProperty)
 node tools/routetrim.mjs      # 6 sprawdzeń: żadna trasa poza obrysem ani ponad standard czasu
+python3 tools/bundle.py       # sklejka do dist/aed-planner-standalone.html
+node tools/bundlecheck.mjs    # 12 sprawdzeń: sklejka realnie działa z file://
 ```
 
 Oba potrzebują Chromium (Playwright) i same podnoszą lokalny serwer.

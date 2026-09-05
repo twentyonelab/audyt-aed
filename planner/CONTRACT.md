@@ -1,4 +1,4 @@
-# CONTRACT.md – interfejsy modułów (v2)
+# CONTRACT.md – interfejsy modułów (v3)
 
 Dokument wiążący dla wszystkich plików w `js/views/`. Rdzeń (`state.js`,
 `model.js`, `ui.js`, `map.js`, `router.js`, `css/app.css`) jest **gotowy i nie
