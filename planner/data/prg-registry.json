@@ -1,0 +1,26 @@
+{
+  "meta": {
+    "name": "Państwowy Rejestr Granic i Powierzchni Jednostek Podziałów Terytorialnych Kraju",
+    "short": "PRG",
+    "note": "wycinek rejestru na potrzeby makiety. Pełny PRG z GUGiK (wszystkie gminy, kody TERYT) wchodzi w etapie 1.",
+    "updated": "2026-09-05"
+  },
+  "gminy": [
+    {
+      "id": "tychy",
+      "name": "Tychy",
+      "type": "miasto na prawach powiatu",
+      "powiat": "Tychy",
+      "voivodeship": "śląskie",
+      "file": "data/boundary-tychy.geojson"
+    },
+    { "id": "bierun", "name": "Bieruń", "type": "gmina miejska", "powiat": "bieruńsko-lędziński", "voivodeship": "śląskie", "file": null },
+    { "id": "ledziny", "name": "Lędziny", "type": "gmina miejska", "powiat": "bieruńsko-lędziński", "voivodeship": "śląskie", "file": null },
+    { "id": "bojszowy", "name": "Bojszowy", "type": "gmina wiejska", "powiat": "bieruńsko-lędziński", "voivodeship": "śląskie", "file": null },
+    { "id": "kobior", "name": "Kobiór", "type": "gmina wiejska", "powiat": "pszczyński", "voivodeship": "śląskie", "file": null },
+    { "id": "wyry", "name": "Wyry", "type": "gmina wiejska", "powiat": "mikołowski", "voivodeship": "śląskie", "file": null },
+    { "id": "mikolow", "name": "Mikołów", "type": "gmina miejska", "powiat": "mikołowski", "voivodeship": "śląskie", "file": null },
+    { "id": "brodnica", "name": "Brodnica", "type": "gmina miejska", "powiat": "brodnicki", "voivodeship": "kujawsko-pomorskie", "file": null },
+    { "id": "czluchow", "name": "Człuchów", "type": "gmina miejska", "powiat": "człuchowski", "voivodeship": "pomorskie", "file": null }
+  ]
+}

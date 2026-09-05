@@ -24,6 +24,7 @@ import {
   completeness,
   pointStatusLevel,
   coverageRadiusM,
+  reachLabel,
   ringCentroid,
   fmtNum,
   fmtMin,
@@ -54,15 +55,28 @@ const STANDARDS = [
 ];
 
 const BOUNDARY_FILE = 'boundary-tychy.geojson';
-const BOUNDARY_DELAY_MS = 800;
+
+/**
+ * Wycinek Państwowego Rejestru Granic.
+ *
+ * Rejestr wczytuje się sam przy wejściu w krok 0 – wybór gminy nie powinien
+ * wymagać klikania „pobierz". Plik jest statyczny i zawiera gminę
+ * demonstracyjną, jej sąsiadów i gminy z listy projektów. Prawdziwy PRG
+ * (wszystkie gminy, kody TERYT, aktualizacja z GUGiK) wchodzi w etapie 1;
+ * do tego czasu pozycje bez pliku granicy mówią to wprost.
+ */
+const REGISTRY_FILE = 'data/prg-registry.json';
 
 /* ------------------------------------------------------------------ *
  * Stan lokalny widoku (przeżywa przerysowanie po save(), nie jest danymi)
  * ------------------------------------------------------------------ */
 
 let map = null;
-let boundaryTimer = null;
 let boundaryStatus = 'idle'; // 'idle' | 'loading' | 'done'
+let registry = null; // {meta, gminy} – wczytany rejestr granic
+let registryStatus = 'idle'; // 'idle' | 'loading' | 'ready' | 'error'
+let registryQuery = ''; // treść filtra, przeżywa przerysowanie po save()
+let loadedGminaId = null; // która pozycja rejestru dała aktualną granicę
 let districtsInfo = null; // {rows, population, source:'demo'|'csv', fileName}
 let importInfo = null; // {count, format}
 
@@ -211,10 +225,8 @@ export async function render(root, ctx) {
 
   if (ctx.setMeta) {
     ctx.setMeta(
-      `${fmtNum(analysis.activeCount)} AED · standard ${fmtMin(project.standardMinutes, 0)} · promień ${fmtNum(
-        analysis.radiusM,
-        0
-      )} m`
+      `${fmtNum(analysis.activeCount)} AED · standard ${fmtMin(project.standardMinutes, 0)} · ` +
+        reachLabel(analysis, project.standardMinutes)
     );
   }
 
@@ -238,56 +250,173 @@ export async function render(root, ctx) {
   });
   const nameField = field('Nazwa gminy', nameInput, labelHint);
 
-  /* ---------------- 2. Granica gminy ---------------- */
+  /* ---------------- 2. Granica gminy: rejestr PRG ---------------- */
 
   const boundaryStatusEl = h('div', { class: 'field__hint' });
-  const boundaryBtn = h('button', { class: 'btn' }, 'Pobierz z rejestru PRG ⟳');
+  const registryList = h('div', { class: 'registry__list' });
+  const registryNote = h('p', { class: 'registry__note' });
+
+  const searchInput = h('input', {
+    class: 'input input--sm',
+    type: 'search',
+    placeholder: 'Szukaj gminy, powiatu, województwa…',
+    value: registryQuery,
+    'aria-label': 'Filtr rejestru granic',
+    oninput: (e) => {
+      registryQuery = e.target.value;
+      paintRegistry();
+    },
+  });
 
   const paintBoundaryStatus = () => {
     if (boundaryStatus === 'loading') {
-      boundaryStatusEl.textContent = 'Pobieranie granicy z rejestru PRG…';
+      boundaryStatusEl.textContent = 'Wczytywanie granicy z rejestru…';
       return;
     }
-    if (boundaryStatus === 'done') {
-      const [w, s, e, n] = bboxOf(state.boundary);
-      boundaryStatusEl.textContent =
-        `✓ Wczytano granicę gminy z pliku ${BOUNDARY_FILE} (dane realne, PRG). ` +
-        `Zakres: ${fmtNum(w, 3)}–${fmtNum(e, 3)} E · ${fmtNum(s, 3)}–${fmtNum(n, 3)} N.`;
+    if (!state.boundary) {
+      boundaryStatusEl.textContent = 'Brak granicy gminy – wybierz pozycję z rejestru.';
       return;
     }
-    boundaryStatusEl.textContent = state.boundary
-      ? `Granica jest wczytana wstępnie (${BOUNDARY_FILE}) – potwierdź pobraniem z rejestru.`
-      : 'Brak granicy gminy.';
+    const [w, s2, e, n] = bboxOf(state.boundary);
+    boundaryStatusEl.textContent =
+      `✓ Granica wczytana (${BOUNDARY_FILE}, dane realne PRG). ` +
+      `Zakres: ${fmtNum(w, 3)}–${fmtNum(e, 3)} E · ${fmtNum(s2, 3)}–${fmtNum(n, 3)} N.`;
   };
 
-  boundaryBtn.addEventListener('click', () => {
-    if (boundaryStatus === 'loading') return;
+  /**
+   * Wczytanie granicy wybranej gminy.
+   *
+   * W makiecie plik ma tylko gmina demonstracyjna. Pozycje bez pliku nie
+   * udają, że coś się dzieje – mówią, czego brakuje, zamiast zostawiać
+   * użytkownika przy pustej mapie.
+   */
+  const chooseGmina = async (entry) => {
+    if (!entry.file) {
+      toast(`${entry.name}: rejestr zna tę gminę, ale w makiecie nie ma jeszcze pliku granicy.`);
+      return;
+    }
+    if (loadedGminaId === entry.id && state.boundary) {
+      toast(`Granica gminy ${entry.name} jest już wczytana.`);
+      return;
+    }
     boundaryStatus = 'loading';
-    boundaryBtn.setAttribute('disabled', '');
-    boundaryBtn.classList.add('is-disabled');
     paintBoundaryStatus();
-
-    clearTimeout(boundaryTimer);
-    boundaryTimer = setTimeout(() => {
-      boundaryTimer = null;
+    try {
+      const response = await fetch(entry.file);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      state.boundary = await response.json();
+      loadedGminaId = entry.id;
       boundaryStatus = 'done';
-      boundaryBtn.removeAttribute('disabled');
-      boundaryBtn.classList.remove('is-disabled');
       paintBoundaryStatus();
+      paintRegistry();
       refreshMapPreview();
-      toast('Granica gminy potwierdzona.');
-    }, BOUNDARY_DELAY_MS);
-  });
+      toast(`Wczytano granicę gminy ${entry.name} z rejestru.`);
+    } catch (err) {
+      console.warn('nie udało się wczytać granicy', err);
+      boundaryStatus = 'idle';
+      paintBoundaryStatus();
+      toast(`Nie udało się wczytać granicy gminy ${entry.name}.`);
+    }
+  };
 
-  paintBoundaryStatus();
-  if (boundaryStatus === 'loading') {
-    boundaryBtn.setAttribute('disabled', '');
-    boundaryBtn.classList.add('is-disabled');
+  const matches = (entry) => {
+    const q = registryQuery.trim().toLowerCase();
+    if (!q) return true;
+    return [entry.name, entry.powiat, entry.voivodeship, entry.type]
+      .join(' ')
+      .toLowerCase()
+      .includes(q);
+  };
+
+  function paintRegistry() {
+    registryList.textContent = '';
+
+    if (registryStatus === 'loading' || registryStatus === 'idle') {
+      registryList.append(h('div', { class: 'registry__empty', text: 'Wczytywanie rejestru granic…' }));
+      return;
+    }
+    if (registryStatus === 'error') {
+      registryList.append(
+        h('div', { class: 'registry__empty', text: 'Nie udało się wczytać rejestru granic.' })
+      );
+      return;
+    }
+
+    const all = (registry && registry.gminy) || [];
+    const rows = all.filter(matches);
+    if (!rows.length) {
+      registryList.append(
+        h('div', { class: 'registry__empty', text: `Brak pozycji dla „${registryQuery.trim()}".` })
+      );
+      return;
+    }
+
+    for (const entry of rows) {
+      const isLoaded = loadedGminaId === entry.id;
+      registryList.append(
+        h(
+          'button',
+          {
+            class: `registry__row${isLoaded ? ' is-on' : ''}${entry.file ? '' : ' is-empty'}`,
+            type: 'button',
+            onclick: () => chooseGmina(entry),
+          },
+          h(
+            'span',
+            { class: 'registry__text' },
+            h('strong', { text: entry.name }),
+            h('small', { text: `${entry.type} · pow. ${entry.powiat} · woj. ${entry.voivodeship}` })
+          ),
+          h('span', {
+            class: `registry__tag${isLoaded ? ' is-on' : ''}`,
+            text: isLoaded ? 'wczytana' : entry.file ? 'dostępna' : 'brak pliku',
+          })
+        )
+      );
+    }
+
+    registryNote.textContent =
+      `${fmtNum(rows.length)} z ${fmtNum(all.length)} pozycji · ` +
+      ((registry && registry.meta && registry.meta.note) || '');
   }
 
+  // Rejestr ładuje się sam – bez klikania „pobierz".
+  const ensureRegistry = async () => {
+    if (registryStatus === 'ready' || registryStatus === 'loading') {
+      paintRegistry();
+      return;
+    }
+    registryStatus = 'loading';
+    paintRegistry();
+    try {
+      const response = await fetch(REGISTRY_FILE);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      registry = await response.json();
+      registryStatus = 'ready';
+      // Granica z demo jest już w pamięci przy wejściu – zaznaczamy, z której
+      // pozycji rejestru pochodzi, żeby lista nie wyglądała na nieaktywną.
+      if (!loadedGminaId && state.boundary) {
+        const guess = (registry.gminy || []).find(
+          (g) => g.file && slug(g.name) === slug(project.name)
+        );
+        if (guess) {
+          loadedGminaId = guess.id;
+          boundaryStatus = 'done';
+        }
+      }
+    } catch (err) {
+      console.warn('nie udało się wczytać rejestru granic', err);
+      registryStatus = 'error';
+    }
+    paintRegistry();
+    paintBoundaryStatus();
+  };
+
+  paintBoundaryStatus();
+
   const boundaryField = field(
-    'Granica gminy',
-    h('div', { class: 'field__row' }, boundaryBtn),
+    'Granica gminy · rejestr PRG',
+    h('div', { class: 'registry' }, searchInput, registryList, registryNote),
     boundaryStatusEl
   );
 
@@ -413,7 +542,12 @@ export async function render(root, ctx) {
             if (project.standardMinutes === option.minutes) return;
             project.standardMinutes = option.minutes;
             await save();
-            toast(`Standard ${option.label} · promień ${fmtNum(coverageRadiusM(option.minutes), 0)} m.`);
+            toast(
+              `Standard ${option.label} · ${reachLabel(analysis, option.minutes)}.` +
+                (analysis.reachMode === 'network'
+                  ? ' Zasięgi liczą się z izochron, nie z okręgu.'
+                  : '')
+            );
           },
         },
         option.label
@@ -427,11 +561,13 @@ export async function render(root, ctx) {
       'div',
       { class: 'field__row' },
       seg,
-      h('span', { class: 'muted num', text: `promień strefy: ${fmtNum(radiusM, 0)} m` })
+      h('span', { class: 'muted num', text: reachLabel(analysis, project.standardMinutes) })
     ),
     hint(
-      `Świadek biegnie po AED i wraca – ${fmtMin(project.standardMinutes, 0)} liczymy w jedną stronę ` +
-        `(100 m/min, korekta trasy 1,35).`
+      `Świadek biegnie po AED i wraca – ${fmtMin(project.standardMinutes, 0)} liczymy w jedną stronę. ` +
+        (analysis.reachMode === 'radius'
+          ? `Bez izochron zasięg to okrąg ${fmtNum(radiusM, 0)} m (100 m/min, korekta trasy 1,35).`
+          : 'Zasięg wyznaczają izochrony po sieci pieszej, więc obrys nie jest kołem.')
     )
   );
 
@@ -586,10 +722,9 @@ export async function render(root, ctx) {
     }),
     h('div', {
       class: 'note',
-      text: `Standard ${fmtMin(project.standardMinutes, 0)} · promień strefy ${fmtNum(
-        analysis.radiusM,
-        0
-      )} m · ${fmtNum(state.demandPoints.length)} punktów popytu w modelu.`,
+      text:
+        `Standard ${fmtMin(project.standardMinutes, 0)} · ${reachLabel(analysis, project.standardMinutes)} · ` +
+        `${fmtNum(state.demandPoints.length)} punktów popytu w modelu.`,
     })
   );
 
@@ -632,6 +767,10 @@ export async function render(root, ctx) {
   );
 
   refreshMapPreview();
+
+  // Rejestr granic dociąga się w tle, już po pokazaniu formularza – lista
+  // sama się wypełni, a użytkownik nie czeka na pusty ekran.
+  ensureRegistry();
 }
 
 /** Podgląd: granica + dzielnice + piny istniejących punktów (bez stref i popytu). */
@@ -661,6 +800,8 @@ function refreshMapPreview() {
     boundary: state.boundary,
     districts: state.districtsGeo,
     showDistricts: true,
+    // Po wczytaniu granicy teren spoza gminy gaśnie – widać, co obejmuje audyt.
+    maskOutside: !!state.boundary,
     coverage: [],
     showCoverage: false,
     demand: [],
@@ -674,11 +815,7 @@ function refreshMapPreview() {
 }
 
 export function destroy() {
-  if (boundaryTimer) {
-    clearTimeout(boundaryTimer);
-    boundaryTimer = null;
-    if (boundaryStatus === 'loading') boundaryStatus = 'idle';
-  }
+  if (boundaryStatus === 'loading') boundaryStatus = 'idle';
   if (map) {
     try {
       map.destroy();

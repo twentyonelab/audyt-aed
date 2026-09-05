@@ -86,6 +86,23 @@ const pins = await page.locator('.map-fallback .pin').count();
 const glyphs = await page.locator('.map-fallback .pin path').count();
 check('znaczniki mapy mają kształt i ikonę', pins > 0 && glyphs > 0, `${pins} pinów · ${glyphs} ścieżek ikon`);
 
+// Rejestr granic jedzie w pliku jako wklejone dane – w wersji samodzielnej
+// nie ma serwera, z którego dałoby się go dociągnąć.
+await page.goto(`file://${BUNDLE}#/setup`, { waitUntil: 'domcontentloaded' });
+await page.waitForTimeout(1800);
+const regRows = await page.locator('.registry__row').count();
+check('rejestr granic działa też w pliku samodzielnym', regRows > 3, `${regRows} pozycji`);
+
+// Warstwa zagęszczenia liczy się w przeglądarce, więc musi działać offline.
+await page.goto(`file://${BUNDLE}#/analysis`, { waitUntil: 'domcontentloaded' });
+await page.waitForTimeout(1800);
+const maskCount = await page.locator('.map-fallback svg path[fill-rule="evenodd"]').count();
+check('maska poza granicą jest w pliku samodzielnym', maskCount === 1, `${maskCount} masek`);
+await page.locator('.layer-dock__btn').nth(1).click();
+await page.waitForTimeout(3000);
+const dens = await page.locator('.map-fallback svg .density-dot').count();
+check('warstwa zagęszczenia liczy się offline', dens > 1500, `${dens} kropek`);
+
 const real = errors.filter((e) => !/mapbox|net::ERR|favicon|Failed to load resource/i.test(e));
 check('brak błędów w konsoli', real.length === 0, real.slice(0, 2).join(' | '));
 

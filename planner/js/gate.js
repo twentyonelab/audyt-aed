@@ -150,7 +150,13 @@ export function requireUnlock(root) {
           { class: 'gate__body' },
           h('span', { class: 'gate__wordmark', html: wordmarkSvg(34) }),
           h('div', { class: 'gate__eyebrow', text: 'AED Planner · makieta audytu' }),
-          h('h1', { class: 'gate__headline', text: 'Bezpieczeństwo zaczyna się od dobrego planu.' }),
+          h('h1', {
+            class: 'gate__headline',
+            // Dwa wiersze łamane ręcznie, jak w materiałach marki – przecinek
+            // kończy pierwszy, więc łamanie automatyczne trafiałoby w losowe
+            // miejsce przy każdej szerokości okna.
+            html: 'Bezpieczeństwo,<br>które zaczyna się od wiedzy',
+          }),
           form,
           h(
             'p',

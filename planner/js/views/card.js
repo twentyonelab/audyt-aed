@@ -67,6 +67,7 @@ import {
 } from '../ui.js';
 
 import { renderSceneSvg } from '../map.js';
+import { contoursFor } from '../reach.js';
 import { TODAY } from '../../config.js';
 
 export const meta = {
@@ -1523,7 +1524,9 @@ export async function render(root, ctx) {
           class: 'note',
           style: { marginTop: '6px' },
           text:
-            `Strefa ${fmtNum(radiusM, 0)} m = standard ${fmtMin(standardMinutes, 0)} w jedną stronę · ` +
+            (contoursFor(point.lat, point.lon)
+              ? `Zasięg ${fmtMin(standardMinutes, 0)} liczony z izochrony po sieci pieszej · `
+              : `Zasięg przybliżony okręgiem ${fmtNum(radiusM, 0)} m (brak izochrony) · `) +
             `${fmtNum(point.lat, 6)}, ${fmtNum(point.lon, 6)}`,
         }),
         h('div', { style: { marginTop: '8px' } }, moveBtn),

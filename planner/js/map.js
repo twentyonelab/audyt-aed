@@ -78,6 +78,41 @@ export function circlePolygon(lat, lon, radiusM, steps = 48) {
 }
 
 /** Linear projection fitted to a bbox – used by every SVG rendering. */
+/**
+ * Wielokąt „cały świat minus granica gminy" – maska terenu poza zakresem audytu.
+ *
+ * Prostokąt zewnętrzny urywamy na ±85° szerokości, bo w odwzorowaniu Mercatora
+ * bieguny uciekają w nieskończoność i wielokąt sięgający 90° nie da się
+ * potriangulować. Pierwszy pierścień jest obrysem zewnętrznym, drugi dziurą –
+ * tak GeoJSON i Mapbox czytają wielokąt z otworem.
+ */
+export function maskPolygon(boundary) {
+  const ring =
+    boundary && boundary.geometry && boundary.geometry.coordinates
+      ? boundary.geometry.coordinates[0]
+      : null;
+  if (!ring || ring.length < 4) return null;
+  const outer = [
+    [-180, -85],
+    [180, -85],
+    [180, 85],
+    [-180, 85],
+    [-180, -85],
+  ];
+  return { type: 'Polygon', coordinates: [outer, ring] };
+}
+
+/**
+ * Promień kropki zagęszczenia: pierwiastek z gęstości względem najgęstszej
+ * komórki. Pierwiastek, bo oko czyta pole kropki, nie jej promień – bez niego
+ * najgęstsze osiedle wyglądałoby na kilkanaście razy ludniejsze, niż jest.
+ */
+function densityScale(cells) {
+  let max = 0;
+  for (const c of cells) if (c.density > max) max = c.density;
+  return (cell) => (max > 0 ? Math.sqrt(Math.max(0, cell.density || 0) / max) : 0);
+}
+
 export function makeProjection(bbox, width, height, pad = 12) {
   const [w, s, e, n] = bbox;
   const midLat = (s + n) / 2;
@@ -136,7 +171,18 @@ const COLORS = {
   /* Ludzik: barwę niesie scena, bo zależy od czasu dojścia, a ten liczy widok.
      Tu zostaje tylko obwódka, wspólna dla wszystkich stanów. */
   walkerStroke: '#ffffff',
+  /* Maska poza granicą gminy – teren spoza zakresu audytu przygaszony,
+     żeby oko trzymało się obszaru, o którym mówią liczby. */
+  mask: '#6f6d68',
+  /* Zagęszczenie ludności: dwa kolory, nie skala. Zielony to dostęp do AED
+     w standardzie, grafit to jego brak – rozmiar kropki niesie gęstość, więc
+     trzeci kolor tylko zaciemniałby obraz. */
+  densityOn: '#167734',
+  densityOff: '#3f4147',
 };
+
+/** Krycie maski poza granicą – „o 50% bardziej wyszarzone". */
+const MASK_OPACITY = 0.5;
 
 /**
  * Drabinka wzorów kreskowania dla płynących tras dojścia w Mapboksie.
@@ -341,12 +387,41 @@ export function renderSceneSvg(scene, opts = {}) {
     }
   }
 
+  // Zagęszczenie ludności: siatka drobnych kropek pokrywająca całą gminę.
+  // Rozmiar niesie gęstość, kolor – dostęp do AED w standardzie.
+  if (scene.density && scene.density.length && opts.showDensity !== false) {
+    const weightOf = densityScale(scene.density);
+    for (const c of scene.density) {
+      const [x, y] = project(c.lon, c.lat);
+      const r = 0.9 + 2.7 * weightOf(c);
+      parts.push(
+        // Klasa, a nie sam kolor: zielony zasięgu to ten sam odcień co zielona
+        // kropka popytu, więc bez niej nie da się rozróżnić dwóch warstw.
+        `<circle class="density-dot" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(2)}" fill="${
+          c.covered ? COLORS.densityOn : COLORS.densityOff
+        }" opacity="${c.covered ? '0.8' : '0.55'}"/>`
+      );
+    }
+  }
+
   if (scene.demand && opts.showDemand !== false) {
     for (const d of scene.demand) {
       const [x, y] = project(d.lon, d.lat);
       const fill = d.covered ? COLORS.covered : d.nearestMin <= (scene.targetMinutes || 5) * 2 ? COLORS.near : COLORS.uncovered;
       parts.push(`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="1.9" fill="${fill}" opacity="0.75"/>`);
     }
+  }
+
+  // Maska poza granicą gminy. Rysowana po warstwach danych, a przed
+  // znacznikami: teren spoza audytu gaśnie, piny i ludzik zostają czytelne.
+  // Reguła parzystości (evenodd) robi z obrysu gminy dziurę w prostokącie.
+  if (scene.maskOutside && scene.boundary) {
+    const ring = scene.boundary.geometry.coordinates[0];
+    const outer = `M0 0H${width}V${height}H0Z`;
+    parts.push(
+      `<path d="${outer}${ringPath(ring, project)}" fill-rule="evenodd" fill="${COLORS.mask}" ` +
+        `fill-opacity="${MASK_OPACITY}"/>`
+    );
   }
 
   // Znaczniki: kropla z ikoną, ten sam kształt co w prototypie. W miniaturach
@@ -549,6 +624,8 @@ function createMapboxMap(container, opts) {
     src('routes', emptyFc);
     src('walk', emptyFc);
     src('demand', emptyFc);
+    src('density', emptyFc);
+    src('mask', emptyFc);
 
     map.addLayer({ id: 'districts-fill', slot: 'bottom', type: 'fill', source: 'districts', paint: { 'fill-color': COLORS.district, 'fill-opacity': 0.55 } });
     map.addLayer({ id: 'districts-line', slot: 'bottom', type: 'line', source: 'districts', paint: { 'line-color': COLORS.districtLine, 'line-width': 1 } });
@@ -627,6 +704,20 @@ function createMapboxMap(container, opts) {
         'line-opacity': 0.9,
       },
     });
+    // Zagęszczenie ludności – drobna siatka pod punktami popytu. Promień
+    // przychodzi w danych (właściwość „w"), bo normalizacja wymaga znajomości
+    // najgęstszej komórki, a tej wyrażenie stylu nie zna.
+    map.addLayer({
+      id: 'density-dots',
+      slot: 'bottom',
+      type: 'circle',
+      source: 'density',
+      paint: {
+        'circle-radius': ['interpolate', ['linear'], ['get', 'w'], 0, 1, 1, 3.8],
+        'circle-color': ['case', ['get', 'covered'], COLORS.densityOn, COLORS.densityOff],
+        'circle-opacity': ['case', ['get', 'covered'], 0.8, 0.55],
+      },
+    });
     map.addLayer({
       id: 'demand-dots',
       slot: 'middle',
@@ -644,6 +735,16 @@ function createMapboxMap(container, opts) {
       },
     });
     map.addLayer({ id: 'boundary-line', slot: 'middle', type: 'line', source: 'boundary', paint: { 'line-color': COLORS.boundary, 'line-width': 1.4, 'line-dasharray': [3, 2] } });
+    // Maska poza granicą gminy. Slot „top" – nad etykietami i budynkami, bo
+    // przygaszony ma być cały teren spoza audytu, a nie sam podkład. Znaczniki
+    // i ludzik są elementami DOM (Marker), więc maska ich nie dotyka.
+    map.addLayer({
+      id: 'mask-fill',
+      slot: 'top',
+      type: 'fill',
+      source: 'mask',
+      paint: { 'fill-color': COLORS.mask, 'fill-opacity': MASK_OPACITY },
+    });
 
     ready = true;
     if (scene.boundary) applyScene(scene);
@@ -726,6 +827,25 @@ function createMapboxMap(container, opts) {
     // Zegar animacji chodzi tylko wtedy, gdy trasy są na mapie.
     if (routeFeatures.length) startRouteFlow();
     else stopRouteFlow();
+
+    const maskGeometry = scene.maskOutside ? maskPolygon(scene.boundary) : null;
+    src(
+      'mask',
+      maskGeometry
+        ? { type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: maskGeometry }] }
+        : emptyFc
+    );
+
+    const densityCells = scene.showDensity === false ? [] : scene.density || [];
+    const densityWeight = densityScale(densityCells);
+    src('density', {
+      type: 'FeatureCollection',
+      features: densityCells.map((c) => ({
+        type: 'Feature',
+        properties: { covered: !!c.covered, w: densityWeight(c) },
+        geometry: { type: 'Point', coordinates: [c.lon, c.lat] },
+      })),
+    });
 
     src('demand', {
       type: 'FeatureCollection',
@@ -1001,6 +1121,7 @@ function createFallbackMap(container, opts) {
         height: size.h,
         projection,
         showDemand: scene.showDemand !== false,
+        showDensity: scene.showDensity !== false,
         showCoverage: scene.showCoverage !== false,
         showDistricts: scene.showDistricts !== false,
       }

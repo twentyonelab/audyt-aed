@@ -926,6 +926,7 @@ function mapStrip(afterPlan) {
     boundary: state.boundary,
     districts: state.districtsGeo,
     showDistricts: true,
+    maskOutside: !!state.boundary,
     coverage: afterPlan.activePoints.map((p) => ({
       lat: p.lat,
       lon: p.lon,

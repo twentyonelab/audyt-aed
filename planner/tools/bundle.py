@@ -37,12 +37,14 @@ MODULES = [
     "js/state.js",
     "js/map.js",
     "js/walker.js",
+    "js/layers.js",
     "js/photos.js",
     "js/pdf.js",
     "js/zip.js",
     "js/cardpdf.js",
     "js/report.js",
     "js/router.js",
+    "js/projects.js",
     "js/views/dashboard.js",
     "js/views/setup.js",
     "js/views/inventory.js",
@@ -64,6 +66,8 @@ DATA_FILES = [
     # okręgami i pokazywałby inne liczby niż wersja serwowana – a to ten sam
     # audyt. Waży ok. 124 kB i jedzie razem z resztą.
     "data/reach-tychy.json",
+    # Rejestr granic – lista gmin w kroku 0 ładuje się sama, także offline.
+    "data/prg-registry.json",
 ]
 
 IMPORT_RE = re.compile(

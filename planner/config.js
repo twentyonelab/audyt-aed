@@ -65,11 +65,17 @@ export const MAP_CONFIG = {
   showRoadLabels: false,
 };
 
-/** Sposoby kolorowania podkładu – przełącznik siedzi w pasku nad mapą. */
+/**
+ * Sposoby kolorowania podkładu – przełącznik siedzi w pasku nad mapą.
+ *
+ * Dwie pozycje, nie trzy. Pełna paleta Mapboxa (`default`) była za mocna:
+ * zieleń parków i błękit wody biły się o uwagę ze znacznikami AED i obrysami
+ * zasięgu, czyli z treścią. „Kolorowy" to teraz `faded` – barwy są, ale
+ * przygaszone na tyle, że zostają tłem.
+ */
 export const MAP_THEMES = [
   { id: 'monochrome', label: 'Szarości', hint: 'Chłodno-ciepłe szarości – domyślny' },
-  { id: 'faded', label: 'Przygaszony', hint: 'Przygaszone barwy' },
-  { id: 'default', label: 'Kolorowy', hint: 'Pełna paleta Mapboxa' },
+  { id: 'faded', label: 'Kolorowy', hint: 'Przygaszone barwy podkładu' },
 ];
 
 /** Źródło rzeźby terenu – identyfikator i adres z dokumentacji Mapboxa. */

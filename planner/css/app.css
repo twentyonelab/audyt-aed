@@ -326,7 +326,61 @@ button, input, select, textarea { font: inherit; color: inherit; font-family: va
   padding: 0 var(--sp-4);
   gap: 2px;
 }
-.topbar__project { flex-direction: row; align-items: center; gap: var(--sp-2); max-width: 200px; }
+/* Wybór projektu: przycisk plus menu, więc opakowanie trzyma pozycjonowanie. */
+.topbar__project-wrap { position: relative; flex: none; }
+.topbar__project {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--sp-2);
+  max-width: 230px;
+  height: 100%;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  transition: var(--t-hover);
+}
+.topbar__project:hover { background: var(--paper-2); }
+.topbar__project[aria-expanded='true'] { background: var(--lime-100); }
+.topbar__project[aria-expanded='true'] .topbar__project-chev { transform: rotate(180deg); }
+.topbar__project-chev { transition: transform var(--dur-fast) var(--ease-standard); }
+
+.project-menu {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  z-index: 30;
+  min-width: 300px;
+  background: var(--white);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--r-0);
+  box-shadow: var(--shadow-menu);
+  padding: var(--sp-2) 0;
+}
+.project-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: var(--sp-3) var(--sp-4);
+  border: 0;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  transition: var(--t-hover);
+}
+.project-menu__item:hover { background: var(--lime-100); }
+.project-menu__item.is-on { background: var(--lime-200); }
+.project-menu__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.project-menu__text strong { font-size: var(--fs-body-s); font-weight: var(--fw-semibold); }
+.project-menu__text small { font-size: var(--fs-label-s); letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
+.project-menu__sep { height: 1px; background: var(--border-hairline); margin: var(--sp-2) 0; }
+.project-menu__item--new { color: var(--text-link); }
+.project-menu__item--new strong { color: var(--text-link); }
+
+/* Domek: ikona zamiast numeru, bo pulpit nie jest krokiem audytu. */
+.topbar__tab--home { padding: 0 18px; color: var(--grey-500); }
+.topbar__tab--home.is-on { color: var(--ink); }
 .topbar__project-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .topbar__project-chev { color: var(--grey-500); }
 .topbar__project strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -771,6 +825,51 @@ button, input, select, textarea { font: inherit; color: inherit; font-family: va
 .input:hover, .select:hover, .textarea:hover { border-color: var(--grey-400); }
 .input:focus, .select:focus, .textarea:focus { outline: 0; border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
 
+.input--sm { height: 34px; font-size: var(--fs-caption); }
+
+/* Rejestr granic (PRG) – lista gmin w kroku 0. */
+.registry { display: flex; flex-direction: column; gap: var(--sp-2); }
+.registry__list {
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-sm);
+  background: var(--white);
+  max-height: 208px;
+  overflow-y: auto;
+}
+.registry__row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: 8px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--border-hairline);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: var(--t-hover);
+  font: inherit;
+}
+.registry__row:last-child { border-bottom: 0; }
+.registry__row:hover { background: var(--lime-100); }
+.registry__row.is-on { background: var(--lime-200); }
+.registry__row.is-empty { color: var(--text-muted); }
+.registry__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.registry__text strong { font-size: var(--fs-body-s); font-weight: var(--fw-semibold); }
+.registry__text small { font-size: var(--fs-caption); color: var(--text-muted); }
+.registry__tag {
+  flex: 0 0 auto;
+  font-size: var(--fs-label-s);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border: 1px solid var(--border-hairline);
+  padding: 2px 6px;
+}
+.registry__tag.is-on { color: var(--green-700); border-color: var(--green-700); }
+.registry__empty { padding: 12px; font-size: var(--fs-caption); color: var(--text-muted); }
+.registry__note { font-size: var(--fs-caption); color: var(--text-muted); margin: 0; }
+
 .checkline { display: flex; align-items: center; gap: var(--sp-3); font-size: var(--fs-body-s); }
 .checkline input { accent-color: var(--green-600); width: 16px; height: 16px; }
 .checkline--big { padding: var(--sp-3) 0; border-bottom: 1px solid var(--border-rule); }
@@ -945,6 +1044,9 @@ button, input, select, textarea { font: inherit; color: inherit; font-family: va
   box-shadow: var(--shadow-pop);
 }
 .map-legend__row { display: flex; align-items: center; gap: var(--sp-2); margin-top: var(--sp-1); }
+/* Blok legendy gaszony razem ze swoją warstwą – atrybut hidden, nie klasa,
+   bo to dosłownie „tego tu nie ma", również dla czytnika ekranu. */
+.legend-block[hidden] { display: none; }
 .map-legend b {
   font-size: var(--fs-label-s);
   letter-spacing: var(--ls-label-s);
@@ -1009,13 +1111,23 @@ button, input, select, textarea { font: inherit; color: inherit; font-family: va
 
 /* Dok przy lewej krawędzi mapy, w pionie na środku – tam, gdzie Google Maps
    trzyma pegmana. Kwadratowy, bo cały ten system jest kwadratowy. */
-.walker-dock {
+/* Szyna narzędzi przy lewej krawędzi mapy: ludzik na górze, pod nim
+   przełączniki warstw. Jeden kontener, żeby odstępy trzymały się same –
+   dok ludzika zmienia wysokość razem z podpisem. */
+.map-rail {
   position: absolute;
   left: var(--sp-4);
   top: 50%;
   transform: translateY(-50%);
   z-index: 6;
-  width: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.walker-dock {
+  width: 66px;
   padding: var(--sp-3) var(--sp-2) var(--sp-2);
   display: flex;
   flex-direction: column;
@@ -1045,6 +1157,41 @@ button, input, select, textarea { font: inherit; color: inherit; font-family: va
 /* Gdy ludzik stoi na mapie, dok zostaje pustym gniazdem – widać, skąd zniknął. */
 .walker-dock.is-out { opacity: 0.42; }
 .walker-dock.is-out .icon { opacity: 0.35; }
+
+/* Przełączniki warstw – ten sam korpus co dok ludzika, tylko niższy. */
+.layer-dock {
+  width: 66px;
+  display: flex;
+  flex-direction: column;
+  background: var(--white);
+  border: 1px solid var(--border-hairline);
+  box-shadow: var(--shadow-pop);
+}
+.layer-dock__btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 7px 4px 6px;
+  border: 0;
+  border-bottom: 1px solid var(--border-hairline);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: var(--t-hover);
+  font: inherit;
+}
+.layer-dock__btn:last-child { border-bottom: 0; }
+.layer-dock__btn:hover { background: var(--paper-2); color: var(--ink); }
+.layer-dock__btn:focus-visible { outline: 0; box-shadow: var(--focus-ring); }
+.layer-dock__btn.is-on { background: var(--lime-200); color: var(--ink); }
+.layer-dock__label {
+  font-size: 9px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: var(--fw-semibold);
+}
 
 /* Duch ciągnięty za kursorem. Kołysanie mówi „trzymam to" – ten sam sygnał
    co u pegmana, bez którego przeciąganie wygląda jak zacięcie interfejsu. */
@@ -1402,38 +1549,86 @@ body.is-walker-dragging { cursor: grabbing; user-select: none; }
   border-radius: var(--r-0);
   display: flex;
   flex-direction: column;
-  min-height: 260px;
+  overflow: hidden;
 }
-.project-card__head { display: flex; align-items: flex-start; gap: var(--sp-3); padding: var(--sp-5) var(--sp-5) var(--sp-3); }
+
+/* Miniatura mapy: realny stan audytu w małej skali, nie obrazek. */
+.project-card__map {
+  height: 190px;
+  background: var(--paper-2);
+  border-bottom: 1px solid var(--border-hairline);
+  position: relative;
+}
+.project-card__map svg { width: 100%; height: 100%; display: block; }
+.project-card__map--empty { display: grid; place-items: center; }
+.project-card__mapname {
+  font-size: var(--fs-label);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: var(--fw-medium);
+  color: var(--grey-400);
+}
+
+.project-card__body { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-5); }
+.project-card__head { display: flex; align-items: center; gap: var(--sp-3); }
 .project-card__head h3 { flex: 1; font-size: 14px; font-weight: var(--fw-semibold); text-transform: uppercase; letter-spacing: 0.04em; }
+
+/* Wielka liczba i jej podpis w jednym wierszu – jak MetricStat size="l". */
 .project-card__kpi {
-  padding: 0 var(--sp-5) var(--sp-4);
-  font-size: var(--fs-metric-m);
-  letter-spacing: var(--ls-metric-m);
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+  font-size: var(--fs-metric-l);
+  letter-spacing: var(--ls-metric-l);
   line-height: 1;
   font-weight: var(--fw-regular);
   font-variant-numeric: tabular-nums;
 }
 .project-card__kpi small {
-  font-size: var(--fs-label-s);
-  letter-spacing: var(--ls-label-s);
+  font-size: 13px;
+  letter-spacing: var(--ls-label);
   text-transform: uppercase;
-  font-weight: var(--fw-semibold);
-  color: var(--text-muted);
-  display: block;
-  margin-top: var(--sp-2);
+  font-weight: var(--fw-medium);
+  color: var(--text-secondary);
 }
-.project-card__steps { display: flex; gap: 3px; padding: 0 var(--sp-5) var(--sp-4); }
-.project-card__step { flex: 1; height: 4px; background: var(--grey-200); }
-.project-card__step.is-done { background: var(--green-700); }
-.project-card__foot {
-  margin-top: auto;
-  display: flex;
-  gap: var(--sp-2);
-  align-items: center;
-  padding: var(--sp-4) var(--sp-5);
-  border-top: 1px solid var(--border-hairline);
+
+/* Kroki jako kropki na linii – ukończone wypełnione, bieżący w limonce. */
+.project-card__steps { display: flex; align-items: center; gap: 0; }
+.project-card__step {
+  flex: 1;
+  height: 11px;
+  position: relative;
 }
+.project-card__step::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: var(--grey-200);
+}
+.project-card__step:first-child::before { left: 50%; }
+.project-card__step:last-child::before { right: 50%; }
+.project-card__step::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  transform: translate(-50%, -50%);
+  border-radius: var(--r-circle);
+  background: var(--white);
+  border: 1px solid var(--grey-300);
+}
+.project-card__step.is-done::before { background: var(--green-700); }
+.project-card__step.is-done::after { background: var(--green-700); border-color: var(--green-700); }
+.project-card__step.is-current::after { background: var(--lime-400); border-color: var(--lime-600); }
+
+.project-card__stats { display: flex; align-items: center; font-size: var(--fs-body-s); }
+.project-card__stats b { font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
+.project-card .btn--primary { margin-top: var(--sp-2); align-self: flex-start; }
 .project-card--new {
   background: var(--surface-signal);
   border-color: var(--surface-signal);

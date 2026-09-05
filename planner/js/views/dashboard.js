@@ -7,12 +7,14 @@
  */
 
 import { reachMapSync } from '../reach.js';
-import { analyze, fmtPct, fmtMin, fmtNum, fmtCost } from '../model.js';
-import { state, exportProject, resetToDemo } from '../state.js';
+import { analyze, completeness, pointStatusLevel, fmtPct, fmtMin, fmtNum, fmtCost } from '../model.js';
+import { renderSceneSvg } from '../map.js';
+import { state, exportProject, resetToDemo, getPreset } from '../state.js';
 import {
   h, el, mount, pillHtml, toast, modal, disabledControl, download, icon,
 } from '../ui.js';
 import { lockAgain } from '../gate.js';
+import { openNewAudit } from '../projects.js';
 
 export const meta = {
   step: null,
@@ -81,136 +83,153 @@ function analyzeCurrent() {
  * Nowy audyt
  * ------------------------------------------------------------------ */
 
-async function openNewAudit(navigate) {
-  const input = h('input', {
-    class: 'input',
-    type: 'text',
-    placeholder: 'np. Brodnica',
-    autocomplete: 'off',
-  });
-
-  const body = h(
-    'div',
-    { class: 'stack' },
-    h(
-      'label',
-      { class: 'field' },
-      h('span', { class: 'field__label', text: 'Nazwa gminy' }),
-      input
-    ),
-    h('p', {
-      class: 'note',
-      text:
-        'Iteracja 2 pracuje na jednym zestawie danych demo. Kreator otworzy krok 0 '
-        + '(Setup projektu) z danymi Tychów – zakładanie własnych gmin wchodzi w iteracji 3.',
-    })
-  );
-
-  const confirmed = await modal({
-    title: 'Nowy audyt',
-    body,
-    confirmLabel: 'DALEJ → KROK 0',
-    cancelLabel: 'Anuluj',
-  });
-  if (!confirmed) return;
-
-  const name = input.value.trim();
-  toast(
-    name
-      ? `W iteracji 2 dostępny jest wyłącznie projekt demo Tychy – „${name}” zapiszemy w iteracji 3.`
-      : 'W iteracji 2 dostępny jest wyłącznie projekt demo Tychy.'
-  );
-  navigate('#/setup');
-}
-
 /* ------------------------------------------------------------------ *
  * Kafelek projektu
  * ------------------------------------------------------------------ */
+
+/**
+ * Miniatura mapy projektu.
+ *
+ * Rysujemy ją z tych samych danych co duża mapa, przez renderSceneSvg – więc
+ * to nie jest obrazek, tylko realny stan audytu w małej skali. Projekt bez
+ * danych dostaje puste pole z nazwą: nie rysujemy granicy gminy, której nie
+ * mamy, bo wymyślony obrys wyglądałby jak dane.
+ */
+function projectThumb(project, isActive) {
+  if (!isActive || !state.boundary) {
+    return h(
+      'div',
+      { class: 'project-card__map project-card__map--empty' },
+      h('span', { class: 'project-card__mapname', text: project.name.toUpperCase() })
+    );
+  }
+
+  const points = state.points
+    .filter((p) => p.status !== 'rejected')
+    .map((p) => ({
+      id: p.id,
+      lat: p.lat,
+      lon: p.lon,
+      level:
+        p.kind === 'proposed'
+          ? 'proposed'
+          : pointStatusLevel(p, completeness(p, getPreset(p.presetId), state.photos).pct),
+    }));
+
+  return h('div', {
+    class: 'project-card__map',
+    html: renderSceneSvg(
+      {
+        boundary: state.boundary,
+        districts: state.districtsGeo,
+        points,
+        labels: [{ lat: centroidLat(), lon: centroidLon(), text: project.name.toUpperCase(), kind: 'district' }],
+      },
+      {
+        width: 420,
+        height: 190,
+        showDemand: false,
+        showCoverage: false,
+        showDistricts: true,
+        showLabels: true,
+        markerSize: 13,
+      }
+    ),
+  });
+}
+
+/** Środek granicy – do podpisu na miniaturze. */
+function centroidLat() {
+  const b = state.boundary;
+  if (!b) return 0;
+  const ring = b.coordinates ? b.coordinates[0] : [];
+  return ring.reduce((a, c) => a + c[1], 0) / (ring.length || 1);
+}
+function centroidLon() {
+  const b = state.boundary;
+  if (!b) return 0;
+  const ring = b.coordinates ? b.coordinates[0] : [];
+  return ring.reduce((a, c) => a + c[0], 0) / (ring.length || 1);
+}
+
+/**
+ * Średnia kompletność kart w projekcie.
+ *
+ * To odpowiedź na pytanie „ile z tego audytu jest już zrobione" – liczona
+ * z realnych kart, nie z liczby odhaczonych kroków. Projekt bez danych nie
+ * dostaje tu liczby, tylko kreskę.
+ */
+function completenessPct() {
+  const points = state.points.filter((p) => p.kind === 'existing' && p.status !== 'rejected');
+  if (!points.length) return null;
+  const sum = points.reduce((a, p) => a + completeness(p, getPreset(p.presetId), state.photos).pct, 0);
+  return sum / points.length;
+}
 
 function projectCard(project, analysis, navigate) {
   const isActive = !!(state.project && state.project.id === project.id);
   const stepsDone = new Set(isActive ? state.project.stepsDone || [] : []);
   const status = statusOf(project);
+  const done = stepsDone.size;
 
-  /* pasek kroków 0–5 */
+  /* Kropki kroków połączone linią – ta sama forma co StepProgress. */
   const steps = h(
     'div',
-    { class: 'project-card__steps', 'aria-label': `Ukończone kroki: ${stepsDone.size} z ${STEP_COUNT}` },
+    { class: 'project-card__steps', 'aria-label': `Ukończone kroki: ${done} z ${STEP_COUNT}` },
     ...Array.from({ length: STEP_COUNT }, (_, i) =>
       h('span', {
-        class: `project-card__step${stepsDone.has(i) ? ' is-done' : ''}`,
+        class: `project-card__step${stepsDone.has(i) ? ' is-done' : ''}${
+          i === done && done > 0 ? ' is-current' : ''
+        }`,
         title: `Krok ${i} – ${stepsDone.has(i) ? 'ukończony' : 'nierozpoczęty'}`,
       })
     )
   );
 
-  /* wiersz meta – realne liczby z danych projektu */
-  let metaText;
-  if (isActive) {
-    const existing = state.points.filter((p) => p.kind === 'existing').length;
-    const districts = (state.project.districts || []).length;
-    metaText =
-      `${fmtNum(existing)} ${plural(existing, ['punkt AED', 'punkty AED', 'punktów AED'])}`
-      + ` · ${fmtNum(districts)} ${plural(districts, ['dzielnica', 'dzielnice', 'dzielnic'])}`
-      + ` · ${fmtNum(state.project.population)} mieszk.`;
-  } else {
-    metaText = 'brak danych źródłowych w tej iteracji';
-  }
-
-  /* kluczowy wskaźnik */
+  const comp = isActive ? completenessPct() : null;
   const showKpi = project.available && isActive && analysis;
-  const kpi = showKpi
-    ? h(
-        'div',
-        { class: 'project-card__kpi' },
-        fmtPct(analysis.coveragePct),
-        h('small', { text: `pokrycia ≤ ${fmtMin(state.project.standardMinutes, 0)}` })
-      )
-    : h(
-        'div',
-        { class: 'project-card__kpi' },
-        '–',
-        h('small', { text: 'wskaźnik policzymy po wczytaniu danych' })
-      );
 
-  /* akcje */
-  const openBtn = h('button', { class: 'btn btn--sm btn--primary' }, 'OTWÓRZ');
-  if (project.available) {
-    openBtn.addEventListener('click', () => navigate('#/inventory'));
-  } else {
-    disabledControl(openBtn, REASON_DEMO_ONLY);
-  }
-
-  const duplicateBtn = disabledControl(
-    h('button', { class: 'btn btn--sm btn--ghost' }, 'Duplikuj'),
-    project.available ? REASON_OUT_OF_SCOPE : REASON_DEMO_ONLY
-  );
-  const archiveBtn = disabledControl(
-    h('button', { class: 'btn btn--sm btn--ghost' }, 'Archiwizuj'),
-    project.available ? REASON_OUT_OF_SCOPE : REASON_DEMO_ONLY
-  );
+  const openBtn = h('button', { class: 'btn btn--primary' }, 'OTWÓRZ');
+  if (project.available) openBtn.addEventListener('click', () => navigate('#/inventory'));
+  else disabledControl(openBtn, REASON_DEMO_ONLY);
 
   return h(
     'article',
     { class: 'project-card' },
+    projectThumb(project, isActive),
     h(
       'div',
-      { class: 'project-card__head' },
-      h('h3', { text: project.name }),
-      el(pillHtml(status.label, status.variant))
-    ),
-    h('div', { class: 'note', text: metaText }),
-    h(
-      'div',
-      { class: 'stack', style: { gap: '4px' } },
+      { class: 'project-card__body' },
+      h(
+        'div',
+        { class: 'project-card__head' },
+        h('h3', { text: (project.label || project.name).toUpperCase() }),
+        el(pillHtml(status.label, status.variant))
+      ),
+      h(
+        'div',
+        { class: 'project-card__kpi' },
+        comp === null ? '–' : fmtPct(comp),
+        h('small', { text: 'kompletności' })
+      ),
+      h('span', { class: 'label-caps', text: `Krok ${fmtNum(done)} z ${fmtNum(STEP_COUNT)}` }),
       steps,
-      h('span', {
-        class: 'label-caps',
-        text: `Kroki 0–5 · ${fmtNum(stepsDone.size)} z ${fmtNum(STEP_COUNT)}`,
-      })
-    ),
-    kpi,
-    h('div', { class: 'project-card__foot' }, openBtn, h('span', { class: 'spacer' }), duplicateBtn, archiveBtn)
+      h(
+        'div',
+        { class: 'project-card__stats' },
+        showKpi
+          ? h('span', {}, h('b', { text: fmtPct(analysis.coveragePct) }), ' pokrycia')
+          : h('span', { class: 'muted', text: '– pokrycie' }),
+        h('span', { class: 'spacer' }),
+        isActive
+          ? h('span', {
+              class: 'muted',
+              text: `${fmtNum(state.points.filter((p) => p.kind === 'existing').length)} punktów AED`,
+            })
+          : null
+      ),
+      openBtn
+    )
   );
 }
 
@@ -352,20 +371,9 @@ export async function render(root, ctx) {
   const projects = state.projects || [];
   const availableCount = projects.filter((p) => p.available).length;
 
-  if (ctx.setMeta) {
-    ctx.setMeta(
-      `${fmtNum(projects.length)} ${plural(projects.length, ['projekt', 'projekty', 'projektów'])}`
-      + ` · ${fmtNum(availableCount)} z danymi demo`
-    );
-  }
+  // Podpasek zostaje pusty: liczba projektów jest widoczna wprost w kafelkach.
 
   /* --- sekcja: projekty ------------------------------------------- */
-
-  const newAuditBtn = h(
-    'button',
-    { class: 'btn btn--primary', onclick: () => openNewAudit(navigate) },
-    '+ NOWY AUDYT'
-  );
 
   const projectsSection = h(
     'section',
@@ -374,8 +382,6 @@ export async function render(root, ctx) {
       'div',
       { class: 'row' },
       h('h2', { text: 'Projekty' }),
-      h('span', { class: 'spacer' }),
-      newAuditBtn
     ),
     h('p', { class: 'note', text: 'Kluczowy wskaźnik to pokrycie stanu obecnego liczone modelem dojścia pieszego (SPEC §5).' }),
     h(
@@ -447,15 +453,9 @@ export async function render(root, ctx) {
     h(
       'div',
       { class: 'row row--wrap' },
-      h(
-        'div',
-        { class: 'stack', style: { gap: '2px' } },
-        h('span', { class: 'label-caps', text: 'Dane robocze' }),
-        h('span', {
-          class: 'note',
-          text: 'Stan projektu trzymamy w IndexedDB przeglądarki. Reset przywraca oryginalny zestaw demo.',
-        })
-      ),
+      // Objaśnienie o IndexedDB zdjęte – to szczegół implementacji, a nie
+      // informacja dla osoby, która przyszła zrobić audyt. Same przyciski
+      // niosą, co robią.
       h('span', { class: 'spacer' }),
       // Zamknięcie sesji pokazu: kasuje zapamiętane wejście i wraca na ekran
       // z hasłem. Stoi obok resetu danych, bo to ta sama półka – sprzątanie

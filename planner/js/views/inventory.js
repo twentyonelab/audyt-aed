@@ -891,6 +891,8 @@ export async function render(root, ctx) {
     boundary: state.boundary,
     districts: state.districtsGeo,
     showDistricts: false,
+    // Teren poza granicą gminy przygaszony – inwentarz kończy się na granicy.
+    maskOutside: !!state.boundary,
     coverage: [],
     showCoverage: false,
     demand: [],

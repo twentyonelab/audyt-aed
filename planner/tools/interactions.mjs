@@ -318,12 +318,22 @@ await page.setViewportSize({ width: 1560, height: 940 });
  * ---------------------------------------------------------------- */
 
 await go('#/inventory', 900);
-const navTabs = await page.locator('.topbar__tab').allInnerTexts();
+// Pierwsza zakładka to domek na pulpit – bez podpisu, więc kroki liczymy
+// od zakładek, które jakiś tekst mają.
+const navTabs = (await page.locator('.topbar__tab:not(.topbar__tab--home)').allInnerTexts()).filter((t) =>
+  t.trim()
+);
 check(
   'nawigacja kroków siedzi w belce górnej, numerowana od 01',
   navTabs.length === 6 && /^01/.test(navTabs[0].replace(/\s+/g, '')),
   navTabs.map((t) => t.replace(/\s+/g, ' ')).join(' · ')
 );
+const homeTab = await page.locator('.topbar__tab--home').count();
+const homeIsHouse = await page.locator('.topbar__tab--home .lucide-house, .topbar__tab--home svg').count();
+check('domek w belce prowadzi na pulpit', homeTab === 1 && homeIsHouse >= 1, `zakładek domku: ${homeTab}`);
+await page.locator('.topbar__tab--home').click();
+await page.waitForTimeout(700);
+check('klik w domek wraca na pulpit', page.url().endsWith('#/'), page.url().split('#')[1] || '(brak)');
 const brandGoesHome = await page.locator('.topbar__brand').count();
 check('znak marki wraca na pulpit', brandGoesHome === 1);
 
@@ -768,6 +778,105 @@ await page.mouse.move(mapRect.x + mapRect.width + 220, mapRect.y + 120, { steps:
 await page.mouse.up();
 await page.waitForTimeout(800);
 check('upuszczenie poza mapą odstawia ludzika do doku', (await page.locator('.walker-card').isVisible()) === false);
+
+/* ---------------------------------------------------------------- *
+ * 15. Maska poza granicą, warstwy mapy i rejestr granic
+ * ---------------------------------------------------------------- */
+
+await go('#/analysis', 1600);
+
+const maskPaths = await page.locator('.map-fallback svg path[fill-rule="evenodd"]').count();
+check('teren poza granicą gminy jest przygaszony maską', maskPaths === 1, `${maskPaths} masek`);
+
+const maskOpacity = await page
+  .locator('.map-fallback svg path[fill-rule="evenodd"]')
+  .first()
+  .getAttribute('fill-opacity');
+check('maska kryje w 50%', maskOpacity === '0.5', `krycie ${maskOpacity}`);
+
+// Przełączniki warstw siedzą w tej samej szynie co ludzik, pod nim.
+const railKids = await page.evaluate(() =>
+  [...document.querySelectorAll('.map-rail > *')].map((el) => el.className)
+);
+check(
+  'szyna mapy: ludzik na górze, przełączniki warstw pod nim',
+  railKids.length === 2 && /walker-dock/.test(railKids[0]) && /layer-dock/.test(railKids[1]),
+  railKids.join(' → ')
+);
+
+const demandDots = () => page.locator('.map-fallback svg circle[r="1.9"]').count();
+// Kropki gęstości mają własną klasę – zielony zasięgu to ten sam odcień
+// co zielona kropka popytu, więc po samym kolorze nie da się ich rozdzielić.
+const densityDots = () => page.locator('.map-fallback svg .density-dot').count();
+
+check('punkty popytu startują włączone', (await demandDots()) > 100, `${await demandDots()} kropek`);
+check('gęstość startuje wyłączona', (await densityDots()) === 0);
+
+// Włączenie warstwy gęstości.
+await page.locator('.layer-dock__btn').nth(1).click();
+await page.waitForTimeout(2500);
+const dens = await densityDots();
+check('warstwa gęstości pokrywa gminę drobnymi kropkami', dens > 1500, `${dens} kropek`);
+
+const green = await page.locator('.map-fallback svg .density-dot[fill="#167734"]').count();
+check(
+  'część kropek gęstości jest zielona – to ludzie z dostępem do AED',
+  green > 0 && green < dens,
+  `${green} z ${dens}`
+);
+
+// Rozmiar kropki niesie gęstość, więc promienie muszą się różnić.
+const radii = await page.evaluate(() => {
+  const set = new Set(
+    [...document.querySelectorAll('.map-fallback svg .density-dot')].map((c) => c.getAttribute('r'))
+  );
+  return set.size;
+});
+check('wielkość kropki niesie zagęszczenie (różne promienie)', radii > 5, `${radii} różnych promieni`);
+
+// Legenda siedzi w zwiniętym bloku, więc pytamy o atrybut hidden, a nie
+// o widoczność – ta zależy też od tego, czy operator legendę rozwinął.
+const legendHidden = (nth) =>
+  page.locator('.legend-block').nth(nth).evaluate((el) => el.hasAttribute('hidden'));
+check('legenda gęstości pokazuje się razem z warstwą', (await legendHidden(1)) === false);
+
+// Zgaszenie punktów popytu.
+await page.locator('.layer-dock__btn').nth(0).click();
+await page.waitForTimeout(900);
+check('przełącznik gasi punkty popytu', (await demandDots()) === 0);
+check('legenda popytu znika razem z warstwą', await legendHidden(0));
+check('kropki gęstości zostają', (await densityDots()) > 1500);
+
+await page.screenshot({ path: join(SHOTS, 'interactions-density.png') });
+
+// Rejestr granic w kroku 0 ładuje się sam.
+await go('#/setup', 1800);
+const regRows = await page.locator('.registry__row').count();
+check('rejestr granic wczytuje się bez klikania', regRows > 3, `${regRows} pozycji`);
+const regLoaded = await page.locator('.registry__row.is-on .registry__text strong').innerText();
+check('gmina projektu jest w rejestrze oznaczona jako wczytana', regLoaded === 'Tychy', regLoaded);
+
+await page.locator('.registry input[type="search"]').fill('pomorskie');
+await page.waitForTimeout(300);
+const filtered = await page.locator('.registry__row').allInnerTexts();
+check(
+  'filtr rejestru zawęża listę',
+  filtered.length > 0 && filtered.length < regRows && filtered.every((t) => /pomorskie/i.test(t)),
+  `${filtered.length} z ${regRows}`
+);
+await page.locator('.registry input[type="search"]').fill('');
+await page.waitForTimeout(300);
+
+// Podsumowanie kroku 0 nie może już mówić o promieniu, skoro liczy z sieci.
+const setupMeta = await page.locator('.subbar').innerText();
+check(
+  'podsumowanie setupu mówi o zasięgu z sieci, nie o samym promieniu okręgu',
+  // Zależnie od tego, ile punktów ma izochronę w cache, podsumowanie mówi
+  // „zasięg z sieci pieszej" albo „sieć piesza (n z m) + promień … dla reszty".
+  // Nie może natomiast podawać samego promienia jako sposobu liczenia zasięgu.
+  /sie(ć|ci) piesz/.test(setupMeta) && !/promień \S+ m \(przybliżenie\)/.test(setupMeta),
+  setupMeta.replace(/\n/g, ' | ')
+);
 
 await go('#/inventory');
 await page.screenshot({ path: join(SHOTS, 'interactions-inventory.png') });

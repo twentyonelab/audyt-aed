@@ -13,6 +13,7 @@
 import { h, mount, clear, toast, icon } from './ui.js';
 import { wordmarkSvg } from './logo.js';
 import { state, canUndo, undo, undoLabel } from './state.js';
+import { openNewAudit, openProject, projectHasData } from './projects.js';
 import { OPERATOR } from '../config.js';
 
 /** The five audit steps plus setup (spec §3). */
@@ -89,6 +90,93 @@ function undoButton() {
 }
 
 /**
+ * Rozwijana lista projektów przy logotypie.
+ *
+ * Menu jest realne, nie ozdobne: pokazuje portfel audytów, zaznacza bieżący,
+ * a projekt bez danych mówi o tym zamiast otwierać pusty widok. Na dole
+ * zakładanie nowego – bo to naturalne miejsce, w którym się go szuka.
+ */
+function projectPicker(project) {
+  const menu = h('div', { class: 'project-menu', hidden: true });
+  const chev = icon('chevron-down', 18, { class: 'topbar__project-chev' });
+
+  const close = () => {
+    menu.hidden = true;
+    btn.setAttribute('aria-expanded', 'false');
+    document.removeEventListener('pointerdown', onOutside, true);
+  };
+  const onOutside = (ev) => {
+    if (!wrap.contains(ev.target)) close();
+  };
+  const open = () => {
+    menu.hidden = false;
+    btn.setAttribute('aria-expanded', 'true');
+    document.addEventListener('pointerdown', onOutside, true);
+  };
+
+  const btn = h(
+    'button',
+    {
+      class: 'topbar__project',
+      'aria-haspopup': 'menu',
+      'aria-expanded': 'false',
+      title: 'Przełącz projekt',
+      onclick: () => (menu.hidden ? open() : close()),
+    },
+    h(
+      'span',
+      { class: 'topbar__project-text' },
+      h('small', { text: 'Projekt' }),
+      h('strong', { text: project.label || project.name })
+    ),
+    chev
+  );
+
+  for (const p of state.projects || []) {
+    const on = p.id === project.id;
+    menu.appendChild(
+      h(
+        'button',
+        {
+          class: `project-menu__item${on ? ' is-on' : ''}`,
+          onclick: () => {
+            close();
+            if (!on) openProject(p, navigate);
+          },
+        },
+        h('span', { class: `dot ${projectHasData(p) ? 'dot--ok' : ''}` }),
+        h(
+          'span',
+          { class: 'project-menu__text' },
+          h('strong', { text: p.label || p.name }),
+          h('small', { text: projectHasData(p) ? 'dane demonstracyjne' : 'brak danych źródłowych' })
+        ),
+        on ? icon('check', 15) : null
+      )
+    );
+  }
+
+  menu.appendChild(h('div', { class: 'project-menu__sep' }));
+  menu.appendChild(
+    h(
+      'button',
+      {
+        class: 'project-menu__item project-menu__item--new',
+        onclick: () => {
+          close();
+          openNewAudit(navigate);
+        },
+      },
+      icon('circle-plus', 16),
+      h('span', { class: 'project-menu__text' }, h('strong', { text: 'Nowy audyt' }))
+    )
+  );
+
+  const wrap = h('div', { class: 'topbar__project-wrap' }, btn, menu);
+  return wrap;
+}
+
+/**
  * Belka górna wg design systemu: znak i wordmark, kreska, nazwa projektu,
  * wyśrodkowane numerowane zakładki 01–05 i limonkowy przycisk menu po prawej.
  * Zakładka aktywna dostaje bladolimonkowe tło na pełną wysokość belki.
@@ -124,20 +212,24 @@ function topbar(activeStep) {
       h('span', { class: 'topbar__wordmark', html: wordmarkSvg(30) })
     ),
     project ? h('span', { class: 'topbar__rule' }) : null,
-    project
-      ? h(
-          'span',
-          { class: 'topbar__project' },
-          h(
-            'span',
-            { class: 'topbar__project-text' },
-            h('small', { text: 'Projekt' }),
-            h('strong', { text: project.label || project.name })
-          ),
-          icon('chevron-down', 18, { class: 'topbar__project-chev' })
-        )
-      : null,
-    h('nav', { class: 'topbar__nav', 'aria-label': 'Kroki audytu' }, ...tabs),
+    project ? projectPicker(project) : null,
+    h(
+      'nav',
+      { class: 'topbar__nav', 'aria-label': 'Kroki audytu' },
+      // Domek przed numerami: pulpit to wyjście do wszystkich projektów,
+      // a nie kolejny krok audytu, więc numeru nie dostaje.
+      h(
+        'button',
+        {
+          class: `topbar__tab topbar__tab--home${activeStep === null || activeStep === undefined ? ' is-on' : ''}`,
+          onclick: () => navigate('#/'),
+          title: 'Pulpit – wszystkie projekty',
+          'aria-label': 'Pulpit',
+        },
+        icon('house', 17)
+      ),
+      ...tabs
+    ),
     h(
       'div',
       { class: 'topbar__actions' },

@@ -80,7 +80,9 @@ export function createWalker({ mapEl, map, activePoints, standardMinutes, onChan
       'aria-label': 'Ludzik: przeciągnij na mapę',
     },
     icon('user', 20),
-    h('span', { class: 'walker-dock__hint', text: 'Przeciągnij\nna mapę' })
+    // Podpis musi zmieścić się w 60 px szyny, więc niesie tylko nazwę –
+    // instrukcja przeciągania stoi w pasku podpowiedzi nad mapą i w tytule.
+    h('span', { class: 'walker-dock__hint', text: 'Ludzik' })
   );
 
   const card = h('div', { class: 'walker-card', style: { display: 'none' } });

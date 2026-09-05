@@ -38,6 +38,8 @@ import {
   coverageRadiusM,
   ringCentroid,
   trimRouteToReach,
+  buildDensityGrid,
+  reachStatusFor,
   fmtPct,
   fmtMin,
   fmtNum,
@@ -62,6 +64,7 @@ import {
 import { createMap, circlePolygon } from '../map.js';
 import { reachMapFor, contoursFor, routesFor, fetchRoutes, reachCoverageOf } from '../reach.js';
 import { createWalker } from '../walker.js';
+import { createLayerDock } from '../layers.js';
 
 export const meta = {
   step: 2,
@@ -104,6 +107,20 @@ let walkerAt = null;
 let savedCamera = null;
 /** Punkt, którego zasięg i trasy dojścia są pokazane; przeżywa przerysowania. */
 let selectedReachId = null;
+/** Przełączniki warstw pod ludzikiem i ich stan między przerysowaniami. */
+let layerDock = null;
+let layerState = { demand: true, density: false };
+/**
+ * Siatka zagęszczenia ludności.
+ *
+ * Liczy się z granicy i dzielnic, więc dla jednego projektu jest stała –
+ * trzymamy ją w module, żeby przełączenie warstwy nie kosztowało ~200 ms
+ * przemiału wielokątów przy każdym kliknięciu. Klucz mówi, dla jakich danych
+ * została policzona; zmiana granicy albo dzielnic unieważnia go sama.
+ */
+let densityCache = { key: null, cells: [] };
+/** Ta sama siatka z naniesionym dostępem do AED – zależy też od scenariusza. */
+let densityStatusCache = { key: null, cells: [] };
 
 /* ------------------------------------------------------------------ *
  * Pomocniki lokalne (rdzenia nie ruszamy)
@@ -257,6 +274,53 @@ export async function render(root, ctx) {
       now: analyze({ ...base, scenario: 'now' }),
       plan: analyze({ ...base, scenario: 'plan' }),
     };
+  };
+
+  /* ---------------- Warstwa zagęszczenia ludności ---------------- */
+
+  /**
+   * Siatka gęstości liczona leniwie: dopiero przy pierwszym włączeniu warstwy.
+   * Przemiał ~2 tys. komórek przez wielokąty dzielnic to około 200 ms – nie ma
+   * powodu płacić tego wejściem w widok, skoro warstwa startuje wygaszona.
+   */
+  const densityCells = () => {
+    if (!layerState.density) return [];
+
+    const gridKey = `${(state.districtsGeo && state.districtsGeo.features.length) || 0}:${
+      state.boundary ? 'b' : '-'
+    }`;
+    if (densityCache.key !== gridKey) {
+      densityCache = {
+        key: gridKey,
+        cells: buildDensityGrid({ boundary: state.boundary, districts: state.districtsGeo }),
+      };
+      // Zmiana siatki unieważnia też naniesiony na nią dostęp do AED.
+      densityStatusCache = { key: null, cells: [] };
+    }
+
+    // Dostęp do AED zależy od scenariusza, pory doby, standardu i tego, ile
+    // punktów stoi na mapie – każdy z tych ruchów musi przemalować kropki.
+    const statusKey = [
+      gridKey,
+      scenario,
+      mode,
+      standardMinutes,
+      state.points.length,
+      state.points.map((p) => `${p.id}:${p.status}:${p.lat.toFixed(5)},${p.lon.toFixed(5)}`).join('|'),
+    ].join('#');
+    if (densityStatusCache.key !== statusKey) {
+      densityStatusCache = {
+        key: statusKey,
+        cells: reachStatusFor(densityCache.cells, {
+          points: state.points,
+          reach,
+          standardMinutes,
+          scenario,
+          mode,
+        }),
+      };
+    }
+    return densityStatusCache.cells;
   };
 
   const gainFor = (site, points, excludeId = null) =>
@@ -883,9 +947,56 @@ export async function render(root, ctx) {
   mapEl.appendChild(
     h('div', {
       class: 'map-hint',
-      text: 'Kliknij w mapę, aby dodać rekomendację · przeciągnij kwadratowy pin, aby ją przesunąć.',
+      text:
+        'Kliknij w mapę, aby dodać rekomendację · przeciągnij kwadratowy pin, aby ją przesunąć · ' +
+        'przeciągnij ludzika z lewej szyny, aby zmierzyć drogę do najbliższego AED.',
     })
   );
+
+  /* Bloki legendy zależne od włączonych warstw. Legenda nie może opisywać
+     kropek, których na mapie nie ma – to najprostszy sposób, żeby nie
+     tłumaczyć czterech kolorów przy zgaszonej warstwie. */
+  const demandLegend = h(
+    'div',
+    { class: 'legend-block' },
+    legendRow(dotHtml('ok'), 'zielona kropka', 'w zasięgu – ktoś zdąży przynieść AED na czas'),
+    legendRow(dotHtml('warn'), 'żółta kropka', 'na granicy standardu'),
+    legendRow(dotHtml('crit'), 'czerwona kropka', 'poza zasięgiem – nie obsługuje ich żadne AED')
+  );
+
+  const densityLegend = h(
+    'div',
+    { class: 'legend-block' },
+    legendRow(
+      '<svg width="16" height="10" aria-hidden="true"><circle cx="4" cy="5" r="1.4" fill="#167734" opacity="0.8"/>' +
+        '<circle cx="9" cy="5" r="2.6" fill="#167734" opacity="0.8"/><circle cx="14" cy="5" r="3.6" fill="#167734" opacity="0.8"/></svg>',
+      'wielkość kropki',
+      'zagęszczenie ludności – większa kropka to gęściej zaludniony hektar'
+    ),
+    legendRow(
+      '<svg width="16" height="10" aria-hidden="true"><circle cx="8" cy="5" r="3.2" fill="#167734" opacity="0.8"/></svg>',
+      'kropka zielona',
+      `ci mieszkańcy mają AED w zasięgu ${fmtMin(standardMinutes, 0)} marszu`
+    ),
+    legendRow(
+      '<svg width="16" height="10" aria-hidden="true"><circle cx="8" cy="5" r="3.2" fill="#3f4147" opacity="0.55"/></svg>',
+      'kropka grafitowa',
+      'nie mają – to są luki, które domyka plan'
+    ),
+    h('p', {
+      class: 'note',
+      text:
+        'Siatka co 170 m pokrywa całą gminę. Ludność rozkładamy równomiernie wewnątrz ' +
+        'dzielnicy, bo tak podaje ją GUS – różnic wewnątrz osiedla ta warstwa nie pokaże.',
+    })
+  );
+
+  /** Legenda idzie za przełącznikami warstw – wołane po każdym kliknięciu. */
+  function paintDensityLegend() {
+    demandLegend.hidden = !layerState.demand;
+    densityLegend.hidden = !layerState.density;
+  }
+  paintDensityLegend();
 
   mapEl.appendChild(
     mapLegend('Legenda', [
@@ -894,11 +1005,11 @@ export async function render(root, ctx) {
         style: { marginTop: '2px' },
         text:
           `Pytanie tej mapy: gdzie mieszkaniec NIE zdąży dobiec do AED w ${fmtMin(standardMinutes, 0)} i wrócić. ` +
-          'Każda kropka to skupisko ludności, obrys to realny zasięg jednego AED.',
+          'Każda kropka to skupisko ludności, obrys to realny zasięg jednego AED. ' +
+          'Teren poza granicą gminy jest przygaszony – audyt kończy się na granicy.',
       }),
-      legendRow(dotHtml('ok'), 'zielona kropka', 'w zasięgu – ktoś zdąży przynieść AED na czas'),
-      legendRow(dotHtml('warn'), 'żółta kropka', 'na granicy standardu'),
-      legendRow(dotHtml('crit'), 'czerwona kropka', 'poza zasięgiem – nie obsługuje ich żadne AED'),
+      demandLegend,
+      densityLegend,
       legendRow(dotHtml('square'), 'limonkowy kwadrat', 'propozycja – przeciągnij, licznik przeliczy się na żywo'),
       legendRow(
         '<svg width="14" height="8" aria-hidden="true"><line x1="0" y1="4" x2="14" y2="4" ' +
@@ -1127,7 +1238,13 @@ export async function render(root, ctx) {
       routes: buildRouteLines(),
       showRoutes: true,
       demand: analysis.demandStatus,
-      showDemand: true,
+      showDemand: layerState.demand,
+      // Zagęszczenie ludności – siatka pod punktami popytu, gdy włączona.
+      density: densityCells(),
+      showDensity: layerState.density,
+      // Teren poza granicą gminy przygaszony: audyt kończy się na granicy,
+      // więc mapa nie może sugerować, że liczby mówią coś o sąsiadach.
+      maskOutside: !!state.boundary,
       targetMinutes: standardMinutes,
       points: buildPins(),
       labels: buildGapLabels(analysis),
@@ -1153,7 +1270,29 @@ export async function render(root, ctx) {
       paintScene();
     },
   });
-  mapEl.appendChild(walker.dock);
+
+  // Przełączniki warstw siedzą w tej samej szynie co ludzik, tuż pod nim.
+  if (layerDock) layerDock.destroy();
+  layerDock = createLayerDock({
+    initial: layerState,
+    onChange: (next) => {
+      // Pierwsze włączenie gęstości przemiela ~2 tys. komórek przez wielokąty
+      // dzielnic. Oddajemy przeglądarce klatkę, żeby przycisk zdążył się
+      // zapalić, zanim zablokuje ją liczenie – inaczej klik wygląda na zgubiony.
+      const heavy = next.density && !layerState.density && !densityStatusCache.cells.length;
+      layerState = next;
+      paintDensityLegend();
+      if (!heavy) {
+        paintScene();
+        return;
+      }
+      toast('Liczę zagęszczenie ludności dla całej gminy…');
+      requestAnimationFrame(() => requestAnimationFrame(paintScene));
+    },
+  });
+
+  const rail = h('div', { class: 'map-rail' }, walker.dock, layerDock.dock);
+  mapEl.appendChild(rail);
   mapEl.appendChild(walker.card);
 
   paintScene();
@@ -1314,5 +1453,11 @@ export function destroy() {
   }
   // Wyjście z widoku kasuje ludzika – wracając, zaczyna się od czystej mapy.
   walkerAt = null;
+  if (layerDock) {
+    layerDock.destroy();
+    layerDock = null;
+  }
+  // Stan warstw zostaje: wracając do analizy, zastaje się tę samą mapę.
+  // Siatka gęstości też – jej policzenie kosztuje, a dane się nie zmieniły.
   releaseMap();
 }

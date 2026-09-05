@@ -91,7 +91,11 @@ await page.addInitScript(() => {
       window.__config = window.__config || [];
       window.__config.push({ importId, prop, value });
     }
-    addSource(id, cfg) { sources[id] = { _data: cfg.data, setData(d) { this._data = d; } }; }
+    addSource(id, cfg) {
+      sources[id] = { _data: cfg.data, setData(d) { this._data = d; } };
+      // Widoki nie mają uchwytu do mapy, a testy muszą zajrzeć w dane warstw.
+      window.__sources = sources;
+    }
     getSource(id) { return sources[id]; }
     setTerrain(cfg) { window.__terrain = cfg; }
     getTerrain() { return window.__terrain || null; }
@@ -265,6 +269,66 @@ const offA = await dashCalls();
 await page.waitForTimeout(500);
 const offB = await dashCalls();
 check('po zgaszeniu tras zegar znów stoi', offA === offB, `${offA} → ${offB} klatek`);
+
+/* ---------------------------------------------------------------- *
+ * Maska poza granicą i warstwa zagęszczenia – ścieżka Mapboksa
+ * ---------------------------------------------------------------- */
+
+check(
+  'maska poza granicą leży w slocie „top" – nad etykietami i budynkami',
+  slots['mask-fill'] === 'top',
+  `slot: ${slots['mask-fill']}`
+);
+check(
+  'kropki zagęszczenia leżą pod punktami popytu',
+  slots['density-dots'] === 'bottom' && slots['demand-dots'] === 'middle',
+  `gęstość: ${slots['density-dots']} · popyt: ${slots['demand-dots']}`
+);
+
+const maskData = await page.evaluate(() => {
+  const src = (window.__sources || {}).mask;
+  const f = src && src._data && src._data.features && src._data.features[0];
+  if (!f) return null;
+  return { rings: f.geometry.coordinates.length, outer: f.geometry.coordinates[0].length };
+});
+check(
+  'maska to wielokąt z dziurą w kształcie granicy gminy',
+  !!maskData && maskData.rings === 2 && maskData.outer === 5,
+  maskData ? `${maskData.rings} pierścienie, prostokąt z ${maskData.outer} wierzchołków` : 'brak maski'
+);
+
+// Warstwa gęstości startuje pusta i napełnia się dopiero po przełączeniu.
+const densityCount = () =>
+  page.evaluate(() => {
+    const src = (window.__sources || {}).density;
+    return src && src._data && src._data.features ? src._data.features.length : -1;
+  });
+check('źródło gęstości startuje puste', (await densityCount()) === 0, `${await densityCount()} punktów`);
+
+await page.locator('.layer-dock__btn').nth(1).click();
+await page.waitForTimeout(3000);
+const dens = await densityCount();
+check('przełącznik napełnia warstwę gęstości', dens > 1500, `${dens} punktów`);
+
+const densProps = await page.evaluate(() => {
+  const feats = ((window.__sources || {}).density._data || {}).features || [];
+  const ws = feats.map((f) => f.properties.w);
+  return {
+    hasCovered: feats.some((f) => f.properties.covered === true),
+    hasUncovered: feats.some((f) => f.properties.covered === false),
+    min: Math.min(...ws),
+    max: Math.max(...ws),
+  };
+});
+check(
+  'każda kropka niesie znormalizowaną gęstość (0–1) i dostęp do AED',
+  densProps.hasCovered &&
+    densProps.hasUncovered &&
+    densProps.min >= 0 &&
+    densProps.max > 0.9 &&
+    densProps.max <= 1,
+  `w: ${densProps.min.toFixed(2)}–${densProps.max.toFixed(2)}`
+);
 
 const real = errors.filter((e) => !/mapbox|net::ERR|favicon/i.test(e));
 check('brak błędów strony', real.length === 0, real.slice(0, 2).join(' | '));

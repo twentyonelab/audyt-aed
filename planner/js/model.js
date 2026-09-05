@@ -55,6 +55,30 @@ export function coverageRadiusM(standardMinutes) {
   return (standardMinutes * WALK_SPEED) / DETOUR;
 }
 
+/**
+ * Jak opisać zasięg w podsumowaniach.
+ *
+ * Promień 370 m to relikt modelu okręgowego. Odkąd pokrycie liczymy po realnej
+ * sieci pieszej, ta liczba nie opisuje już niczego, co widać na mapie: obrys
+ * jest poszarpany, a tory czy rzeka odcinają teren leżący 200 m w linii
+ * prostej. Podawanie jej obok wyniku z sieci sugerowałoby, że pokrycie jest
+ * kołem – dlatego promień pojawia się tylko tam, gdzie faktycznie liczy:
+ * w trybie przybliżonym i przy punktach bez izochrony.
+ *
+ * @param {{reachMode?:string, reachStats?:{network:number,total:number}}} analysis
+ * @returns {string} np. „zasięg z sieci pieszej" albo „promień 370 m (przybliżenie)"
+ */
+export function reachLabel(analysis, standardMinutes) {
+  const radius = `${Math.round(coverageRadiusM(standardMinutes))} m`;
+  const stats = (analysis && analysis.reachStats) || { network: 0, total: 0 };
+  const mode = analysis && analysis.reachMode;
+  if (mode === 'network') return 'zasięg z sieci pieszej';
+  if (mode === 'mixed') {
+    return `sieć piesza (${stats.network} z ${stats.total}) + promień ${radius} dla reszty`;
+  }
+  return `promień ${radius} (przybliżenie)`;
+}
+
 /** Offset a lat/lon by a metric vector. */
 export function offsetLatLon(origin, dxM, dyM) {
   return {
@@ -165,6 +189,149 @@ export function buildDemandPoints(features) {
     }
   }
   return out;
+}
+
+/* ------------------------------------------------------------------ *
+ * Zagęszczenie ludności
+ * ------------------------------------------------------------------ */
+
+/** Pole wielokąta w km², wzór Gaussa na współrzędnych przeliczonych na metry. */
+export function ringAreaKm2(ring) {
+  if (!ring || ring.length < 4) return 0;
+  const centre = ringCentroid(ring);
+  const kx = metresPerDegLon(centre.lat);
+  let sum = 0;
+  for (let i = 0, n = ring.length - 1; i < n; i++) {
+    const x0 = (ring[i][0] - centre.lon) * kx;
+    const y0 = (ring[i][1] - centre.lat) * M_PER_DEG_LAT;
+    const x1 = (ring[i + 1][0] - centre.lon) * kx;
+    const y1 = (ring[i + 1][1] - centre.lat) * M_PER_DEG_LAT;
+    sum += x0 * y1 - x1 * y0;
+  }
+  return Math.abs(sum) / 2 / 1e6;
+}
+
+/**
+ * Siatka zagęszczenia ludności pokrywająca całą gminę.
+ *
+ * DLACZEGO SIATKA, A NIE LOSOWE KROPKI
+ *
+ * Punkty popytu (buildDemandPoints) są rozrzucane spiralnie wokół środka
+ * dzielnicy: dobrze nadają się do liczenia pokrycia, ale jako obraz gęstości
+ * kłamią – układają się w rozetę, której w terenie nie ma. Siatka o stałym
+ * skoku pokrywa gminę równomiernie, a informację o zagęszczeniu niesie
+ * wielkość kropki, nie ich układ. Dzięki temu porównanie dwóch miejsc na
+ * mapie jest uczciwe: ta sama powierzchnia, różny rozmiar znaku.
+ *
+ * Rozdzielczość danych to nadal dzielnica – GUS podaje ludność na jednostkę
+ * pomocniczą, nie na hektar. Siatka rozkłada tę liczbę równomiernie wewnątrz
+ * dzielnicy i tyle wie; różnic wewnątrz osiedla nie pokaże. Dokładniejszy
+ * obraz wymaga siatki GUS 1 km² albo punktów adresowych z BDOT – to wchodzi
+ * osobno, razem z ręcznym oznaczaniem miejsc o podwyższonym zagęszczeniu.
+ *
+ * @param {object} args
+ * @param {object|null} args.boundary  Feature granicy gminy – obcina siatkę
+ * @param {object|null} args.districts FeatureCollection dzielnic z properties.population
+ * @param {number} args.spacingM       skok siatki w metrach
+ * @returns {Array<{lat:number, lon:number, districtId:string, density:number, weight:number}>}
+ */
+export function buildDensityGrid({ boundary, districts, spacingM = 170 } = {}) {
+  const features = (districts && districts.features) || [];
+  if (!features.length) return [];
+
+  // Gęstość i obrys każdej dzielnicy liczymy raz, nie przy każdej komórce.
+  const zones = features
+    .map((f) => {
+      const ring = f.geometry && f.geometry.coordinates && f.geometry.coordinates[0];
+      if (!ring || ring.length < 4) return null;
+      const areaKm2 = ringAreaKm2(ring);
+      const population = (f.properties && f.properties.population) || 0;
+      return {
+        id: (f.properties && f.properties.id) || '',
+        ring,
+        bbox: ringBbox(ring),
+        areaKm2,
+        density: areaKm2 > 0 ? population / areaKm2 : 0,
+      };
+    })
+    .filter(Boolean);
+  if (!zones.length) return [];
+
+  const boundaryRing =
+    boundary && boundary.geometry && boundary.geometry.coordinates
+      ? boundary.geometry.coordinates[0]
+      : null;
+
+  // Zakres siatki: granica gminy, a gdy jej nie ma – suma obrysów dzielnic.
+  let [w, s, e, n] = boundaryRing
+    ? ringBbox(boundaryRing)
+    : zones.reduce(
+        (acc, z) => [
+          Math.min(acc[0], z.bbox[0]),
+          Math.min(acc[1], z.bbox[1]),
+          Math.max(acc[2], z.bbox[2]),
+          Math.max(acc[3], z.bbox[3]),
+        ],
+        [180, 90, -180, -90]
+      );
+
+  const midLat = (s + n) / 2;
+  const stepLat = spacingM / M_PER_DEG_LAT;
+  const stepLon = spacingM / metresPerDegLon(midLat);
+  if (!Number.isFinite(stepLat) || !Number.isFinite(stepLon) || stepLat <= 0 || stepLon <= 0) return [];
+
+  // Powierzchnia jednej komórki w km² – z niej liczymy, ilu ludzi reprezentuje.
+  const cellKm2 = (spacingM * spacingM) / 1e6;
+  const out = [];
+
+  for (let lat = s + stepLat / 2; lat <= n; lat += stepLat) {
+    // Wiersze nieparzyste przesunięte o pół kroku: siatka trójkątna czyta się
+    // jako powierzchnia, kwadratowa – jako rzędy kropek.
+    const row = Math.round((lat - s) / stepLat);
+    const shift = row % 2 ? stepLon / 2 : 0;
+    for (let lon = w + stepLon / 2 + shift; lon <= e; lon += stepLon) {
+      if (boundaryRing && !inRing(lat, lon, boundaryRing)) continue;
+      const zone = zones.find((z) => {
+        const [zw, zs, ze, zn] = z.bbox;
+        if (lon < zw || lon > ze || lat < zs || lat > zn) return false;
+        return inRing(lat, lon, z.ring);
+      });
+      if (!zone || zone.density <= 0) continue;
+      out.push({
+        lat,
+        lon,
+        districtId: zone.id,
+        density: zone.density,
+        weight: zone.density * cellKm2,
+      });
+    }
+  }
+  return out;
+}
+
+/**
+ * Dla każdej komórki siatki: czy ma dojście do czynnego AED w standardzie
+ * i ile minut zajmuje dojście do najbliższego. Ta sama sonda co w analyze(),
+ * więc warstwa gęstości i wskaźniki nie mogą się rozjechać.
+ */
+export function reachStatusFor(
+  cells,
+  { points = [], reach = null, standardMinutes = 5, scenario = 'now', mode = 'day' } = {}
+) {
+  const radiusM = coverageRadiusM(standardMinutes);
+  const active = activePoints(points, scenario, mode);
+  const probes = makeProbes(active, reach, standardMinutes, radiusM);
+
+  return cells.map((cell) => {
+    let nearestMin = Infinity;
+    let covered = false;
+    for (const probe of probes) {
+      if (!covered && probe.covers(cell)) covered = true;
+      const m = probe.minutes(cell);
+      if (m < nearestMin) nearestMin = m;
+    }
+    return { ...cell, covered, nearestMin };
+  });
 }
 
 /* ------------------------------------------------------------------ *

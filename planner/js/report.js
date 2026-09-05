@@ -26,6 +26,7 @@ import {
   roadmapTotals,
   PHASE_META,
   coverageRadiusM,
+  reachLabel,
   WALK_SPEED,
   DETOUR,
   fmtPct,
@@ -410,7 +411,7 @@ function sectionCover(ctx) {
       ['Punkty AED w inwentarzu', fmtNum(existing)],
       ['Punkty planowane', fmtNum(proposed)],
       ['Standard czasu dojścia', `${fmtMin(standardMinutes, 0)} w jedną stronę`],
-      ['Promień strefy pokrycia', `${fmtNum(now.radiusM)} m`],
+      ['Sposób liczenia zasięgu', reachLabel(now, standardMinutes)],
       ['Pokrycie w stanie obecnym', fmtPct(now.coveragePct, 0)],
       ['Data raportu', esc(ctx.date)],
       ['Opracowanie', esc(ctx.contact)],
@@ -553,8 +554,8 @@ function sectionAnalysis(ctx) {
       Model rozkłada mieszkańców na <strong>${fmtNum(demandCount)}</strong>
       ${plural(demandCount, ['punkt popytu', 'punkty popytu', 'punktów popytu'])}
       i dla każdego liczy czas dojścia do najbliższego AED.
-      Punkt jest pokryty, gdy mieści się w promieniu <strong>${fmtNum(ctx.radiusM)} m</strong>
-      (${fmtMin(ctx.standardMinutes, 0)} w jedną stronę).
+      Punkt jest pokryty, gdy mieści się w zasięgu <strong>${fmtMin(ctx.standardMinutes, 0)}</strong>
+      marszu w jedną stronę – ${esc(reachLabel(ctx.now, ctx.standardMinutes))}.
     </p>
 
     <h3>Luki wg dzielnic – stan obecny</h3>
@@ -714,16 +715,23 @@ function sectionMethod(ctx) {
   return `
     <h2>Metodyka</h2>
 
-    <h3>Czas dojścia i promień strefy</h3>
+    <h3>Czas dojścia i zasięg</h3>
     <p>
       Liczymy czas świadka biegnącego po AED <em>i z powrotem</em> do poszkodowanego,
-      dlatego standard wyrażony jest „w jedną stronę”. Prędkość marszu przyjęto na
-      <strong>${fmtNum(WALK_SPEED)} m/min</strong>, a współczynnik wydłużenia trasy
-      po ulicach (odejście od linii prostej) na <strong>${fmtNum(DETOUR, 2)}</strong>.
+      dlatego standard wyrażony jest „w jedną stronę”. Zasięg każdego punktu wyznacza
+      izochrona po realnej sieci pieszej (OSM): tory, rzeka czy ogrodzone osiedle
+      odcinają teren, który w linii prostej leży blisko. Okrąg o promieniu
+      <strong>${fmtNum(coverageRadiusM(ctx.standardMinutes))} m</strong>
+      (${fmtNum(WALK_SPEED)} m/min, korekta trasy ${fmtNum(DETOUR, 2)}) zostaje wyłącznie
+      jako awaryjne przybliżenie dla punktów bez izochrony.
     </p>
     ${factsHtml([
       ['Standard czasu dojścia', `${fmtMin(ctx.standardMinutes, 0)} w jedną stronę`],
-      ['Promień strefy pokrycia', `${fmtNum(coverageRadiusM(ctx.standardMinutes))} m`],
+      ['Sposób liczenia zasięgu', reachLabel(ctx.now, ctx.standardMinutes)],
+      [
+        'Punkty z izochroną',
+        `${fmtNum((ctx.now.reachStats || {}).network || 0)} z ${fmtNum((ctx.now.reachStats || {}).total || 0)}`,
+      ],
       ['Punkty popytu w modelu', fmtNum(demand)],
       ['Ludność objęta modelem', fmtNum(ctx.now.totalPeople)],
       ['Punkty czynne – dzień', fmtNum(ctx.now.activeCount)],
