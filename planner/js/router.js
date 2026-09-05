@@ -1,6 +1,11 @@
 /**
- * router.js – hash routing plus the application shell (top bar, sub bar,
- * stepper). Views are plain modules that export `meta` and `render`.
+ * router.js – hash routing plus the application shell (top bar, sub bar).
+ * Views are plain modules that export `meta` and `render`.
+ *
+ * v2: nawigacja przeniosła się z bocznej szyny do belki górnej. Design system
+ * marki prowadzi krok po kroku numerowanymi zakładkami 01–05 wyśrodkowanymi
+ * w belce, a nie pionową listą po lewej – dzięki temu obszar roboczy zaczyna
+ * się od lewej krawędzi ekranu i mapa dostaje pełną szerokość.
  *
  * Spec reference: ITERACJA2_SPEC.md §3 (shell), §6 (routes).
  */
@@ -11,12 +16,14 @@ import { OPERATOR } from '../config.js';
 
 /** The five audit steps plus setup (spec §3). */
 export const STEPS = [
-  { step: 0, route: '#/setup', name: 'Setup projektu', short: 'dane wejściowe' },
-  { step: 1, route: '#/inventory', name: 'Inwentaryzacja', short: 'jak jest' },
-  { step: 2, route: '#/analysis', name: 'Analiza dostępności', short: 'gdzie są luki' },
-  { step: 3, route: '#/cards', name: 'Karty punktów', short: 'co zrobić' },
-  { step: 4, route: '#/roadmap', name: 'Roadmapa', short: 'kiedy i za ile' },
-  { step: 5, route: '#/report', name: 'Raport', short: 'dla decydenta' },
+  // `tab` to skrócona etykieta do belki górnej: sześć pełnych nazw nie mieści
+  // się w wyśrodkowanej nawigacji, a numer i tak niesie kolejność kroku.
+  { step: 0, route: '#/setup', name: 'Setup projektu', tab: 'Setup', short: 'dane wejściowe' },
+  { step: 1, route: '#/inventory', name: 'Inwentaryzacja', tab: 'Inwentaryzacja', short: 'jak jest' },
+  { step: 2, route: '#/analysis', name: 'Analiza dostępności', tab: 'Dostępność', short: 'gdzie są luki' },
+  { step: 3, route: '#/cards', name: 'Karty punktów', tab: 'Punkty', short: 'co zrobić' },
+  { step: 4, route: '#/roadmap', name: 'Roadmapa', tab: 'Roadmapa', short: 'kiedy i za ile' },
+  { step: 5, route: '#/report', name: 'Raport', tab: 'Raport', short: 'dla decydenta' },
 ];
 
 const routes = [];
@@ -70,7 +77,7 @@ function undoButton() {
   return h(
     'button',
     {
-      class: 'btn btn--sm btn--ghost topbar__undo',
+      class: 'btn btn--sm topbar__undo',
       disabled: enabled ? null : '',
       onclick: undoLast,
       title: enabled ? `Cofnij: ${undoLabel()} (Ctrl+Z)` : 'Nie ma czego cofnąć',
@@ -79,69 +86,69 @@ function undoButton() {
   );
 }
 
-function topbar() {
+/** Znak marki – błyskawica z księgi Sinecco, w kolorze dziedziczonym z CSS. */
+const MARK_SVG =
+  '<svg viewBox="0 0 296.533 400" aria-hidden="true"><path fill="currentColor" ' +
+  'd="M83.035 218.064L0 218.064L92.348 0L222.031 0L83.035 218.064ZM157.537 400L74.502 400' +
+  'L166.763 181.936L296.533 181.936L157.537 400Z"/></svg>';
+
+/**
+ * Belka górna wg design systemu: znak i wordmark, kreska, nazwa projektu,
+ * wyśrodkowane numerowane zakładki 01–05 i limonkowy przycisk menu po prawej.
+ * Zakładka aktywna dostaje bladolimonkowe tło na pełną wysokość belki.
+ */
+function topbar(activeStep) {
   const project = state.project;
+  const done = new Set(state.project?.stepsDone || []);
+
+  const tabs = STEPS.map((s, i) =>
+    h(
+      'button',
+      {
+        class: `topbar__tab${s.step === activeStep ? ' is-on' : ''}${
+          done.has(s.step) && s.step !== activeStep ? ' is-done' : ''
+        }`,
+        onclick: () => navigate(s.route),
+        title: `${s.name} – ${s.short}`,
+      },
+      h('span', { class: 'topbar__tab-no', text: String(i + 1).padStart(2, '0') }),
+      h('span', { text: s.tab || s.name })
+    )
+  );
+
   return h(
     'header',
     { class: 'topbar' },
     h(
       'button',
       { class: 'topbar__brand', onclick: () => navigate('#/'), title: 'Wróć do pulpitu' },
-      h('span', {
-        class: 'topbar__mark',
-        html: '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M14 2 5 14h6l-1 8 9-12h-6z" fill="#4CAF7D"/></svg>',
-      }),
-      h('span', { html: '<b>SINECCO</b> · AED Planner' })
+      h('span', { class: 'topbar__mark', html: MARK_SVG }),
+      h('span', { class: 'topbar__wordmark', text: 'sinecco' })
     ),
-    undoButton(),
+    project ? h('span', { class: 'topbar__rule' }) : null,
     project
-      ? h('span', {
-          class: 'topbar__project',
-          html: `Projekt: <strong>${project.label || project.name}</strong>`,
-        })
+      ? h(
+          'span',
+          { class: 'topbar__project' },
+          h('small', { text: 'Projekt' }),
+          h('strong', { text: project.label || project.name })
+        )
       : null,
-    h('span', { class: 'topbar__spacer' }),
-    h('span', { class: 'topbar__project', text: OPERATOR }),
+    h('nav', { class: 'topbar__nav', 'aria-label': 'Kroki audytu' }, ...tabs),
     h(
       'div',
       { class: 'topbar__actions' },
+      h('span', { class: 'topbar__tag', html: `<b>Audyt</b> · ${OPERATOR}` }),
+      undoButton(),
       h(
         'button',
         {
-          class: 'btn btn--sm btn--primary',
+          class: 'icon-btn icon-btn--signal',
           onclick: () => navigate('#/report'),
           title: 'Przejdź do raportu i wygeneruj PDF',
+          'aria-label': 'Raport i PDF',
         },
-        'PDF'
-      )
-    )
-  );
-}
-
-function stepper(activeStep) {
-  const done = new Set(state.project?.stepsDone || []);
-  return h(
-    'nav',
-    { class: 'stepper', 'aria-label': 'Kroki audytu' },
-    // Pulpit na górze: to wyjście do wszystkich projektów, a nie ostatni krok.
-    h(
-      'button',
-      { class: 'stepper__item', onclick: () => navigate('#/') },
-      h('span', { class: 'stepper__circle', text: '⌂' }),
-      h('span', { class: 'stepper__label', html: 'Pulpit<small>wszystkie projekty</small>' })
-    ),
-    h('div', { class: 'stepper__sep' }),
-    ...STEPS.map((s) =>
-      h(
-        'button',
-        {
-          class: `stepper__item${s.step === activeStep ? ' is-active' : ''}${
-            done.has(s.step) && s.step !== activeStep ? ' is-done' : ''
-          }`,
-          onclick: () => navigate(s.route),
-        },
-        h('span', { class: 'stepper__circle', text: done.has(s.step) && s.step !== activeStep ? '✓' : String(s.step) }),
-        h('span', { class: 'stepper__label', html: `${s.name}<small>${s.short}</small>` })
+        '⌸'
       )
     )
   );
@@ -211,11 +218,9 @@ export async function render() {
   );
 
   clear(root);
-  root.appendChild(topbar());
+  root.appendChild(topbar(meta.step));
   root.appendChild(subbar);
-  root.appendChild(
-    h('div', { class: 'layout' }, meta.hideStepper ? null : stepper(meta.step), workspace)
-  );
+  root.appendChild(h('div', { class: 'layout' }, workspace));
 
   try {
     await view.render(workspace, {
@@ -234,7 +239,7 @@ export async function render() {
 }
 
 function topbarIf(meta) {
-  return meta.showTopbar === false ? h('div') : topbar();
+  return meta.showTopbar === false ? h('div') : topbar(meta.step);
 }
 
 export function initRouter() {

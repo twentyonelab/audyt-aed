@@ -54,7 +54,7 @@ const go = async (hash, wait = 1000) => {
   await page.waitForTimeout(wait);
 };
 
-/** Count of purple recommendation squares currently in state. */
+/** Count of lime recommendation squares currently in state. */
 const proposedCount = () =>
   page.evaluate(() => window.__aed.points.filter((p) => p.kind === 'proposed' && p.status !== 'rejected').length);
 
@@ -75,7 +75,7 @@ const anaPolys = await page.locator('.map-fallback svg path[fill="#e8e8e4"], .ma
 check('analiza: brak wypełnionych obrysów dzielnic', anaPolys === 0, `${anaPolys} wielokątów`);
 
 /* ---------------------------------------------------------------- *
- * 2. Klik w mapę analizy dodaje fioletową rekomendację
+ * 2. Klik w mapę analizy dodaje limonkową rekomendację
  * ---------------------------------------------------------------- */
 
 const before = await proposedCount();
@@ -91,8 +91,8 @@ const lastKind = await page.evaluate(() => {
 });
 check('analiza: nowy punkt to propozycja NEW-', /^NEW-\d+\/proposed\/proposed$/.test(lastKind), lastKind);
 
-const squares = await page.locator('.map-fallback svg rect[fill="#8a6fc7"]').count();
-check('analiza: rekomendacje rysują się jako fioletowe kwadraty', squares >= after, `${squares} kwadratów`);
+const squares = await page.locator('.map-fallback svg rect[fill="#c9ee54"]').count();
+check('analiza: rekomendacje rysują się jako limonkowe kwadraty', squares >= after, `${squares} kwadratów`);
 
 /* Podwójny klik przybliża – i nie dokłada przy okazji dwóch punktów. */
 const beforeDbl = await proposedCount();
@@ -134,9 +134,9 @@ const spread = () =>
   });
 
 const spreadFitted = await spread();
-// Zoom wokół pierwszego fioletowego kwadratu – zoom celowany w kursor trzyma
+// Zoom wokół pierwszego limonkowego kwadratu – zoom celowany w kursor trzyma
 // ten punkt w miejscu, więc kwadrat nie ucieknie poza kadr przed przeciąganiem.
-const zoomAnchor = await page.locator('.map-fallback svg rect[fill="#8a6fc7"]').first().boundingBox();
+const zoomAnchor = await page.locator('.map-fallback svg rect[fill="#c9ee54"]').first().boundingBox();
 box = await mapBox();
 await page.mouse.move(
   zoomAnchor ? zoomAnchor.x + zoomAnchor.width / 2 : box.x + box.width / 2,
@@ -152,14 +152,14 @@ check(
   `${spreadFitted} → ${scaleBefore}`
 );
 
-// Przeciągnij pierwszą propozycję (fioletowy kwadrat) o kawałek.
+// Przeciągnij pierwszą propozycję (limonkowy kwadrat) o kawałek.
 const coordsOf = () =>
   page.evaluate(() => {
     const all = [...window.__aed.points, ...window.__aed.pendingProposals];
     return all.map((p) => `${p.lat},${p.lon}`).join('|');
   });
 const coordsBefore = await coordsOf();
-const sq = page.locator('.map-fallback svg rect[fill="#8a6fc7"]').first();
+const sq = page.locator('.map-fallback svg rect[fill="#c9ee54"]').first();
 const sqBox = await sq.boundingBox();
 if (sqBox) {
   await page.mouse.move(sqBox.x + sqBox.width / 2, sqBox.y + sqBox.height / 2);
@@ -233,15 +233,15 @@ await page.waitForTimeout(600);
 
 const dimmedPins = await page.locator('.map-fallback svg [stroke][opacity="0.2"]').count();
 check('filtr dzielnicy wygasza punkty spoza niej do 20%', dimmedPins > 0, `${dimmedPins} wygaszonych`);
-const highlight = await page.locator('.map-fallback svg path[stroke="#4caf7d"]').count();
-check('wybrana dzielnica jest podświetlona na mapie', highlight > 0);
+const highlight = await page.locator('.map-fallback svg path[stroke="#0c9331"]').count();
+check('wybrana dzielnica jest podświetlona na mapie', highlight > 0, `${highlight} obrysów`);
 await page.screenshot({ path: join(SHOTS, 'interactions-district-filter.png') });
 
 await page.locator('.chips .chip').first().click(); // powrót do „Wszystkie"
 await page.waitForTimeout(400);
 check(
   'zdjęcie filtra gasi podświetlenie',
-  (await page.locator('.map-fallback svg path[stroke="#4caf7d"]').count()) === 0
+  (await page.locator('.map-fallback svg path[stroke="#0c9331"]').count()) === 0
 );
 
 check('legenda: kwadrat rekomendacji pod statusami', (await page.locator('.map-legend .dot--square').count()) > 0);
@@ -316,8 +316,14 @@ await page.setViewportSize({ width: 1560, height: 940 });
  * ---------------------------------------------------------------- */
 
 await go('#/inventory', 900);
-const firstStep = await page.locator('.stepper .stepper__item').first().innerText();
-check('Pulpit jest pierwszą pozycją nawigacji', /pulpit/i.test(firstStep), firstStep.replace(/\s+/g, ' '));
+const navTabs = await page.locator('.topbar__tab').allInnerTexts();
+check(
+  'nawigacja kroków siedzi w belce górnej, numerowana od 01',
+  navTabs.length === 6 && /^01/.test(navTabs[0].replace(/\s+/g, '')),
+  navTabs.map((t) => t.replace(/\s+/g, ' ')).join(' · ')
+);
+const brandGoesHome = await page.locator('.topbar__brand').count();
+check('znak marki wraca na pulpit', brandGoesHome === 1);
 
 /* ---------------------------------------------------------------- *
  * 12. Aktywna karta punktu w analizie: to samo miejsce co w inwentaryzacji,
@@ -386,8 +392,8 @@ const routeStroke = await page
   .first()
   .getAttribute('stroke');
 check(
-  'analiza: linie dojścia w kolorze granicy zasięgu (zielone)',
-  routeStroke === '#4caf7d',
+  'analiza: linie dojścia w kolorze obrysu zasięgu',
+  routeStroke === '#9cbd25',
   String(routeStroke)
 );
 
@@ -424,12 +430,12 @@ check('✕ zamyka kartę i odklikuje punkt', (await cardPlace()) === null);
 check('✕ gasi też linie dojścia', (await routeLines()) === 0);
 
 /* ---------------------------------------------------------------- *
- * 13. Nowy fioletowy punkt: własny obrys, podświetlone pole, wpływ na pokrycie
+ * 13. Nowa rekomendacja: własny obrys, podświetlone pole, wpływ na pokrycie
  * ---------------------------------------------------------------- */
 
 /** Fioletowe obrysy zasięgu (propozycje) – kreskowane, w odróżnieniu od zielonych. */
 const planRings = () =>
-  page.locator('.map-fallback svg path[stroke-dasharray="3 2"][fill="rgba(138,111,199,0.16)"]').count();
+  page.locator('.map-fallback svg path[stroke-dasharray="3 2"][fill="rgba(11,112,48,0.12)"]').count();
 const ringsBefore = await planRings();
 box = await mapBox();
 await page.mouse.click(box.x + box.width * 0.45, box.y + box.height * 0.5);
@@ -442,7 +448,7 @@ check(
   newPlace ? newPlace.text.slice(0, 70) : 'brak karty'
 );
 check(
-  'pole karty nowego punktu podświetlone na fioletowo',
+  'pole karty nowego punktu podświetlone kolorem rekomendacji',
   !!newPlace && newPlace.proposed,
   newPlace ? `klasa --proposed=${newPlace.proposed}` : 'brak karty'
 );
@@ -454,7 +460,7 @@ check(
 
 const ringsAfter = await planRings();
 check(
-  'nowy punkt dorysowuje własny fioletowy obrys zasięgu',
+  'nowy punkt dorysowuje własny obrys zasięgu planu',
   ringsAfter === ringsBefore + 1,
   `${ringsBefore} → ${ringsAfter} obrysów`
 );
@@ -491,7 +497,7 @@ check(
   invPlace ? `margin ${invPlace.marginBottom}px · padding ${invPlace.paddingTop}/${invPlace.paddingRight}px` : 'brak karty'
 );
 
-const invSelected = await page.locator('.map-fallback svg circle[stroke="#1e1e1e"]').count();
+const invSelected = await page.locator('.map-fallback svg circle[stroke="#000000"]').count();
 check('inwentaryzacja: wybrany pin ma ciemną obwódkę', invSelected === 1, `${invSelected} pinów`);
 
 await page.locator('.panel .panel__selected button[title*="Zamknij"]').first().click();
@@ -499,7 +505,7 @@ await page.waitForTimeout(700);
 check('inwentaryzacja: ✕ zamyka kartę', (await cardPlace()) === null);
 check(
   'inwentaryzacja: ✕ odklikuje pin na mapie',
-  (await page.locator('.map-fallback svg circle[stroke="#1e1e1e"]').count()) === 0
+  (await page.locator('.map-fallback svg circle[stroke="#000000"]').count()) === 0
 );
 
 /* ---------------------------------------------------------------- *
@@ -528,8 +534,8 @@ const confirmModal = async (label) => {
   await page.waitForTimeout(900);
 };
 
-// Zaznacz fioletowy kwadrat propozycji i usuń go z mini-karty.
-await page.locator('.map-fallback svg rect[fill="#8a6fc7"]').first().click();
+// Zaznacz limonkowy kwadrat propozycji i usuń go z mini-karty.
+await page.locator('.map-fallback svg rect[fill="#c9ee54"]').first().click();
 await page.waitForTimeout(1200);
 const delBtn = page.locator('.panel .panel__selected button:has-text("USUŃ PUNKT")');
 check('analiza: karta rekomendacji ma USUŃ PUNKT', (await delBtn.count()) === 1);
@@ -560,7 +566,7 @@ check(
 
 // Ta sama akcja w inwentaryzacji.
 await go('#/inventory', 1300);
-await page.locator('.map-fallback svg rect[fill="#8a6fc7"]').first().click();
+await page.locator('.map-fallback svg rect[fill="#c9ee54"]').first().click();
 await page.waitForTimeout(900);
 const invDel = page.locator('.panel .panel__selected button:has-text("USUŃ")');
 check('inwentaryzacja: karta rekomendacji ma USUŃ', (await invDel.count()) === 1);

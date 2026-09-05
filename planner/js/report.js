@@ -447,7 +447,7 @@ function sectionSummary(ctx, kpis) {
     </div>
     <p class="note">
       Zielone punkty to mieszkańcy w zasięgu, czerwone – poza zasięgiem.
-      Okręgi to strefy pokrycia (fioletowe: punkty planowane).
+      Okręgi to strefy pokrycia (ciemniejsze: punkty planowane).
     </p>
     <div class="report-quote">„${esc(CONTEXT_SENTENCE)}”</div>
     <p>

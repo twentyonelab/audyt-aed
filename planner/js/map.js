@@ -89,25 +89,35 @@ export function makeProjection(bbox, width, height, pad = 12) {
  * Static SVG rendering (report maps, card mini-maps, fallback basemap)
  * ------------------------------------------------------------------ */
 
+/* v2: paleta mapy pochodzi z design systemu marki. Zasięg jest limonkowy,
+   bo limonka niesie w tym systemie znaczenie „objęte", a nie dekorację;
+   statusy punktów zostają przy zieleni, żółci i czerwieni audytu. */
 const COLORS = {
-  boundary: '#b9b9b4',
+  boundary: '#a8a7a4',
   boundaryFill: '#ffffff',
-  district: '#e6e6e2',
-  districtLine: '#d0d0d0',
-  coverage: 'rgba(76,175,125,0.16)',
-  coverageLine: 'rgba(76,175,125,0.55)',
-  coveragePlan: 'rgba(138,111,199,0.16)',
-  coveragePlanLine: 'rgba(138,111,199,0.6)',
-  covered: '#4caf7d',
-  uncovered: '#d9534f',
-  near: '#e8b33c',
-  highlight: 'rgba(76,175,125,0.12)',
-  highlightLine: '#4caf7d',
+  district: '#f4f4f2',
+  districtLine: '#e0e0de',
+  coverage: 'rgba(184,221,60,0.22)',
+  coverageLine: 'rgba(156,189,37,0.75)',
+  coveragePlan: 'rgba(11,112,48,0.12)',
+  coveragePlanLine: 'rgba(11,112,48,0.55)',
+  covered: '#167734',
+  uncovered: '#d40b07',
+  near: '#fecd14',
+  highlight: 'rgba(201,238,84,0.22)',
+  highlightLine: '#0c9331',
   // Trasy dojścia: ten sam odcień co obrys zasięgu, ale w pełnym nasyceniu –
   // krycie 50% nakłada się dopiero w atrybucie stroke-opacity, więc linia nie
   // gaśnie dwa razy (raz w kolorze, raz w kryciu).
-  routeLine: '#4caf7d',
-  routePlanLine: '#8a6fc7',
+  routeLine: '#9cbd25',
+  routePlanLine: '#0b7030',
+  /* Rekomendacja: nasycona limonka, ten sam odcień co pigułka „propozycja". */
+  proposed: '#c9ee54',
+  /* Podpisy na mapie – szarość techniczna i czerwień luki z palety statusów. */
+  labelMuted: '#908f8f',
+  labelGap: '#b30a06',
+  pinStroke: '#ffffff',
+  pinStrokeSelected: '#000000',
 };
 
 /**
@@ -173,7 +183,7 @@ export function renderSceneSvg(scene, opts = {}) {
   const { project, metres } = opts.projection || makeProjection(bbox, width, height, opts.pad ?? 10);
   const parts = [];
 
-  parts.push(`<rect width="${width}" height="${height}" fill="#f2f2ef"/>`);
+  parts.push(`<rect width="${width}" height="${height}" fill="${COLORS.district}"/>`);
 
   if (scene.boundary) {
     const ring = scene.boundary.geometry.coordinates[0];
@@ -264,7 +274,7 @@ export function renderSceneSvg(scene, opts = {}) {
   for (const p of scene.points || []) {
     const [x, y] = project(p.lon, p.lat);
     const fill =
-      p.level === 'ok' ? COLORS.covered : p.level === 'warn' ? '#e8b33c' : p.level === 'proposed' ? '#8a6fc7' : COLORS.uncovered;
+      p.level === 'ok' ? COLORS.covered : p.level === 'warn' ? COLORS.near : p.level === 'proposed' ? COLORS.proposed : COLORS.uncovered;
     const dim = p.dimmed ? ' opacity="0.2"' : '';
     if (p.level === 'proposed') {
       parts.push(
@@ -279,7 +289,7 @@ export function renderSceneSvg(scene, opts = {}) {
     for (const l of scene.labels) {
       const [x, y] = project(l.lon, l.lat);
       parts.push(
-        `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-family="Inter, sans-serif" font-size="8" fill="#8d8d8d" text-anchor="middle">${l.text}</text>`
+        `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-family="Archivo, Helvetica, sans-serif" font-size="8" fill="${COLORS.labelMuted}" text-anchor="middle">${l.text}</text>`
       );
     }
   }
@@ -388,16 +398,16 @@ function createMapboxMap(container, opts) {
     src('routes', emptyFc);
     src('demand', emptyFc);
 
-    map.addLayer({ id: 'districts-fill', type: 'fill', source: 'districts', paint: { 'fill-color': '#e8e8e4', 'fill-opacity': 0.55 } });
-    map.addLayer({ id: 'districts-line', type: 'line', source: 'districts', paint: { 'line-color': '#c9c9c4', 'line-width': 1 } });
-    map.addLayer({ id: 'district-hl-fill', type: 'fill', source: 'district-hl', paint: { 'fill-color': '#4caf7d', 'fill-opacity': 0.1 } });
-    map.addLayer({ id: 'district-hl-line', type: 'line', source: 'district-hl', paint: { 'line-color': '#4caf7d', 'line-width': 1.8 } });
+    map.addLayer({ id: 'districts-fill', type: 'fill', source: 'districts', paint: { 'fill-color': COLORS.district, 'fill-opacity': 0.55 } });
+    map.addLayer({ id: 'districts-line', type: 'line', source: 'districts', paint: { 'line-color': COLORS.districtLine, 'line-width': 1 } });
+    map.addLayer({ id: 'district-hl-fill', type: 'fill', source: 'district-hl', paint: { 'fill-color': COLORS.highlightLine, 'fill-opacity': 0.1 } });
+    map.addLayer({ id: 'district-hl-line', type: 'line', source: 'district-hl', paint: { 'line-color': COLORS.highlightLine, 'line-width': 1.8 } });
     map.addLayer({
       id: 'coverage-fill',
       type: 'fill',
       source: 'coverage',
       paint: {
-        'fill-color': ['case', ['==', ['get', 'kind'], 'proposed'], '#8a6fc7', '#4caf7d'],
+        'fill-color': ['case', ['==', ['get', 'kind'], 'proposed'], COLORS.coveragePlanLine, COLORS.coverageLine],
         'fill-opacity': 0.15,
       },
     });
@@ -406,7 +416,7 @@ function createMapboxMap(container, opts) {
       type: 'line',
       source: 'coverage',
       paint: {
-        'line-color': ['case', ['==', ['get', 'kind'], 'proposed'], '#8a6fc7', '#4caf7d'],
+        'line-color': ['case', ['==', ['get', 'kind'], 'proposed'], COLORS.coveragePlanLine, COLORS.coverageLine],
         'line-width': 1,
         'line-dasharray': [2, 1.5],
       },
@@ -418,7 +428,7 @@ function createMapboxMap(container, opts) {
       type: 'fill',
       source: 'reach',
       paint: {
-        'fill-color': ['case', ['==', ['get', 'kind'], 'proposed'], '#8a6fc7', '#4caf7d'],
+        'fill-color': ['case', ['==', ['get', 'kind'], 'proposed'], COLORS.coveragePlanLine, COLORS.coverageLine],
         'fill-opacity': ['case', ['get', 'emphasis'], 0.22, 0.13],
       },
     });
@@ -427,7 +437,7 @@ function createMapboxMap(container, opts) {
       type: 'line',
       source: 'reach',
       paint: {
-        'line-color': ['case', ['==', ['get', 'kind'], 'proposed'], '#8a6fc7', '#4caf7d'],
+        'line-color': ['case', ['==', ['get', 'kind'], 'proposed'], COLORS.coveragePlanLine, COLORS.coverageLine],
         'line-width': ['case', ['get', 'emphasis'], 2, 1],
       },
     });
@@ -439,7 +449,7 @@ function createMapboxMap(container, opts) {
       // o długości zero, a te z okrągłą końcówką rysowałyby się jako kropki.
       layout: { 'line-join': 'round' },
       paint: {
-        'line-color': ['case', ['==', ['get', 'kind'], 'proposed'], '#8a6fc7', '#4caf7d'],
+        'line-color': ['case', ['==', ['get', 'kind'], 'proposed'], COLORS.coveragePlanLine, COLORS.coverageLine],
         'line-width': 2,
         'line-opacity': 0.5,
         'line-dasharray': ROUTE_FLOW_STEPS[0],
@@ -454,13 +464,13 @@ function createMapboxMap(container, opts) {
         'circle-opacity': 0.75,
         'circle-color': [
           'case',
-          ['get', 'covered'], '#4caf7d',
-          ['<=', ['get', 'ratio'], 2], '#e8b33c',
-          '#d9534f',
+          ['get', 'covered'], COLORS.covered,
+          ['<=', ['get', 'ratio'], 2], COLORS.near,
+          COLORS.uncovered,
         ],
       },
     });
-    map.addLayer({ id: 'boundary-line', type: 'line', source: 'boundary', paint: { 'line-color': '#7c7c78', 'line-width': 1.4, 'line-dasharray': [3, 2] } });
+    map.addLayer({ id: 'boundary-line', type: 'line', source: 'boundary', paint: { 'line-color': COLORS.boundary, 'line-width': 1.4, 'line-dasharray': [3, 2] } });
 
     ready = true;
     if (scene.boundary) applyScene(scene);
@@ -728,9 +738,9 @@ function createFallbackMap(container, opts) {
       t.setAttribute('y', (y + 14).toFixed(1));
       t.setAttribute('text-anchor', 'middle');
       t.setAttribute('font-size', l.kind === 'gap' ? '10.5' : '10');
-      t.setAttribute('fill', l.kind === 'gap' ? '#a5322e' : '#8d8d8d');
+      t.setAttribute('fill', l.kind === 'gap' ? COLORS.labelGap : COLORS.labelMuted);
       t.setAttribute('font-weight', '600');
-      t.setAttribute('stroke', '#ffffff');
+      t.setAttribute('stroke', COLORS.pinStroke);
       t.setAttribute('stroke-width', '2.6');
       t.setAttribute('paint-order', 'stroke');
       t.setAttribute('stroke-linejoin', 'round');
@@ -744,7 +754,7 @@ function createFallbackMap(container, opts) {
       const isProposed = p.level === 'proposed';
       const node = document.createElementNS('http://www.w3.org/2000/svg', isProposed ? 'rect' : 'circle');
       const fill =
-        p.level === 'ok' ? '#4caf7d' : p.level === 'warn' ? '#e8b33c' : isProposed ? '#8a6fc7' : '#d9534f';
+        p.level === 'ok' ? COLORS.covered : p.level === 'warn' ? COLORS.near : isProposed ? COLORS.proposed : COLORS.uncovered;
       if (isProposed) {
         node.setAttribute('x', (x - 6).toFixed(1));
         node.setAttribute('y', (y - 6).toFixed(1));
@@ -756,7 +766,7 @@ function createFallbackMap(container, opts) {
         node.setAttribute('r', '6');
       }
       node.setAttribute('fill', fill);
-      node.setAttribute('stroke', p.id === scene.selectedId ? '#1e1e1e' : '#ffffff');
+      node.setAttribute('stroke', p.id === scene.selectedId ? COLORS.pinStrokeSelected : COLORS.pinStroke);
       node.setAttribute('stroke-width', p.id === scene.selectedId ? '2.4' : '2');
       if (p.dimmed) node.setAttribute('opacity', '0.2');
       node.style.cursor = p.draggable ? 'grab' : 'pointer';

@@ -893,13 +893,13 @@ export async function render(root, ctx) {
       legendRow(dotHtml('ok'), 'zielona kropka', 'w zasięgu – ktoś zdąży przynieść AED na czas'),
       legendRow(dotHtml('warn'), 'żółta kropka', 'na granicy standardu'),
       legendRow(dotHtml('crit'), 'czerwona kropka', 'poza zasięgiem – nie obsługuje ich żadne AED'),
-      legendRow(dotHtml('square'), 'fioletowy kwadrat', 'propozycja – przeciągnij, licznik przeliczy się na żywo'),
+      legendRow(dotHtml('square'), 'limonkowy kwadrat', 'propozycja – przeciągnij, licznik przeliczy się na żywo'),
       legendRow(
         '<svg width="14" height="8" aria-hidden="true"><line x1="0" y1="4" x2="14" y2="4" ' +
           'stroke="#4caf7d" stroke-width="1.6" stroke-opacity="0.5" stroke-dasharray="4 3"/></svg>',
         'przerywane linie',
         'trasy dojścia do wybranego punktu – kreski biegną od granicy zasięgu do pinu, ' +
-          `każda trasa to ${fmtMin(standardMinutes, 0)} marszu (fioletowe dla propozycji)`
+          `każda trasa to ${fmtMin(standardMinutes, 0)} marszu (ciemnozielone dla propozycji)`
       ),
       h('p', {
         class: 'note',
@@ -911,7 +911,7 @@ export async function render(root, ctx) {
       h('p', {
         class: 'note',
         text:
-          'Klik w pin – także w fioletową propozycję – pokazuje jej obrys, trasy dojścia i zysk pokrycia ' +
+          'Klik w pin – także w limonkową propozycję – pokazuje jej obrys, trasy dojścia i zysk pokrycia ' +
           'w karcie w panelu obok; drugi klik otwiera pełną kartę punktu.',
       }),
     ])
@@ -1018,7 +1018,7 @@ export async function render(root, ctx) {
   /**
    * Lokalizacje, którym rysujemy obrys zasięgu: czynne AED scenariusza oraz
    * KAŻDA rekomendacja – także ta, która w bieżącym scenariuszu nie liczy się
-   * jeszcze do pokrycia. Bez tego fioletowy pin wisiał na mapie bez obrysu
+   * jeszcze do pokrycia. Bez tego pin rekomendacji wisiał na mapie bez obrysu
    * i nie było widać, jaki obszar miałby obsłużyć.
    */
   const shapeSites = () => {
@@ -1064,7 +1064,7 @@ export async function render(root, ctx) {
    *
    * Każda trasa jest przycięta do obrysu standardu i do jego budżetu czasu
    * (patrz trimRouteToReach) – dlatego nigdy nie wystaje poza zielone czy
-   * fioletowe pole i zawsze odpowiada temu samemu czasowi dojścia.
+   * pole zasięgu i zawsze odpowiada temu samemu czasowi dojścia.
    * Kolejność współrzędnych odwracamy: Directions liczy od pinu na zewnątrz,
    * a animacja płynie w kierunku rysowania – po odwróceniu kreski biegną
    * od granicy DO pinu, jak człowiek biegnący po AED.
@@ -1157,7 +1157,7 @@ export async function render(root, ctx) {
     paintSelected();
   });
 
-  // Klik w puste miejsce mapy dokłada rekomendację (fioletowy kwadrat) – to
+  // Klik w puste miejsce mapy dokłada rekomendację (limonkowy kwadrat) – to
   // najszybsza odpowiedź na pytanie „a gdyby AED stanęło tutaj?". Zysk liczy
   // ten sam coverageGainFor(), którego używa optymalizator, więc nowa
   // rekomendacja jest porównywalna z propozycjami wygenerowanymi automatycznie.

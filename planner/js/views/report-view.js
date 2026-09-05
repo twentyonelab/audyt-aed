@@ -141,6 +141,26 @@ function configCard(title, ...children) {
   );
 }
 
+/**
+ * Limonkowy panel domykający kolumnę konfiguracji.
+ *
+ * Design system marki dopuszcza JEDNĄ nasyconą powierzchnię na ekran i sadza
+ * ją na dole szyny, pod etykietą sekcji. Tutaj przypada generowaniu: to jest
+ * czynność, po której audytor wychodzi z narzędzia z dokumentem w ręku.
+ */
+function signalCard(title, ...children) {
+  return h(
+    'div',
+    { class: 'signal-panel' },
+    h('span', {
+      class: 'label-caps',
+      style: { display: 'block', marginBottom: '14px', color: 'var(--ink)', paddingBottom: '10px', borderBottom: '1px solid rgba(0,0,0,.18)' },
+      text: title,
+    }),
+    ...children
+  );
+}
+
 /** Zapisuje wybór sekcji w kolejności druku (null = wszystkie). */
 function setSectionEnabled(id, on) {
   const current = new Set(enabledSectionIds(state));
@@ -416,21 +436,38 @@ export async function render(root, ctx) {
     )
   );
 
-  const cardGenerate = configCard(
+  const pickedSections = enabledSectionIds(state).length;
+  const allSectionsOn = pickedSections === REPORT_SECTIONS.length;
+
+  const cardGenerate = signalCard(
     'Generowanie',
+    h('div', {
+      style: {
+        fontSize: 'var(--fs-metric-m)',
+        letterSpacing: 'var(--ls-metric-m)',
+        lineHeight: '1',
+        fontVariantNumeric: 'tabular-nums',
+      },
+      text: `${pickedSections} z ${REPORT_SECTIONS.length}`,
+    }),
+    h('div', {
+      style: { marginTop: '8px', fontSize: '15px' },
+      text: allSectionsOn ? 'Wszystkie sekcje w dokumencie.' : 'Sekcje wybrane do wydruku.',
+    }),
     h(
       'button',
       {
         class: 'btn btn--primary btn--block',
+        style: { marginTop: '26px' },
         onclick: () => window.print(),
       },
       'GENERUJ PDF – SNAPSHOT'
     ),
     h('p', {
       class: 'note',
-      style: { marginTop: '10px' },
+      style: { marginTop: '12px', color: 'var(--grey-700)' },
       text:
-        'Iteracja 2: wydruk przeglądarki z arkuszem @media print (A4, marginesy 14 mm). ' +
+        'Wydruk przeglądarki z arkuszem @media print (A4, marginesy 14 mm). ' +
         'W oknie druku wybierz „Zapisz jako PDF”. Miniatury, ten panel i powłoka aplikacji ' +
         'nie trafiają na wydruk; każda sekcja zaczyna nową stronę.',
     })

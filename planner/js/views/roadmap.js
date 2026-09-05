@@ -596,9 +596,11 @@ export async function render(root, ctx) {
     )
   );
 
+  // Pas KPI roadmapy to limonkowa tafla domykająca nagłówek – jedna nasycona
+  // powierzchnia tego ekranu, zgodnie z design systemem marki.
   const kpis = h(
     'div',
-    { class: 'kpi-grid kpi-grid--3', style: { marginBottom: '14px' } },
+    { class: 'kpi-grid kpi-grid--3 kpi-grid--signal', style: { marginBottom: '20px' } },
     h(
       'div',
       { class: 'kpi' },
@@ -646,7 +648,7 @@ export async function render(root, ctx) {
       class: 'note',
       style: { flex: '1', minWidth: '260px', margin: '0' },
       text:
-        `Zatwierdzenie zalicza krok 4 w stepperze i przenosi do raportu. Sumy i terminy ` +
+        `Zatwierdzenie zalicza krok 4 w belce i przenosi do raportu. Sumy i terminy ` +
         `pozostają edytowalne – raport czyta je na bieżąco ze stanu projektu.`,
     }),
     h('button', { class: 'btn btn--primary', onclick: approve }, 'ZATWIERDŹ → RAPORT')

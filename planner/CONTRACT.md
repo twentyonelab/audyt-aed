@@ -1,4 +1,4 @@
-# CONTRACT.md – interfejsy modułów (iteracja 2)
+# CONTRACT.md – interfejsy modułów (v2)
 
 Dokument wiążący dla wszystkich plików w `js/views/`. Rdzeń (`state.js`,
 `model.js`, `ui.js`, `map.js`, `router.js`, `css/app.css`) jest **gotowy i nie
@@ -16,12 +16,12 @@ Każdy plik w `js/views/` eksportuje:
 
 ```js
 export const meta = {
-  step: 1,                 // numer kroku w stepperze; null/undefined = brak
+  step: 1,                 // numer kroku w belce górnej; null/undefined = brak
   title: 'Inwentaryzacja', // tytuł w sub barze
   subtitle: 'jak jest',    // podtytuł w cudzysłowie; opcjonalny
   layout: 'split',         // 'split' (widok sam zarządza wysokością) | 'scroll'
-  chrome: 'full',          // 'full' | 'none' (bez sub bara i steppera)
-  hideStepper: false,      // ukryj stepper zachowując sub bar
+  chrome: 'full',          // 'full' | 'none' (bez sub bara)
+  hideStepper: false,      // zachowane dla zgodności; v2 nie ma bocznej szyny
 };
 
 export async function render(root, ctx) { /* buduje UI wewnątrz root */ }
@@ -140,8 +140,8 @@ import { h, el, frag, mount, clear, escapeHtml, qs, qsa,
 - `h(tag, props, ...children)` – `class`, `text`, `html`, `style` (obiekt),
   `dataset` (obiekt), `onclick`/`oninput`/… jako funkcje.
 - `modal({title, body, confirmLabel, cancelLabel, hideCancel})` → `Promise<boolean>`.
-- `disabledControl(node, 'poza zakresem iteracji 2')` – **tak oznaczamy
-  wszystko, czego nie ma w iteracji 2. Żadnego martwego przycisku.**
+- `disabledControl(node, 'poza zakresem')` – **tak oznaczamy wszystko, czego
+  nie ma w bieżącym zakresie. Żadnego martwego przycisku.**
 - `statusMeta(point, completenessPct)` → `{level:'ok'|'warn'|'crit'|'proposed', label, variant}`.
 
 ---

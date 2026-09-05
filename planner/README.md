@@ -1,8 +1,30 @@
-# Sinecco AED Planner – iteracja 2 (klikalna makieta)
+# Sinecco AED Planner – v2 (design system marki)
 
 Narzędzie audytu i planowania sieci defibrylatorów AED dla gmin.
-Ta iteracja to **klikalna makieta całego procesu** – do pokazania klientowi,
-klikania na spotkaniu i nanoszenia uwag bezpośrednio w niej.
+Działający prototyp całego procesu – do pokazania klientowi, klikania na
+spotkaniu i nanoszenia uwag bezpośrednio w nim.
+
+## Co zmienia v2
+
+v2 to **przeprojektowanie warstwy wizualnej na design system marki Sinecco**.
+Funkcjonalność została bez zmian: te same widoki, ten sam model dostępności po
+realnej sieci pieszej, ten sam eksport PDF i ZIP, te same testy. Zmienia się
+to, jak aplikacja wygląda i jak prowadzi wzrok.
+
+| | iteracja 2 | v2 |
+|---|---|---|
+| Zasada koloru | interfejs szary, kolor wyłącznie dla danych | czerń, biel, dwie szarości; limonka jako jedyna nasycona powierzchnia, jedna na ekran |
+| Krój | Inter | Archivo (interfejs) + Outfit (wordmark) |
+| Nawigacja | pionowy stepper po lewej | numerowane zakładki 01–06 wyśrodkowane w belce górnej |
+| Rogi | 2 px | 0 px; zaokrąglają się tylko pigułki, kropki i pola |
+| Głębia | ramki i delikatne tła | wyłącznie linie włoskowe; cień mają tylko warstwy pływające i okładka raportu |
+| Liczby | 22 px, półgrube | skala `--fs-metric-*` do 72 px, waga zwykła, tabularne |
+| Paleta mapy | zieleń, żółć, fiolet | zieleń/żółć/czerwień audytu, zasięg i rekomendacje limonkowe |
+
+Tokeny (paleta, typografia, odstępy, promienie, cienie, aliasy semantyczne)
+siedzą w `css/app.css` w sekcji 1 i są przeniesione 1:1 z design systemu.
+Stare nazwy zmiennych z iteracji 2 zostały zmapowane na tokeny Sinecco, żeby
+nie przepisywać setek miejsc w widokach.
 
 ## Uruchomienie
 

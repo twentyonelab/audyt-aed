@@ -926,7 +926,7 @@ export async function render(root, ctx) {
     const addressInput = h('input', { class: 'input', type: 'text', placeholder: 'np. ul. Szkolna 3' });
 
     /* Punkt wskazany na mapie to domyślnie REKOMENDACJA – nowa lokalizacja do
-       wdrożenia (fioletowy kwadrat, trafia do propozycji w kroku 2). Drugi tryb
+       wdrożenia (limonkowy kwadrat, trafia do propozycji w kroku 2). Drugi tryb
        zostaje, bo krok 1 musi umieć zapisać AED zastany w terenie, którego nie
        było w rejestrze. */
     let kind = 'proposed';
@@ -955,7 +955,7 @@ export async function render(root, ctx) {
       noteEl.textContent =
         `Współrzędne: ${fmtNum(lat, 5)} N · ${fmtNum(lon, 5)} E · dzielnica: ${districtName(districtId)}. ` +
         (kind === 'proposed'
-          ? 'Punkt trafi do propozycji jako rekomendacja (fioletowy kwadrat). ' +
+          ? 'Punkt trafi do propozycji jako rekomendacja (limonkowy kwadrat). ' +
             'Zysk w pokryciu policzy się od razu, a zaakceptujesz go w kroku 2 – Analiza dostępności.'
           : 'Punkt trafi do rejestru ze statusem NIEZWERYFIKOWANY – resztę danych uzupełnisz w karcie (krok 3).');
     };
