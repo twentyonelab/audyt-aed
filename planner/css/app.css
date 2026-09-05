@@ -1061,6 +1061,138 @@ button, input, select, textarea { font: inherit; color: inherit; font-family: va
 .panel__selected + .panel__body { padding-top: var(--sp-5); border-top: 1px solid var(--border-hairline); }
 
 /* ==========================================================================
+   16a. Ekran wejścia
+   ========================================================================== */
+
+/* Ten sam układ co HeroBanner, tyle że na pełny ekran: zdjęcie ze scrimem
+   po lewej, drugie zdjęcie w kolumnie po prawej, treść na scrimie. */
+.gate {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  grid-template-columns: 1fr 520px;
+  background: #0a0c0d;
+  overflow: hidden;
+}
+/* Zdjęcie tłumu jest jedynym spokojnym kadrem w zestawie – reszta to bliskie
+   ujęcia żółtych urządzeń, na których biały tekst przestaje być czytelny.
+   Do wąskiej kolumny po prawej idzie pionowe ujęcie AED na ścianie. */
+.gate__photo {
+  position: relative;
+  grid-area: 1 / 1;
+  background: url('../assets/img/plaza-crowd.png') center / cover no-repeat;
+}
+/* Scrim mocniejszy niż na pulpicie: tam nagłówek stoi nad ciemnym fragmentem
+   kadru, tu przechodzi przez cały ekran i musi być czytelny wszędzie. */
+.gate__scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(8, 10, 11, 0.95) 0%,
+    rgba(8, 10, 11, 0.88) 45%,
+    rgba(8, 10, 11, 0.55) 78%,
+    rgba(8, 10, 11, 0.3) 100%
+  );
+}
+.gate__inset {
+  grid-area: 1 / 2;
+  background: url('../assets/img/city-night-aed.png') center / cover no-repeat;
+}
+.gate__body {
+  position: relative;
+  grid-area: 1 / 1;
+  padding: 0 clamp(32px, 7vw, 96px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: var(--sp-5);
+  color: var(--white);
+  max-width: 900px;
+}
+.gate__wordmark { display: block; color: var(--white); margin-bottom: var(--sp-6); }
+.gate__wordmark svg { display: block; }
+.gate__eyebrow {
+  font-size: var(--fs-label);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  font-weight: var(--fw-semibold);
+  color: var(--lime-300);
+}
+.gate__headline {
+  font-size: var(--fs-display-xl);
+  line-height: var(--lh-display-xl);
+  letter-spacing: var(--ls-display-xl);
+  font-weight: var(--fw-regular);
+  max-width: 15ch;
+}
+
+.gate__form { display: flex; flex-direction: column; gap: var(--sp-3); margin-top: var(--sp-4); width: 100%; max-width: 540px; }
+.gate__label {
+  font-size: var(--fs-label-s);
+  letter-spacing: var(--ls-label-s);
+  text-transform: uppercase;
+  font-weight: var(--fw-semibold);
+  color: rgba(255, 255, 255, 0.72);
+}
+.gate__row { display: flex; gap: var(--sp-3); flex-wrap: wrap; }
+
+/* Pole na zdjęciu: przezroczyste, z podkreśleniem zamiast ramki – tak jak
+   TextField w design systemie, tylko odwrócone na ciemne tło. */
+.gate__input {
+  flex: 1 1 240px;
+  height: 56px;
+  min-width: 0;
+  padding: 0 var(--sp-4);
+  background: rgba(255, 255, 255, 0.08);
+  border: 0;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.45);
+  border-radius: var(--r-0);
+  color: var(--white);
+  font-size: 17px;
+  letter-spacing: 0.02em;
+  transition: var(--t-hover);
+}
+.gate__input::placeholder { color: rgba(255, 255, 255, 0.5); }
+.gate__input:hover { background: rgba(255, 255, 255, 0.12); }
+.gate__input:focus {
+  outline: 0;
+  background: rgba(255, 255, 255, 0.14);
+  border-bottom-color: var(--lime-300);
+}
+.gate__input:disabled { opacity: 0.5; }
+.gate__submit { flex: 0 0 auto; min-width: 200px; }
+
+/* Pomarańcz, nie limonka: limonka jest tu barwą akcji („Wejdź"), więc błąd
+   w tym samym kolorze czytałby się jak potwierdzenie. Czerwień z palety
+   statusów gubi się na prawie czarnym tle. */
+.gate__error { font-size: var(--fs-body-s); color: var(--orange-500); font-weight: var(--fw-medium); min-height: 1.4em; }
+.gate__note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  margin-top: var(--sp-6);
+  max-width: 52ch;
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  color: rgba(255, 255, 255, 0.62);
+}
+.gate__note .icon { margin-top: 1px; }
+
+@media (max-width: 1100px) {
+  .gate { grid-template-columns: 1fr; }
+  .gate__inset { display: none; }
+  .gate__headline { font-size: var(--fs-display-l); line-height: var(--lh-display-l); }
+}
+@media (max-width: 620px) {
+  .gate__headline { font-size: var(--fs-display-m); line-height: var(--lh-display-m); }
+  .gate__wordmark svg { height: 26px; width: auto; }
+  .gate__submit { width: 100%; }
+}
+
+/* ==========================================================================
    16b. Pasmo fotograficzne (HeroBanner)
    ========================================================================== */
 

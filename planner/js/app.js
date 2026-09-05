@@ -6,6 +6,7 @@ import { initState, state, subscribe } from './state.js';
 import { loadReach } from './reach.js';
 import { registerRoute, initRouter, render } from './router.js';
 import { h, mount, toast } from './ui.js';
+import { requireUnlock } from './gate.js';
 
 registerRoute('#/', () => import('./views/dashboard.js'));
 registerRoute('#/setup', () => import('./views/setup.js'));
@@ -19,6 +20,13 @@ registerRoute('#/field/:token', () => import('./views/field.js'));
 
 async function boot() {
   const root = document.getElementById('app');
+
+  // Ekran wejścia idzie PRZED wczytaniem danych: nie ma powodu budzić
+  // IndexedDB i pobierać zasięgów, dopóki nikt nie wszedł.
+  await requireUnlock(root);
+
+  mount(root, h('div', { class: 'boot', text: 'Wczytywanie danych projektu…' }));
+
   try {
     // Zasięgi dojścia wczytujemy razem ze stanem – każdy krok liczy pokrycie
     // tym samym modelem, więc plik musi być na miejscu przed pierwszym renderem.

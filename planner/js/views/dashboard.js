@@ -12,6 +12,7 @@ import { state, exportProject, resetToDemo } from '../state.js';
 import {
   h, el, mount, pillHtml, toast, modal, disabledControl, download, icon,
 } from '../ui.js';
+import { lockAgain } from '../gate.js';
 
 export const meta = {
   step: null,
@@ -456,6 +457,19 @@ export async function render(root, ctx) {
         })
       ),
       h('span', { class: 'spacer' }),
+      // Zamknięcie sesji pokazu: kasuje zapamiętane wejście i wraca na ekran
+      // z hasłem. Stoi obok resetu danych, bo to ta sama półka – sprzątanie
+      // po spotkaniu, a nie codzienna praca.
+      h(
+        'button',
+        {
+          class: 'btn',
+          title: 'Wyloguj z makiety – następne wejście znów poprosi o hasło',
+          onclick: lockAgain,
+        },
+        icon('shield-check', 14),
+        'Zablokuj makietę'
+      ),
       h('button', { class: 'btn btn--danger', onclick: confirmResetToDemo }, 'Przywróć dane demo')
     )
   );

@@ -29,6 +29,25 @@ się odtworzyć z samych tokenów.
 - **Pasek podtytułu 1:1 z `PlannerChrome`**: szara wstawka zamiast białej belki,
   numer kroku wersalikami, pionowa kreska, licznik dosunięty w prawo.
 
+### Ekran wejścia
+
+Makieta stoi za ekranem z hasłem (`AedSnc2026!`), utrzymanym w stylu marki:
+pełnoekranowe zdjęcie ze scrimem, logotyp, nagłówek 64 px, limonkowy przycisk
+ze znakiem. Poprawne wejście zapamiętuje się w `localStorage`; przycisk
+**Zablokuj makietę** na pulpicie je kasuje.
+
+**Czym to jest, a czym nie jest.** To zapora przed przypadkowym wejściem, nie
+zabezpieczenie. Strona jest statyczna, więc cała logika jedzie do przeglądarki
+i ktoś, kto zajrzy w źródło, obejdzie ten ekran w minutę. Hasło leży w kodzie
+jako skrót SHA-256 z solą (`js/gate.js`), a nie otwartym tekstem, ale to
+utrudnienie, nie ochrona. Za bramką nie ma niczego, czego nie można pokazać
+na spotkaniu: dane są demonstracyjne i żyją w IndexedDB jednej przeglądarki.
+Prawdziwa kontrola dostępu wymaga serwera, który sprawdza hasło u siebie.
+
+SHA-256 jest napisany od zera (`js/sha256.js`), bo `crypto.subtle` nie działa
+w kontekście `file://`, a plik samodzielny z `dist/` ma działać tak samo jak
+wersja serwowana.
+
 ### Mapa 3D
 
 Podkład przeszedł z płaskiego `light-v11` na **Mapbox Standard** – rozwiązanie
@@ -232,6 +251,8 @@ tools/interactions.mjs   test interakcji mapy (klik, przeciąganie, cofnij, kadr
 tools/routeflow.mjs      test ścieżki Mapboksa: mapa 3D i animacja tras (atrapa biblioteki)
 tools/routetrim.mjs      test przycinania tras do obrysu i do czasu standardu (dane z cache)
 tools/bundlecheck.mjs    test pliku samodzielnego z dist/ (wszystkie widoki, grafiki, ikony)
+tools/gate.mjs           test ekranu wejścia (hasło, blokada prób, zapamiętanie)
+tools/unlock.mjs         wspólne odblokowanie bramki dla pozostałych testów
 CONTRACT.md           interfejsy modułów (wiążące)
 ITERACJA2_SPEC.md     specyfikacja produktu
 ```
@@ -245,6 +266,7 @@ node tools/routeflow.mjs      # 18 sprawdzeń: konfiguracja mapy 3D i kreskowani
 node tools/routetrim.mjs      # 6 sprawdzeń: żadna trasa poza obrysem ani ponad standard czasu
 python3 tools/bundle.py       # sklejka do dist/aed-planner-standalone.html
 node tools/bundlecheck.mjs    # 12 sprawdzeń: sklejka realnie działa z file://
+node tools/gate.mjs           # 19 sprawdzeń: ekran wejścia, od pustego pola po wylogowanie
 ```
 
 Oba potrzebują Chromium (Playwright) i same podnoszą lokalny serwer.

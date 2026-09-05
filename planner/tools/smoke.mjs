@@ -8,6 +8,7 @@
  */
 
 import { chromium } from 'playwright';
+import { unlock } from './unlock.mjs';
 import { spawn } from 'node:child_process';
 import { mkdirSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -43,6 +44,7 @@ function check(name, ok, detail = '') {
 
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--no-sandbox'] });
 const page = await browser.newPage({ viewport: { width: 1560, height: 940 } });
+await unlock(page);
 
 page.on('console', (m) => {
   if (m.type() === 'error') errors.push(m.text());

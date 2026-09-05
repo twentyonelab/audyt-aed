@@ -11,6 +11,7 @@
  */
 
 import { chromium } from 'playwright';
+import { unlock } from './unlock.mjs';
 import { existsSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -44,6 +45,7 @@ check('każdy moduł z js/ jest na liście sklejki', notListed.length === 0, not
 
 const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--no-sandbox'] });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+await unlock(page);
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 page.on('console', (m) => {
