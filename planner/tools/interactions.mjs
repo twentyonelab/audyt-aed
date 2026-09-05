@@ -664,6 +664,111 @@ check(
   (await page.locator('.kanban__card h4:has-text("Pozycja po edycji")').count()) === 0
 );
 
+/* ---------------------------------------------------------------- *
+ * 18. Ludzik świadka: przeciągnięcie na mapę, droga do najbliższego AED
+ * ---------------------------------------------------------------- */
+
+await go('#/analysis', 1600);
+
+const dock = page.locator('.walker-dock');
+check('analiza: dok ludzika jest przy krawędzi mapy', (await dock.count()) === 1);
+check('ludzik startuje w doku, nie na mapie', (await page.locator('.walker-card').isVisible()) === false);
+
+/** Przeciąga ludzika w podane miejsce mapy (ułamki szerokości i wysokości). */
+const dropWalker = async (fx, fy) => {
+  const d = await page.locator('.walker-dock').boundingBox();
+  const m = await mapBox();
+  await page.mouse.move(d.x + d.width / 2, d.y + d.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(m.x + m.width * fx, m.y + m.height * fy, { steps: 12 });
+  await page.waitForTimeout(220);
+  const ghost = await page.locator('.walker-ghost').count();
+  const armed = await page.locator('.map-wrap.is-walker-target').count();
+  await page.mouse.up();
+  // Czekamy na werdykt, a nie na stały czas: trasa idzie do Directions API,
+  // a gdy sieć jest odcięta, wynik pojawia się dopiero po limicie czasu.
+  await page.locator('.walker-card__verdict').waitFor({ timeout: 12000 }).catch(() => {});
+  return { ghost, armed };
+};
+
+const drag = await dropWalker(0.45, 0.55);
+check('podczas ciągnięcia leci duch za kursorem', drag.ghost === 1, `${drag.ghost}`);
+check('mapa pokazuje, że przyjmie upuszczenie', drag.armed === 1, `${drag.armed}`);
+check('po upuszczeniu duch znika', (await page.locator('.walker-ghost').count()) === 0);
+
+const cardText = await page.locator('.walker-card').innerText();
+check('karta ludzika pokazuje czas dojścia', /\d+([,.]\d+)?\s*min/.test(cardText), cardText.split('\n')[1] || cardText.slice(0, 40));
+check(
+  'karta nazywa najbliższe AED',
+  /m drogi/.test(cardText) && cardText.length > 40,
+  (cardText.match(/^.*m drogi$/m) || [''])[0]
+);
+check('dok pokazuje, że ludzik z niego wyszedł', await dock.evaluate((el) => el.classList.contains('is-out')));
+
+const walkerOnMap = await page.locator('.map-fallback svg path[stroke-width="3"]').count();
+check('droga do AED jest narysowana na mapie', walkerOnMap >= 1, `${walkerOnMap} linii`);
+
+/* Werdykt i barwa muszą iść za czasem: blisko AED zielono, daleko czerwono. */
+const verdictColor = () =>
+  page.evaluate(() => {
+    const el = document.querySelector('.walker-card__verdict');
+    return el ? { text: el.textContent, color: getComputedStyle(el).color } : null;
+  });
+const far = await verdictColor();
+check('daleko od AED werdykt jest ostrzegawczy', !!far && /nie zdąży|poza zasięgiem|granicy/.test(far.text), far ? `${far.text} · ${far.color}` : 'brak');
+
+// Upuść ludzika tuż przy istniejącym punkcie – wtedy ma zdążyć.
+const pinBox = await page.locator('.map-fallback svg .pin--ok, .map-fallback svg .pin--warn').first().boundingBox();
+const mapRect = await mapBox();
+if (pinBox) {
+  const d = await page.locator('.walker-dock').boundingBox();
+  await page.mouse.move(d.x + d.width / 2, d.y + d.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(pinBox.x + pinBox.width / 2 + 6, pinBox.y + pinBox.height / 2 + 6, { steps: 12 });
+  await page.mouse.up();
+  await page.locator('.walker-card__verdict').waitFor({ timeout: 12000 }).catch(() => {});
+}
+const near = await verdictColor();
+check(
+  'przy samym AED werdykt mówi, że zdąży',
+  !!near && /zdąży/.test(near.text) && !/nie zdąży/.test(near.text),
+  near ? `${near.text} · ${near.color}` : 'brak'
+);
+check('barwa werdyktu zmienia się z czasem dojścia', !!far && !!near && far.color !== near.color, `${far?.color} → ${near?.color}`);
+await page.screenshot({ path: join(SHOTS, 'interactions-walker.png') });
+
+// Zdjęcie ludzika: krzyżyk na karcie.
+await page.locator('.walker-card__close').click();
+await page.waitForTimeout(700);
+check('krzyżyk zdejmuje ludzika z mapy', (await page.locator('.walker-card').isVisible()) === false);
+check('dok wraca do stanu wyjściowego', !(await dock.evaluate((el) => el.classList.contains('is-out'))));
+check('droga znika z mapy', (await page.locator('.map-fallback svg path[stroke-width="3"]').count()) === 0);
+
+// Zdjęcie ludzika: Esc.
+await dropWalker(0.5, 0.4);
+check('ludzik znów stoi na mapie', await page.locator('.walker-card').isVisible());
+await page.keyboard.press('Escape');
+await page.waitForTimeout(600);
+check('Esc też zdejmuje ludzika', (await page.locator('.walker-card').isVisible()) === false);
+
+// Zdjęcie ludzika: upuszczenie poza mapą.
+const d2 = await page.locator('.walker-dock').boundingBox();
+await page.mouse.move(d2.x + d2.width / 2, d2.y + d2.height / 2);
+await page.mouse.down();
+await page.mouse.move(mapRect.x + mapRect.width * 0.5, mapRect.y + mapRect.height * 0.5, { steps: 8 });
+await page.mouse.up();
+await page.locator('.walker-card__verdict').waitFor({ timeout: 12000 }).catch(() => {});
+check('ludzik postawiony po raz trzeci', await page.locator('.walker-card').isVisible());
+
+const d3 = await page.locator('.walker-dock').boundingBox();
+await page.mouse.move(d3.x + d3.width / 2, d3.y + d3.height / 2);
+await page.mouse.down();
+// Prawa szyna leży poza mapą – upuszczenie tam ma odstawić ludzika do doku.
+await page.mouse.move(mapRect.x + mapRect.width + 220, mapRect.y + 120, { steps: 10 });
+await page.mouse.up();
+await page.waitForTimeout(800);
+check('upuszczenie poza mapą odstawia ludzika do doku', (await page.locator('.walker-card').isVisible()) === false);
+
 await go('#/inventory');
 await page.screenshot({ path: join(SHOTS, 'interactions-inventory.png') });
 await go('#/analysis');

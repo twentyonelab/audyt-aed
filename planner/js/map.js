@@ -133,6 +133,9 @@ const COLORS = {
   labelGap: '#b30a06',
   pinStroke: '#ffffff',
   pinStrokeSelected: '#000000',
+  /* Ludzik: barwę niesie scena, bo zależy od czasu dojścia, a ten liczy widok.
+     Tu zostaje tylko obwódka, wspólna dla wszystkich stanów. */
+  walkerStroke: '#ffffff',
 };
 
 /**
@@ -358,6 +361,31 @@ export function renderSceneSvg(scene, opts = {}) {
     );
   }
 
+  // Ludzik: postawiony na mapie świadek i jego droga do najbliższego AED.
+  if (scene.walker) {
+    const w = scene.walker;
+    if (Array.isArray(w.line) && w.line.length > 1) {
+      const d = w.line
+        .map(([lon, lat], i) => {
+          const [x, y] = project(lon, lat);
+          return `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`;
+        })
+        .join('');
+      parts.push(
+        `<path d="${d}" fill="none" stroke="${w.color}" stroke-width="3" stroke-opacity="0.9" ` +
+          `stroke-linecap="round" stroke-linejoin="round"/>`
+      );
+    }
+    const [wx, wy] = project(w.lon, w.lat);
+    parts.push(
+      `<g transform="translate(${wx.toFixed(1)} ${wy.toFixed(1)})">` +
+        `<circle cx="0" cy="0" r="13" fill="${w.color}" stroke="${COLORS.walkerStroke}" stroke-width="2"/>` +
+        `<g transform="translate(-8 -8) scale(0.6667)" fill="none" stroke="${COLORS.walkerStroke}" ` +
+        `stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${ICON_PATHS.user || ''}</g>` +
+        `</g>`
+    );
+  }
+
   if (opts.showLabels && scene.labels) {
     for (const l of scene.labels) {
       const [x, y] = project(l.lon, l.lat);
@@ -448,6 +476,8 @@ function createMapboxMap(container, opts) {
 
   let markers = [];
   let labelMarkers = [];
+  /** Znacznik ludzika – jeden albo żaden, więc trzymany osobno od reszty. */
+  let walkerMarker = null;
   let scene = {};
   let ready = false;
   let addMode = false;
@@ -517,6 +547,7 @@ function createMapboxMap(container, opts) {
     src('coverage', emptyFc);
     src('reach', emptyFc);
     src('routes', emptyFc);
+    src('walk', emptyFc);
     src('demand', emptyFc);
 
     map.addLayer({ id: 'districts-fill', slot: 'bottom', type: 'fill', source: 'districts', paint: { 'fill-color': COLORS.district, 'fill-opacity': 0.55 } });
@@ -579,6 +610,21 @@ function createMapboxMap(container, opts) {
         'line-width': 2,
         'line-opacity': 0.5,
         'line-dasharray': ROUTE_FLOW_STEPS[0],
+      },
+    });
+    // Droga ludzika: gruba, ciągła i nad resztą, bo to odpowiedź na pytanie
+    // zadane przez operatora tu i teraz. Barwa idzie z danych – zależy od
+    // czasu dojścia, więc liczy ją widok.
+    map.addLayer({
+      id: 'walk-line',
+      slot: 'middle',
+      type: 'line',
+      source: 'walk',
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: {
+        'line-color': ['get', 'color'],
+        'line-width': 4,
+        'line-opacity': 0.9,
       },
     });
     map.addLayer({
@@ -662,6 +708,21 @@ function createMapboxMap(container, opts) {
         geometry: { type: 'LineString', coordinates: r.line },
       }));
     src('routes', { type: 'FeatureCollection', features: routeFeatures });
+
+    const walk = scene.walker;
+    src('walk', {
+      type: 'FeatureCollection',
+      features:
+        walk && Array.isArray(walk.line) && walk.line.length > 1
+          ? [
+              {
+                type: 'Feature',
+                properties: { color: walk.color },
+                geometry: { type: 'LineString', coordinates: walk.line },
+              },
+            ]
+          : [],
+    });
     // Zegar animacji chodzi tylko wtedy, gdy trasy są na mapie.
     if (routeFeatures.length) startRouteFlow();
     else stopRouteFlow();
@@ -677,6 +738,30 @@ function createMapboxMap(container, opts) {
         geometry: { type: 'Point', coordinates: [d.lon, d.lat] },
       })),
     });
+
+    // Ludzik: jeden znacznik, więc podmieniamy go w miejscu zamiast
+    // przebudowywać przy każdej scenie.
+    const walkPoint = scene.walker;
+    if (!walkPoint && walkerMarker) {
+      walkerMarker.remove();
+      walkerMarker = null;
+    } else if (walkPoint) {
+      if (!walkerMarker) {
+        const node = document.createElement('div');
+        node.className = 'walker-pin';
+        walkerMarker = new window.mapboxgl.Marker({
+          element: node,
+          anchor: 'center',
+          pitchAlignment: 'viewport',
+          rotationAlignment: 'viewport',
+        }).addTo(map);
+      }
+      const node = walkerMarker.getElement();
+      node.style.background = walkPoint.color;
+      node.innerHTML = iconSvg('user', 17);
+      node.title = walkPoint.title || 'Świadek';
+      walkerMarker.setLngLat([walkPoint.lon, walkPoint.lat]);
+    }
 
     markers.forEach((m) => m.remove());
     markers = (scene.points || []).map((p) => {
@@ -758,6 +843,20 @@ function createMapboxMap(container, opts) {
       canvas.style.cursor = value ? 'crosshair' : '';
     },
 
+    /**
+     * Punkt ekranu (względem pudełka mapy) na współrzędne i z powrotem.
+     * Potrzebne widokom, które kładą coś na mapie myszą – jak ludzik
+     * w analizie dostępności.
+     */
+    screenToLatLon(x, y) {
+      const ll = map.unproject([x, y]);
+      return { lat: ll.lat, lon: ll.lng };
+    },
+    latLonToScreen(lat, lon) {
+      const p = map.project([lon, lat]);
+      return { x: p.x, y: p.y };
+    },
+
     /** Sposoby kolorowania podkładu do przełącznika w widoku. */
     basemapThemes: MAP_THEMES,
     getBasemapTheme: () => basemapTheme,
@@ -813,6 +912,7 @@ function createMapboxMap(container, opts) {
       stopRouteFlow();
       markers.forEach((m) => m.remove());
       labelMarkers.forEach((m) => m.remove());
+      if (walkerMarker) walkerMarker.remove();
       map.remove();
       canvas.remove();
     },
@@ -1120,6 +1220,17 @@ function createFallbackMap(container, opts) {
     // Render zapasowy nie ma podkładu ani trzeciego wymiaru, ale musi mieć
     // ten sam interfejs – inaczej widoki musiałyby pytać, który renderer stoi
     // pod spodem, a to jest dokładnie ta wiedza, której nie mają mieć.
+    screenToLatLon(x, y) {
+      if (!projection) return null;
+      const [lon, lat] = projection.unproject(x, y);
+      return { lat, lon };
+    },
+    latLonToScreen(lat, lon) {
+      if (!projection) return null;
+      const [x, y] = projection.project(lon, lat);
+      return { x, y };
+    },
+
     basemapThemes: [],
     getBasemapTheme: () => null,
     setBasemapTheme() {},

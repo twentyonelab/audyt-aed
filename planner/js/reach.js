@@ -233,6 +233,41 @@ export async function fetchRoutes(lat, lon, ring, count = 12) {
 }
 
 /**
+ * Trasa piesza między dwoma punktami – Directions API.
+ *
+ * Używana przez ludzika w analizie: świadek stoi gdzieś na mapie, AED gdzie
+ * indziej, a odpowiedź „ile mu zajmie dojście" musi iść po chodnikach, a nie
+ * w linii prostej. Zwraca null przy braku tokenu, sieci albo trasy – wtedy
+ * wołający liczy przybliżenie z modelu i mówi o tym wprost.
+ */
+export async function fetchWalk(fromLat, fromLon, toLat, toLon) {
+  if (!tokenUsable()) return null;
+  const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS) : null;
+  try {
+    const url =
+      `https://api.mapbox.com/directions/v5/mapbox/walking/` +
+      `${fromLon.toFixed(5)},${fromLat.toFixed(5)};${toLon.toFixed(5)},${toLat.toFixed(5)}` +
+      `?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
+    const res = await fetch(url, ctrl ? { signal: ctrl.signal } : undefined);
+    if (!res.ok) return null;
+    const json = await res.json();
+    const route = json.routes && json.routes[0];
+    if (!route || !route.geometry) return null;
+    return {
+      line: route.geometry.coordinates,
+      distanceM: Math.round(route.distance),
+      minutes: Math.round((route.duration / 60) * 10) / 10,
+      network: true,
+    };
+  } catch {
+    return null;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+/**
  * Wersja synchroniczna – buduje mapę zasięgów wyłącznie z tego, co już jest
  * wczytane (cache projektu + wyniki dopytane wcześniej w tej sesji).
  * Dla widoków, które renderują się synchronicznie: roadmapa, raport, pulpit.

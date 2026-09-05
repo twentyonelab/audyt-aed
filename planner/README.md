@@ -29,6 +29,33 @@ się odtworzyć z samych tokenów.
 - **Pasek podtytułu 1:1 z `PlannerChrome`**: szara wstawka zamiast białej belki,
   numer kroku wersalikami, pionowa kreska, licznik dosunięty w prawo.
 
+### Ludzik świadka (analiza dostępności)
+
+Wszystkie liczby w kroku 2 są zbiorcze: „51% mieszkańców w zasięgu 5 minut".
+To dobra miara dla decydenta, ale nie odpowiada na pytanie, które zadaje sobie
+każdy patrzący na mapę: **a gdybym stał tutaj?**
+
+Przy lewej krawędzi mapy siedzi ludzik. Przeciąga się go w dowolne miejsce –
+gest jak pegman w Google Maps, razem z kołyszącym się duchem pod kursorem.
+Po upuszczeniu narzędzie znajduje najbliższe czynne AED, liczy realną trasę
+pieszą (Directions API) i rysuje ją na mapie. Barwa idzie za czasem dojścia
+w stosunku do standardu:
+
+| stosunek do standardu | barwa | werdykt |
+|---|---|---|
+| ≤ 0,6 | `--green-700` | zdąży z zapasem |
+| ≤ 1,0 | `--green-600` | zdąży w standardzie |
+| ≤ 1,4 | `--yellow-500` | na granicy standardu |
+| ≤ 2,0 | `--orange-500` | nie zdąży |
+| > 2,0 | `--red-500` | daleko poza zasięgiem |
+
+Cel wybierany jest po odległości w linii prostej, a czas liczy dopiero realna
+trasa do tego jednego punktu – inaczej każde upuszczenie kosztowałoby
+czternaście zapytań. Bez tokenu albo bez sieci ludzik pokazuje przybliżenie
+z modelu i mówi o tym wprost na karcie.
+
+Zdjęcie ludzika: krzyżyk na karcie, `Esc` albo upuszczenie poza mapą.
+
 ### Ekran wejścia
 
 Makieta stoi za ekranem z hasłem (`AedSnc2026!`), utrzymanym w stylu marki:
@@ -261,7 +288,7 @@ ITERACJA2_SPEC.md     specyfikacja produktu
 
 ```bash
 node tools/smoke.mjs          # 35 sprawdzeń: cała ścieżka 0→5, zero błędów konsoli
-node tools/interactions.mjs   # 72 sprawdzenia: interakcje mapy, karta punktu, PDF/ZIP, roadmapa
+node tools/interactions.mjs   # 93 sprawdzenia: interakcje mapy, karta punktu, PDF/ZIP, roadmapa, ludzik
 node tools/routeflow.mjs      # 18 sprawdzeń: konfiguracja mapy 3D i kreskowanie tras
 node tools/routetrim.mjs      # 6 sprawdzeń: żadna trasa poza obrysem ani ponad standard czasu
 python3 tools/bundle.py       # sklejka do dist/aed-planner-standalone.html

@@ -36,6 +36,7 @@ MODULES = [
     "js/reach.js",
     "js/state.js",
     "js/map.js",
+    "js/walker.js",
     "js/photos.js",
     "js/pdf.js",
     "js/zip.js",

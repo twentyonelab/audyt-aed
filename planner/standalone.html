@@ -8,11 +8,12 @@
 <script>window.MAPBOX_TOKEN=atob("cGsuZXlKMUlqb2lhMkp2WjI5dFlYb2lMQ0poSWpvaVkyMXlaR1IzY3pVM01HSnBNako2Y1haMk5YVTFZbmQ1Y1NKOS41eHBERzFUY01HWkZoR3ZqYVBwU1dn");</script>
 <style>
 /* ==========================================================================
-   Sinecco AED Planner — v2 (design system marki Sinecco)
+   Sinecco AED Planner – v3 (design system marki Sinecco)
 
    Iteracja 2 była szara z założenia: kolor niósł wyłącznie informację o danych.
-   v2 zmienia tę zasadę zgodnie z księgą marki: system stoi na czerni, bieli
-   i dwóch szarościach, a limonka jest JEDYNĄ nasyconą powierzchnią — jedna na
+   v2 zmieniło tę zasadę zgodnie z księgą marki, v3 dołożyło grafikę: ikony,
+   logotyp, fotografię i kroplowe znaczniki mapy. Zasada koloru bez zmian: system stoi na czerni, bieli
+   i dwóch szarościach, a limonka jest JEDYNĄ nasyconą powierzchnią – jedna na
    ekran, dociągnięta do krawędzi. Statusy audytu zachowują własne barwy, bo
    niosą znaczenie, ale schodzą do roli akcentu, nie tła.
 
@@ -24,7 +25,7 @@
    ========================================================================== */
 
 /* ==========================================================================
-   1. Tokeny — przeniesione 1:1 z design systemu
+   1. Tokeny – przeniesione 1:1 z design systemu
    ========================================================================== */
 
 :root {
@@ -292,7 +293,7 @@ button, input, select, textarea { font: inherit; color: inherit; font-family: va
 .note { font-size: var(--fs-caption); color: var(--text-secondary); line-height: var(--lh-caption); }
 
 /* ==========================================================================
-   3. Belka górna — mark, projekt, numerowana nawigacja, limonkowe menu
+   3. Belka górna – mark, projekt, numerowana nawigacja, limonkowe menu
    ========================================================================== */
 
 .topbar {
@@ -322,7 +323,7 @@ button, input, select, textarea { font: inherit; color: inherit; font-family: va
 .topbar__wordmark { display: block; color: var(--ink); }
 .topbar__wordmark svg { display: block; }
 
-/* Pionowa kreska oddzielająca znak od projektu — jak w design systemie. */
+/* Pionowa kreska oddzielająca znak od projektu – jak w design systemie. */
 .topbar__rule { width: 1px; align-self: center; height: 34px; background: var(--border-hairline); flex: none; }
 
 .topbar__project {
@@ -607,7 +608,7 @@ button, input, select, textarea { font: inherit; color: inherit; font-family: va
 .dot--warn { background: var(--status-attention); }
 .dot--crit { background: var(--status-critical); }
 .dot--proposed { background: var(--lime-400); }
-/* Rekomendacje rysują się na mapie jako kwadraty — legenda powtarza kształt. */
+/* Rekomendacje rysują się na mapie jako kwadraty – legenda powtarza kształt. */
 .dot--square { background: var(--lime-400); border-radius: var(--r-0); }
 
 /* ==========================================================================
@@ -650,7 +651,7 @@ button, input, select, textarea { font: inherit; color: inherit; font-family: va
 .signal-panel--pale { background: var(--surface-signal-pale); }
 
 /* ==========================================================================
-   9. Wskaźniki — wielka liczba jako kotwica ekranu
+   9. Wskaźniki – wielka liczba jako kotwica ekranu
    ========================================================================== */
 
 .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border-hairline); border: 1px solid var(--border-hairline); }
@@ -1013,6 +1014,132 @@ button, input, select, textarea { font: inherit; color: inherit; font-family: va
 .map-popup__flag { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-caption); }
 .mapboxgl-popup-content { border-radius: var(--r-0); padding: var(--sp-4); font-family: var(--font-sans); box-shadow: var(--shadow-pop); }
 
+/* ---------- ludzik świadka: dok, duch, karta wyniku ------------------------ */
+
+/* Dok przy lewej krawędzi mapy, w pionie na środku – tam, gdzie Google Maps
+   trzyma pegmana. Kwadratowy, bo cały ten system jest kwadratowy. */
+.walker-dock {
+  position: absolute;
+  left: var(--sp-4);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 6;
+  width: 60px;
+  padding: var(--sp-3) var(--sp-2) var(--sp-2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-1);
+  background: var(--white);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--r-0);
+  box-shadow: var(--shadow-pop);
+  color: var(--ink);
+  cursor: grab;
+  touch-action: none;
+  transition: var(--t-hover);
+}
+.walker-dock:hover { background: var(--lime-100); border-color: var(--lime-400); }
+.walker-dock:focus-visible { outline: 0; box-shadow: var(--focus-ring), var(--shadow-pop); }
+.walker-dock__hint {
+  font-size: 9px;
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: var(--fw-semibold);
+  color: var(--text-muted);
+  text-align: center;
+  white-space: pre-line;
+}
+/* Gdy ludzik stoi na mapie, dok zostaje pustym gniazdem – widać, skąd zniknął. */
+.walker-dock.is-out { opacity: 0.42; }
+.walker-dock.is-out .icon { opacity: 0.35; }
+
+/* Duch ciągnięty za kursorem. Kołysanie mówi „trzymam to" – ten sam sygnał
+   co u pegmana, bez którego przeciąganie wygląda jak zacięcie interfejsu. */
+.walker-ghost {
+  position: fixed;
+  z-index: 300;
+  width: 42px;
+  height: 42px;
+  margin: -21px 0 0 -21px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-circle);
+  background: var(--ink);
+  color: var(--lime-300);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.34);
+  pointer-events: none;
+  animation: walker-swing 0.5s ease-in-out infinite alternate;
+}
+@keyframes walker-swing {
+  from { transform: rotate(-9deg) scale(1.04); }
+  to { transform: rotate(9deg) scale(1.12); }
+}
+body.is-walker-dragging { cursor: grabbing; user-select: none; }
+/* Mapa mówi, że przyjmie upuszczenie. */
+.map-wrap.is-walker-target { outline: 2px dashed var(--lime-400); outline-offset: -4px; }
+
+/* Znacznik na mapie Mapboksa – kółko z ikoną, barwa z czasu dojścia. */
+.walker-pin {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-circle);
+  border: 2px solid var(--white);
+  color: var(--white);
+  box-shadow: var(--shadow-marker);
+  cursor: default;
+}
+.walker-pin svg { display: block; }
+
+/* Karta z wynikiem: pod dokiem, przy tej samej krawędzi. */
+.walker-card {
+  position: absolute;
+  left: var(--sp-4);
+  top: calc(50% + 72px);
+  z-index: 6;
+  width: 268px;
+  max-width: calc(100% - 32px);
+  padding: var(--sp-4);
+  background: var(--white);
+  border: 1px solid var(--border-hairline);
+  border-left: var(--bw-accent) solid var(--grey-300);
+  border-radius: var(--r-0);
+  box-shadow: var(--shadow-pop);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.walker-card--ok { border-left-color: var(--status-verified); }
+.walker-card--warn { border-left-color: var(--status-attention); }
+.walker-card--crit { border-left-color: var(--status-critical); }
+.walker-card__close { margin: -6px -6px 0 0; }
+.walker-card__time {
+  font-size: var(--fs-metric-m);
+  letter-spacing: var(--ls-metric-m);
+  line-height: 1;
+  font-weight: var(--fw-regular);
+}
+.walker-card__verdict {
+  font-size: var(--fs-body-s);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.walker-card b { font-weight: var(--fw-semibold); }
+
+@media (max-width: 900px) {
+  /* Na wąskim ekranie karta schodzi pod mapę, żeby nie zjeść kadru. */
+  .walker-card { top: auto; bottom: var(--sp-4); left: var(--sp-4); }
+  .walker-dock { top: var(--sp-4); transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .walker-ghost { animation: none; transform: scale(1.08); }
+}
+
 /* ---------- legenda: przycisk u dołu, rozwijany w górę --------------------- */
 
 .map-legend-wrap {
@@ -1033,7 +1160,7 @@ button, input, select, textarea { font: inherit; color: inherit; font-family: va
 
 /* dasharray "4 3" ma okres 7 jednostek, więc przesunięcie o -7 zamyka pełny
    cykl i pętla nie skacze. Ujemny offset przesuwa kreski W KIERUNKU rysowania
-   trasy, a trasa jest rysowana od granicy do pinu — jak biegnący człowiek. */
+   trasy, a trasa jest rysowana od granicy do pinu – jak biegnący człowiek. */
 @keyframes route-flow {
   from { stroke-dashoffset: 0; }
   to { stroke-dashoffset: -7; }
@@ -1059,7 +1186,7 @@ button, input, select, textarea { font: inherit; color: inherit; font-family: va
   flex-direction: column;
   gap: var(--sp-1);
 }
-/* Aktywna rekomendacja — pole podświetlone kolorem pinu. */
+/* Aktywna rekomendacja – pole podświetlone kolorem pinu. */
 .panel__selected--proposed {
   border-color: var(--lime-400);
   border-left-color: var(--lime-400);
@@ -2710,6 +2837,8 @@ const ICON_PATHS = {
     '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /> <path d="M12 9v4" /> <path d="M12 17h.01" />',
   'upload':
     '<path d="M12 3v12" /> <path d="m17 8-5-5-5 5" /> <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />',
+  'user':
+    '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /> <circle cx="12" cy="7" r="4" />',
   'user-check':
     '<path d="m16 11 2 2 4-4" /> <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /> <circle cx="9" cy="7" r="4" />',
   'users':
@@ -3619,6 +3748,41 @@ async function fetchRoutes(lat, lon, ring, count = 12) {
 }
 
 /**
+ * Trasa piesza między dwoma punktami – Directions API.
+ *
+ * Używana przez ludzika w analizie: świadek stoi gdzieś na mapie, AED gdzie
+ * indziej, a odpowiedź „ile mu zajmie dojście" musi iść po chodnikach, a nie
+ * w linii prostej. Zwraca null przy braku tokenu, sieci albo trasy – wtedy
+ * wołający liczy przybliżenie z modelu i mówi o tym wprost.
+ */
+async function fetchWalk(fromLat, fromLon, toLat, toLon) {
+  if (!tokenUsable()) return null;
+  const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS) : null;
+  try {
+    const url =
+      `https://api.mapbox.com/directions/v5/mapbox/walking/` +
+      `${fromLon.toFixed(5)},${fromLat.toFixed(5)};${toLon.toFixed(5)},${toLat.toFixed(5)}` +
+      `?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
+    const res = await fetch(url, ctrl ? { signal: ctrl.signal } : undefined);
+    if (!res.ok) return null;
+    const json = await res.json();
+    const route = json.routes && json.routes[0];
+    if (!route || !route.geometry) return null;
+    return {
+      line: route.geometry.coordinates,
+      distanceM: Math.round(route.distance),
+      minutes: Math.round((route.duration / 60) * 10) / 10,
+      network: true,
+    };
+  } catch {
+    return null;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+/**
  * Wersja synchroniczna – buduje mapę zasięgów wyłącznie z tego, co już jest
  * wczytane (cache projektu + wyniki dopytane wcześniej w tej sesji).
  * Dla widoków, które renderują się synchronicznie: roadmapa, raport, pulpit.
@@ -3644,7 +3808,7 @@ function reachCoverageOf(sites, reachMap) {
   return { network, total: sites.length, radius: sites.length - network };
 }
 
-return { contourLadder, contoursFor, fetchReach, fetchRoutes, loadReach, reachAvailable, reachCoverageOf, reachKey, reachMapFor, reachMapSync, routesFor };
+return { contourLadder, contoursFor, fetchReach, fetchRoutes, fetchWalk, loadReach, reachAvailable, reachCoverageOf, reachKey, reachMapFor, reachMapSync, routesFor };
 };
 
 __defs['js/state.js'] = function () {
@@ -4323,6 +4487,9 @@ const COLORS = {
   labelGap: '#b30a06',
   pinStroke: '#ffffff',
   pinStrokeSelected: '#000000',
+  /* Ludzik: barwę niesie scena, bo zależy od czasu dojścia, a ten liczy widok.
+     Tu zostaje tylko obwódka, wspólna dla wszystkich stanów. */
+  walkerStroke: '#ffffff',
 };
 
 /**
@@ -4548,6 +4715,31 @@ function renderSceneSvg(scene, opts = {}) {
     );
   }
 
+  // Ludzik: postawiony na mapie świadek i jego droga do najbliższego AED.
+  if (scene.walker) {
+    const w = scene.walker;
+    if (Array.isArray(w.line) && w.line.length > 1) {
+      const d = w.line
+        .map(([lon, lat], i) => {
+          const [x, y] = project(lon, lat);
+          return `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`;
+        })
+        .join('');
+      parts.push(
+        `<path d="${d}" fill="none" stroke="${w.color}" stroke-width="3" stroke-opacity="0.9" ` +
+          `stroke-linecap="round" stroke-linejoin="round"/>`
+      );
+    }
+    const [wx, wy] = project(w.lon, w.lat);
+    parts.push(
+      `<g transform="translate(${wx.toFixed(1)} ${wy.toFixed(1)})">` +
+        `<circle cx="0" cy="0" r="13" fill="${w.color}" stroke="${COLORS.walkerStroke}" stroke-width="2"/>` +
+        `<g transform="translate(-8 -8) scale(0.6667)" fill="none" stroke="${COLORS.walkerStroke}" ` +
+        `stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${ICON_PATHS.user || ''}</g>` +
+        `</g>`
+    );
+  }
+
   if (opts.showLabels && scene.labels) {
     for (const l of scene.labels) {
       const [x, y] = project(l.lon, l.lat);
@@ -4638,6 +4830,8 @@ function createMapboxMap(container, opts) {
 
   let markers = [];
   let labelMarkers = [];
+  /** Znacznik ludzika – jeden albo żaden, więc trzymany osobno od reszty. */
+  let walkerMarker = null;
   let scene = {};
   let ready = false;
   let addMode = false;
@@ -4707,6 +4901,7 @@ function createMapboxMap(container, opts) {
     src('coverage', emptyFc);
     src('reach', emptyFc);
     src('routes', emptyFc);
+    src('walk', emptyFc);
     src('demand', emptyFc);
 
     map.addLayer({ id: 'districts-fill', slot: 'bottom', type: 'fill', source: 'districts', paint: { 'fill-color': COLORS.district, 'fill-opacity': 0.55 } });
@@ -4769,6 +4964,21 @@ function createMapboxMap(container, opts) {
         'line-width': 2,
         'line-opacity': 0.5,
         'line-dasharray': ROUTE_FLOW_STEPS[0],
+      },
+    });
+    // Droga ludzika: gruba, ciągła i nad resztą, bo to odpowiedź na pytanie
+    // zadane przez operatora tu i teraz. Barwa idzie z danych – zależy od
+    // czasu dojścia, więc liczy ją widok.
+    map.addLayer({
+      id: 'walk-line',
+      slot: 'middle',
+      type: 'line',
+      source: 'walk',
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: {
+        'line-color': ['get', 'color'],
+        'line-width': 4,
+        'line-opacity': 0.9,
       },
     });
     map.addLayer({
@@ -4852,6 +5062,21 @@ function createMapboxMap(container, opts) {
         geometry: { type: 'LineString', coordinates: r.line },
       }));
     src('routes', { type: 'FeatureCollection', features: routeFeatures });
+
+    const walk = scene.walker;
+    src('walk', {
+      type: 'FeatureCollection',
+      features:
+        walk && Array.isArray(walk.line) && walk.line.length > 1
+          ? [
+              {
+                type: 'Feature',
+                properties: { color: walk.color },
+                geometry: { type: 'LineString', coordinates: walk.line },
+              },
+            ]
+          : [],
+    });
     // Zegar animacji chodzi tylko wtedy, gdy trasy są na mapie.
     if (routeFeatures.length) startRouteFlow();
     else stopRouteFlow();
@@ -4867,6 +5092,30 @@ function createMapboxMap(container, opts) {
         geometry: { type: 'Point', coordinates: [d.lon, d.lat] },
       })),
     });
+
+    // Ludzik: jeden znacznik, więc podmieniamy go w miejscu zamiast
+    // przebudowywać przy każdej scenie.
+    const walkPoint = scene.walker;
+    if (!walkPoint && walkerMarker) {
+      walkerMarker.remove();
+      walkerMarker = null;
+    } else if (walkPoint) {
+      if (!walkerMarker) {
+        const node = document.createElement('div');
+        node.className = 'walker-pin';
+        walkerMarker = new window.mapboxgl.Marker({
+          element: node,
+          anchor: 'center',
+          pitchAlignment: 'viewport',
+          rotationAlignment: 'viewport',
+        }).addTo(map);
+      }
+      const node = walkerMarker.getElement();
+      node.style.background = walkPoint.color;
+      node.innerHTML = iconSvg('user', 17);
+      node.title = walkPoint.title || 'Świadek';
+      walkerMarker.setLngLat([walkPoint.lon, walkPoint.lat]);
+    }
 
     markers.forEach((m) => m.remove());
     markers = (scene.points || []).map((p) => {
@@ -4948,6 +5197,20 @@ function createMapboxMap(container, opts) {
       canvas.style.cursor = value ? 'crosshair' : '';
     },
 
+    /**
+     * Punkt ekranu (względem pudełka mapy) na współrzędne i z powrotem.
+     * Potrzebne widokom, które kładą coś na mapie myszą – jak ludzik
+     * w analizie dostępności.
+     */
+    screenToLatLon(x, y) {
+      const ll = map.unproject([x, y]);
+      return { lat: ll.lat, lon: ll.lng };
+    },
+    latLonToScreen(lat, lon) {
+      const p = map.project([lon, lat]);
+      return { x: p.x, y: p.y };
+    },
+
     /** Sposoby kolorowania podkładu do przełącznika w widoku. */
     basemapThemes: MAP_THEMES,
     getBasemapTheme: () => basemapTheme,
@@ -5003,6 +5266,7 @@ function createMapboxMap(container, opts) {
       stopRouteFlow();
       markers.forEach((m) => m.remove());
       labelMarkers.forEach((m) => m.remove());
+      if (walkerMarker) walkerMarker.remove();
       map.remove();
       canvas.remove();
     },
@@ -5310,6 +5574,17 @@ function createFallbackMap(container, opts) {
     // Render zapasowy nie ma podkładu ani trzeciego wymiaru, ale musi mieć
     // ten sam interfejs – inaczej widoki musiałyby pytać, który renderer stoi
     // pod spodem, a to jest dokładnie ta wiedza, której nie mają mieć.
+    screenToLatLon(x, y) {
+      if (!projection) return null;
+      const [lon, lat] = projection.unproject(x, y);
+      return { lat, lon };
+    },
+    latLonToScreen(lat, lon) {
+      if (!projection) return null;
+      const [x, y] = projection.project(lon, lat);
+      return { x, y };
+    },
+
     basemapThemes: [],
     getBasemapTheme: () => null,
     setBasemapTheme() {},
@@ -5345,6 +5620,358 @@ function createFallbackMap(container, opts) {
 }
 
 return { bboxOf, circlePolygon, createMap, makeProjection, mapboxAvailable, renderSceneSvg };
+};
+
+__defs['js/walker.js'] = function () {
+/**
+ * walker.js – ludzik świadka na mapie analizy dostępności.
+ *
+ * Po co: wszystkie liczby w tym kroku są zbiorcze – „51% mieszkańców w zasięgu
+ * 5 minut". To dobra miara dla decydenta, ale nie odpowiada na pytanie, które
+ * zadaje sobie każdy patrzący na mapę: „a gdybym stał TUTAJ?". Ludzik odpowiada
+ * na nie jednym przeciągnięciem: staje w wybranym miejscu, znajduje najbliższe
+ * czynne AED i rysuje realną drogę do niego, barwioną czasem dojścia.
+ *
+ * Wzorzec interakcji jest zapożyczony z Google Maps (pegman): figurka mieszka
+ * w doku przy krawędzi mapy, chwyta się ją i upuszcza na mapie. Trzymamy się
+ * tego, bo to jedyny gest w tej aplikacji, którego nikt nie musi się uczyć.
+ */
+
+const { h, icon, iconHtml } = __req('js/ui.js');
+const { distanceM, walkTimeMin, fmtNum, fmtMin } = __req('js/model.js');
+const { fetchWalk } = __req('js/reach.js');
+/**
+ * Progi barwy, liczone jako stosunek czasu dojścia do standardu.
+ *
+ * Barwy są z palety statusów design systemu, a nie z gradientu wymyślonego
+ * na potrzeby tej jednej kontrolki: ten sam zielony, żółty i czerwony niosą
+ * w całej aplikacji to samo znaczenie.
+ */
+const BANDS = [
+  { max: 0.6, color: '#0b7030', label: 'zdąży z zapasem', tone: 'ok' },
+  { max: 1.0, color: '#167734', label: 'zdąży w standardzie', tone: 'ok' },
+  { max: 1.4, color: '#fecd14', label: 'na granicy standardu', tone: 'warn' },
+  { max: 2.0, color: '#f98326', label: 'nie zdąży', tone: 'warn' },
+  { max: Infinity, color: '#d40b07', label: 'daleko poza zasięgiem', tone: 'crit' },
+];
+
+function bandFor(minutes, standardMinutes) {
+  const ratio = standardMinutes > 0 ? minutes / standardMinutes : Infinity;
+  return BANDS.find((b) => ratio <= b.max) || BANDS[BANDS.length - 1];
+}
+
+/**
+ * Najbliższe czynne AED w linii prostej.
+ *
+ * Dlaczego w linii prostej, skoro cała aplikacja liczy po sieci pieszej:
+ * żeby wybrać CEL, wystarczy przybliżenie – a policzenie realnej trasy do
+ * każdego z czternastu punktów oznaczałoby czternaście zapytań na każde
+ * upuszczenie ludzika. Realna trasa liczy się potem, do tego jednego celu,
+ * i to ona podaje czas.
+ */
+function nearestPoint(lat, lon, points) {
+  let best = null;
+  for (const p of points) {
+    if (!Number.isFinite(p.lat) || !Number.isFinite(p.lon)) continue;
+    const d = distanceM({ lat, lon }, p);
+    if (!best || d < best.distanceM) best = { point: p, distanceM: d };
+  }
+  return best;
+}
+
+/**
+ * Ludzik na mapie widoku analizy.
+ *
+ * @param {object} opts
+ * @param {HTMLElement} opts.mapEl        kontener mapy (dok siada na jego krawędzi)
+ * @param {object} opts.map               renderer – potrzebny do przeliczeń ekran/współrzędne
+ * @param {Function} opts.activePoints    () => lista czynnych AED
+ * @param {number} opts.standardMinutes   standard czasu dojścia
+ * @param {Function} opts.onChange        wołane po każdej zmianie stanu (przerysowanie sceny)
+ */
+function createWalker({ mapEl, map, activePoints, standardMinutes, onChange, initialAt = null }) {
+  /** Bieżący stan: null = ludzik siedzi w doku. */
+  let placed = null;
+  /** Numer upuszczenia – ubija wyniki zapytań, które wróciły po kolejnym ruchu. */
+  let dropId = 0;
+
+  const dock = h(
+    'button',
+    {
+      class: 'walker-dock',
+      type: 'button',
+      title: 'Przeciągnij ludzika na mapę, żeby sprawdzić drogę do najbliższego AED',
+      'aria-label': 'Ludzik: przeciągnij na mapę',
+    },
+    icon('user', 20),
+    h('span', { class: 'walker-dock__hint', text: 'Przeciągnij\nna mapę' })
+  );
+
+  const card = h('div', { class: 'walker-card', style: { display: 'none' } });
+
+  /* ---------------- stan i liczenie ---------------- */
+
+  const clear = () => {
+    dropId += 1;
+    placed = null;
+    dock.classList.remove('is-out');
+    card.style.display = 'none';
+    onChange();
+  };
+
+  /** Dane do sceny mapy – albo null, gdy ludzik jest w doku. */
+  const scene = () =>
+    placed
+      ? {
+          lat: placed.lat,
+          lon: placed.lon,
+          line: placed.line,
+          color: placed.band ? placed.band.color : '#908f8f',
+          title: placed.target ? `Świadek → ${placed.target.name}` : 'Świadek',
+        }
+      : null;
+
+  const paintCard = () => {
+    if (!placed) {
+      card.style.display = 'none';
+      return;
+    }
+    card.style.display = '';
+    card.className = `walker-card walker-card--${placed.band ? placed.band.tone : ''}`;
+    card.innerHTML = '';
+
+    const close = h(
+      'button',
+      {
+        class: 'btn btn--sm btn--ghost walker-card__close',
+        title: 'Zdejmij ludzika z mapy (Esc)',
+        'aria-label': 'Zdejmij ludzika z mapy',
+        onclick: clear,
+      },
+      icon('x', 14)
+    );
+
+    if (!placed.target) {
+      card.append(
+        h(
+          'div',
+          { class: 'row', style: { alignItems: 'flex-start' } },
+          h('span', { class: 'label-caps', style: { flex: '1' }, text: 'Świadek' }),
+          close
+        ),
+        h('p', { class: 'note', text: 'W tym scenariuszu nie ma ani jednego czynnego AED.' })
+      );
+      return;
+    }
+
+    const b = placed.band;
+    card.append(
+      h(
+        'div',
+        { class: 'row', style: { alignItems: 'flex-start' } },
+        h('span', { class: 'label-caps', style: { flex: '1' }, text: 'Świadek stąd biegnie po AED' }),
+        close
+      ),
+      h('div', {
+        class: 'walker-card__time num',
+        style: { color: b.color },
+        text: fmtMin(placed.minutes, 1),
+      }),
+      h('div', { class: 'walker-card__verdict', style: { color: b.color }, text: b.label }),
+      h('div', {
+        class: 'note',
+        html:
+          `${iconHtml('map-pin', 12)} <b>${placed.target.name}</b> · ` +
+          `${fmtNum(placed.distanceM, 0)} m drogi`,
+      }),
+      h('p', {
+        class: 'note',
+        // Trzy stany, trzy różne zdania. Nigdy „ładowanie" bez liczby:
+        // przybliżenie jest gotowe od razu, więc pokazujemy je i mówimy,
+        // że trasa się jeszcze uściśla.
+        text: placed.pending
+          ? `Przybliżenie w linii prostej. Uściślam trasę po chodnikach… ` +
+            `Standard: ${fmtMin(standardMinutes, 0)} w jedną stronę.`
+          : placed.network
+            ? `Trasa po realnych chodnikach i ulicach. Standard: ${fmtMin(standardMinutes, 0)} w jedną stronę.`
+            : `Przybliżenie w linii prostej z korektą trasy – Mapbox nie odpowiedział. ` +
+              `Standard: ${fmtMin(standardMinutes, 0)} w jedną stronę.`,
+      })
+    );
+  };
+
+  /** Liczy drogę do najbliższego AED i odświeża widok. */
+  const resolve = async (lat, lon) => {
+    const mine = ++dropId;
+    const points = activePoints();
+    const near = nearestPoint(lat, lon, points);
+
+    if (!near) {
+      placed = { lat, lon, target: null, pending: false };
+      paintCard();
+      onChange();
+      return;
+    }
+
+    // Najpierw przybliżenie, żeby ludzik od razu miał barwę i liczbę.
+    const roughMin = walkTimeMin(near.distanceM);
+    placed = {
+      lat,
+      lon,
+      target: near.point,
+      distanceM: Math.round(near.distanceM),
+      minutes: roughMin,
+      band: bandFor(roughMin, standardMinutes),
+      line: [
+        [lon, lat],
+        [near.point.lon, near.point.lat],
+      ],
+      network: false,
+      pending: true,
+    };
+    paintCard();
+    onChange();
+
+    const walk = await fetchWalk(lat, lon, near.point.lat, near.point.lon);
+    // Ludzik mógł w międzyczasie zostać przesunięty albo zdjęty.
+    if (mine !== dropId) return;
+
+    if (walk) {
+      placed = {
+        ...placed,
+        line: walk.line,
+        distanceM: walk.distanceM,
+        minutes: walk.minutes,
+        band: bandFor(walk.minutes, standardMinutes),
+        network: true,
+        pending: false,
+      };
+    } else {
+      placed = { ...placed, pending: false };
+    }
+    paintCard();
+    onChange();
+  };
+
+  /* ---------------- przeciąganie ---------------- */
+
+  /**
+   * Duch ciągnięty za kursorem.
+   *
+   * Osobny element w <body>, a nie przesuwany dok: dzięki temu figurka może
+   * wyjść poza mapę bez przycinania i nie wpływa na układ. Lekkie kołysanie
+   * (klasa .walker-ghost) to ten sam sygnał co u pegmana w Google Maps –
+   * mówi „trzymam to", zanim jeszcze cokolwiek się wydarzy.
+   */
+  let ghost = null;
+  let dragging = false;
+
+  const moveGhost = (x, y) => {
+    if (ghost) {
+      ghost.style.left = `${x}px`;
+      ghost.style.top = `${y}px`;
+    }
+  };
+
+  const overMap = (x, y) => {
+    const r = mapEl.getBoundingClientRect();
+    return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+  };
+
+  const endDrag = (ev) => {
+    if (!dragging) return;
+    dragging = false;
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', endDrag);
+    document.removeEventListener('pointercancel', endDrag);
+    document.body.classList.remove('is-walker-dragging');
+    if (ghost) {
+      ghost.remove();
+      ghost = null;
+    }
+    mapEl.classList.remove('is-walker-target');
+
+    const x = ev.clientX;
+    const y = ev.clientY;
+    if (!overMap(x, y)) {
+      // Upuszczony poza mapą wraca do doku – to najprostszy sposób, żeby go
+      // zdjąć, i działa też, gdy ktoś nie zauważył krzyżyka na karcie.
+      clear();
+      return;
+    }
+    const r = mapEl.getBoundingClientRect();
+    const at = map.screenToLatLon(x - r.left, y - r.top);
+    if (!at) return;
+    dock.classList.add('is-out');
+    resolve(at.lat, at.lon);
+  };
+
+  const onMove = (ev) => {
+    if (!dragging) return;
+    moveGhost(ev.clientX, ev.clientY);
+    mapEl.classList.toggle('is-walker-target', overMap(ev.clientX, ev.clientY));
+  };
+
+  const startDrag = (ev) => {
+    if (ev.button !== undefined && ev.button !== 0) return;
+    ev.preventDefault();
+    dragging = true;
+    ghost = h('div', { class: 'walker-ghost', html: iconHtml('user', 22) });
+    document.body.appendChild(ghost);
+    moveGhost(ev.clientX, ev.clientY);
+    document.body.classList.add('is-walker-dragging');
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', endDrag);
+    document.addEventListener('pointercancel', endDrag);
+  };
+
+  dock.addEventListener('pointerdown', startDrag);
+
+  // Klawiatura: bez myszy ludzik ląduje na środku kadru, a stamtąd i tak
+  // można go przeciągnąć. Lepsze to niż kontrolka dostępna tylko myszą.
+  dock.addEventListener('keydown', (ev) => {
+    if (ev.key !== 'Enter' && ev.key !== ' ') return;
+    ev.preventDefault();
+    const r = mapEl.getBoundingClientRect();
+    const at = map.screenToLatLon(r.width / 2, r.height / 2);
+    if (!at) return;
+    dock.classList.add('is-out');
+    resolve(at.lat, at.lon);
+  });
+
+  const onKey = (ev) => {
+    if (ev.key === 'Escape' && placed) clear();
+  };
+  document.addEventListener('keydown', onKey);
+
+  // Widok analizy przerysowuje się po każdej zmianie stanu (przesunięcie pinu,
+  // przełącznik scenariusza). Ludzik ma to przetrwać, więc po odtworzeniu
+  // wraca w to samo miejsce i przelicza drogę od nowa – dane mogły się zmienić.
+  if (initialAt) {
+    dock.classList.add('is-out');
+    resolve(initialAt.lat, initialAt.lon);
+  }
+
+  return {
+    dock,
+    card,
+    scene,
+    clear,
+    isPlaced: () => !!placed,
+    /** Miejsce, w którym stoi ludzik – do przeniesienia przez przerysowanie. */
+    getPlace: () => (placed ? { lat: placed.lat, lon: placed.lon } : null),
+    destroy() {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', endDrag);
+      document.removeEventListener('pointercancel', endDrag);
+      if (ghost) ghost.remove();
+      document.body.classList.remove('is-walker-dragging');
+    },
+  };
+}
+
+return { createWalker };
 };
 
 __defs['js/photos.js'] = function () {
@@ -10606,6 +11233,7 @@ const { analyze, proposeNewPoints, coverageGainFor, completeness, pointStatusLev
 const { h, mount, toast, barHtml, pillHtml, dotHtml, statusMeta, mapLegend, basemapThemeSwitch, modal } = __req('js/ui.js');
 const { createMap, circlePolygon } = __req('js/map.js');
 const { reachMapFor, contoursFor, routesFor, fetchRoutes, reachCoverageOf } = __req('js/reach.js');
+const { createWalker } = __req('js/walker.js');
 const meta = {
   step: 2,
   title: 'Analiza dostępności',
@@ -10639,6 +11267,10 @@ const EPS = 0.05;
 
 let map = null;
 let dragTimer = null;
+/** Ludzik świadka – żyje tyle, co widok, i sam sprząta po sobie. */
+let walker = null;
+/** Gdzie stał przed przerysowaniem. Bez tego znikałby przy każdym zapisie. */
+let walkerAt = null;
 /** Ostatni kadr mapy – odtwarzany przy każdym przerysowaniu widoku. */
 let savedCamera = null;
 /** Punkt, którego zasięg i trasy dojścia są pokazane; przeżywa przerysowania. */
@@ -11671,8 +12303,29 @@ async function render(root, ctx) {
       points: buildPins(),
       labels: buildGapLabels(analysis),
       selectedId: state.ui.selectedPointId,
+      walker: walker ? walker.scene() : null,
     });
   };
+
+  // Ludzik świadka: dok przy lewej krawędzi mapy, karta z wynikiem pod nim.
+  // Powołujemy go po zbudowaniu mapy, bo potrzebuje przeliczeń ekran/współrzędne.
+  if (walker) {
+    walkerAt = walker.getPlace();
+    walker.destroy();
+  }
+  walker = createWalker({
+    mapEl,
+    map,
+    activePoints: () => analysis.activePoints || [],
+    standardMinutes,
+    initialAt: walkerAt,
+    onChange: () => {
+      walkerAt = walker.getPlace();
+      paintScene();
+    },
+  });
+  mapEl.appendChild(walker.dock);
+  mapEl.appendChild(walker.card);
 
   paintScene();
   paintSelected();
@@ -11826,6 +12479,12 @@ function destroy() {
     clearTimeout(dragTimer);
     dragTimer = null;
   }
+  if (walker) {
+    walker.destroy();
+    walker = null;
+  }
+  // Wyjście z widoku kasuje ludzika – wracając, zaczyna się od czystej mapy.
+  walkerAt = null;
   releaseMap();
 }
 

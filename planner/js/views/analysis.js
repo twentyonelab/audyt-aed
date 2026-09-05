@@ -61,6 +61,7 @@ import {
 
 import { createMap, circlePolygon } from '../map.js';
 import { reachMapFor, contoursFor, routesFor, fetchRoutes, reachCoverageOf } from '../reach.js';
+import { createWalker } from '../walker.js';
 
 export const meta = {
   step: 2,
@@ -95,6 +96,10 @@ const EPS = 0.05;
 
 let map = null;
 let dragTimer = null;
+/** Ludzik świadka – żyje tyle, co widok, i sam sprząta po sobie. */
+let walker = null;
+/** Gdzie stał przed przerysowaniem. Bez tego znikałby przy każdym zapisie. */
+let walkerAt = null;
 /** Ostatni kadr mapy – odtwarzany przy każdym przerysowaniu widoku. */
 let savedCamera = null;
 /** Punkt, którego zasięg i trasy dojścia są pokazane; przeżywa przerysowania. */
@@ -1127,8 +1132,29 @@ export async function render(root, ctx) {
       points: buildPins(),
       labels: buildGapLabels(analysis),
       selectedId: state.ui.selectedPointId,
+      walker: walker ? walker.scene() : null,
     });
   };
+
+  // Ludzik świadka: dok przy lewej krawędzi mapy, karta z wynikiem pod nim.
+  // Powołujemy go po zbudowaniu mapy, bo potrzebuje przeliczeń ekran/współrzędne.
+  if (walker) {
+    walkerAt = walker.getPlace();
+    walker.destroy();
+  }
+  walker = createWalker({
+    mapEl,
+    map,
+    activePoints: () => analysis.activePoints || [],
+    standardMinutes,
+    initialAt: walkerAt,
+    onChange: () => {
+      walkerAt = walker.getPlace();
+      paintScene();
+    },
+  });
+  mapEl.appendChild(walker.dock);
+  mapEl.appendChild(walker.card);
 
   paintScene();
   paintSelected();
@@ -1282,5 +1308,11 @@ export function destroy() {
     clearTimeout(dragTimer);
     dragTimer = null;
   }
+  if (walker) {
+    walker.destroy();
+    walker = null;
+  }
+  // Wyjście z widoku kasuje ludzika – wracając, zaczyna się od czystej mapy.
+  walkerAt = null;
   releaseMap();
 }
