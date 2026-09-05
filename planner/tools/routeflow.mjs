@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * routeflow.mjs – sprawdza animację tras dojścia na ścieżce MAPBOKSOWEJ.
+ * routeflow.mjs – sprawdza ścieżkę MAPBOKSOWĄ: konfigurację mapy 3D
+ * i animację tras dojścia.
  *
  * Mapbox GL JS jest w tym środowisku nieosiągalny (Chromium nie dociąga
  * biblioteki), więc podstawiamy atrapę `window.mapboxgl` o dokładnie takim
@@ -56,21 +57,24 @@ await page.addInitScript(() => {
   const sources = {};
   const layers = new Set();
   class FakeMap {
-    constructor() {
-      setTimeout(() => (handlers.load || []).forEach((fn) => fn()), 0);
+    constructor(opts) {
+      window.__mapOpts = opts;
+      // Prawdziwy Mapbox wysyła najpierw `style.load`, potem `load`.
+      // Rzeźba terenu wisi na tym pierwszym, bo podmiana motywu podkładu
+      // przeładowuje styl i teren trzeba założyć ponownie.
+      setTimeout(() => {
+        (handlers['style.load'] || []).forEach((fn) => fn());
+        (handlers.load || []).forEach((fn) => fn());
+      }, 0);
     }
     on(ev, fn) {
       (handlers[ev] = handlers[ev] || []).push(fn);
     }
-    addControl() {}
-    getSource(id) {
-      return sources[id];
-    }
-    addSource(id, cfg) {
-      sources[id] = { _data: cfg.data, setData(d) { this._data = d; } };
-    }
+    addControl(c) { (window.__controls = window.__controls || []).push(c && c.constructor && c.constructor.name); }
     addLayer(cfg) {
       layers.add(cfg.id);
+      window.__layerSlots = window.__layerSlots || {};
+      window.__layerSlots[cfg.id] = cfg.slot || null;
       if (cfg.id === 'routes-line') window.__routeLayer = cfg;
     }
     getLayer(id) {
@@ -80,6 +84,15 @@ await page.addInitScript(() => {
       window.__paint.push({ layer, prop, value: JSON.stringify(value) });
     }
     setLayoutProperty() {}
+    // Styl Standard: konfiguracja importu, rzeźba terenu i przelot kamery.
+    setConfigProperty(importId, prop, value) {
+      window.__config = window.__config || [];
+      window.__config.push({ importId, prop, value });
+    }
+    addSource(id, cfg) { sources[id] = { _data: cfg.data, setData(d) { this._data = d; } }; }
+    getSource(id) { return sources[id]; }
+    setTerrain(cfg) { window.__terrain = cfg; }
+    getTerrain() { return window.__terrain || null; }
     getCenter() { return { lng: 19, lat: 50.12 }; }
     getZoom() { return 12; }
     getBearing() { return 0; }
@@ -92,6 +105,7 @@ await page.addInitScript(() => {
   window.mapboxgl = {
     Map: FakeMap,
     NavigationControl: class {},
+    AttributionControl: class {},
     Marker: class {
       constructor(o) {
         this._el = o && o.element;
@@ -134,6 +148,55 @@ check(
   'renderuje się ścieżka Mapboksa, nie zapasowa',
   (await page.locator('.map-canvas').count()) === 1 && (await page.locator('.map-fallback').count()) === 0,
   `canvas ${await page.locator('.map-canvas').count()} · fallback ${await page.locator('.map-fallback').count()}`
+);
+
+/* ---------------------------------------------------------------- *
+ * Mapa 3D: styl Standard, konfiguracja podkładu, rzeźba terenu
+ * ---------------------------------------------------------------- */
+
+const opts = await page.evaluate(() => window.__mapOpts);
+check(
+  'mapa startuje na stylu Standard',
+  !!opts && opts.style === 'mapbox://styles/mapbox/standard',
+  opts ? String(opts.style) : 'brak opcji'
+);
+check(
+  'konfiguracja podkładu idzie od razu przy tworzeniu mapy',
+  !!opts && !!opts.config && !!opts.config.basemap,
+  opts && opts.config ? JSON.stringify(opts.config.basemap) : 'brak config'
+);
+const cfg = (opts && opts.config && opts.config.basemap) || {};
+check('bryły budynków włączone', cfg.show3dObjects === true, String(cfg.show3dObjects));
+check('podkład w szarościach', cfg.theme === 'monochrome', String(cfg.theme));
+check(
+  'podpisy dróg i punktów usługowych zdjęte',
+  cfg.showRoadLabels === false && cfg.showPointOfInterestLabels === false,
+  `drogi=${cfg.showRoadLabels} POI=${cfg.showPointOfInterestLabels}`
+);
+check('kamera pochylona, inaczej „3D" to tylko nazwa', opts && opts.pitch === 52, String(opts && opts.pitch));
+
+const terrain = await page.evaluate(() => window.__terrain);
+check(
+  'rzeźba terenu założona z przewyższeniem',
+  !!terrain && terrain.source === 'mapbox-dem' && terrain.exaggeration === 1.4,
+  terrain ? JSON.stringify(terrain) : 'brak terenu'
+);
+
+const controls = await page.evaluate(() => window.__controls || []);
+check(
+  'atrybucja Mapboxa jest na mapie (wymóg licencji)',
+  controls.includes('AttributionControl'),
+  controls.join(', ')
+);
+check('kompas z pochyleniem jest na mapie', controls.includes('NavigationControl'), controls.join(', '));
+
+// Własne warstwy w stylu Standard muszą mieć slot, inaczej lądują na wierzchu
+// i zasłaniają bryły oraz podpisy.
+const slots = await page.evaluate(() => window.__layerSlots || {});
+check(
+  'każda własna warstwa ma przypisany slot',
+  Object.values(slots).every(Boolean) && Object.keys(slots).length >= 8,
+  Object.entries(slots).map(([k, v]) => `${k}:${v || 'BRAK'}`).join(' · ')
 );
 
 const layer = await page.evaluate(() => window.__routeLayer);

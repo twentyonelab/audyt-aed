@@ -546,6 +546,8 @@ button, input, select, textarea { font: inherit; color: inherit; font-family: va
   transition: var(--t-hover);
 }
 .seg__btn:last-child { border-right: 0; }
+/* Wariant do paska nad mapą – niższy, żeby nie przykrywał kadru. */
+.seg--sm .seg__btn { height: 28px; padding: 0 10px; font-size: 10px; }
 .seg__btn:hover { background: var(--paper-2); color: var(--ink); }
 .seg__btn.is-on { background: var(--ink); color: var(--white); }
 
@@ -950,6 +952,8 @@ button, input, select, textarea { font: inherit; color: inherit; font-family: va
   font-weight: var(--fw-semibold);
 }
 .map-toolbar { position: absolute; right: var(--sp-4); top: var(--sp-4); z-index: 5; display: flex; flex-direction: column; gap: var(--sp-2); align-items: flex-end; }
+/* Kontrolki Mapboksa siedzą w prawym dolnym rogu – pasek nie może na nie wchodzić. */
+.mapboxgl-ctrl-bottom-right { z-index: 4; }
 .map-corner-note { position: absolute; right: 56px; bottom: var(--sp-4); z-index: 5; max-width: 250px; text-align: right; }
 .map-corner-note .pill { height: auto; padding: var(--sp-2) var(--sp-3); line-height: 1.35; white-space: normal; display: inline-block; text-transform: none; letter-spacing: 0.02em; }
 .map-hint {

@@ -44,6 +44,7 @@ import {
   modal,
   disabledControl,
   mapLegend,
+  basemapThemeSwitch,
   download,
   pickFile,
   toCsv,
@@ -334,7 +335,7 @@ export async function render(root, ctx) {
     'DOPASUJ WIDOK'
   );
 
-  mapEl.appendChild(h('div', { class: 'map-toolbar' }, addBtn, fitBtn));
+  mapEl.appendChild(h('div', { class: 'map-toolbar' }, addBtn, fitBtn, basemapThemeSwitch(map)));
   mapEl.appendChild(hint);
   const legendEl = legend(proposedRows.length);
   mapEl.appendChild(legendEl);

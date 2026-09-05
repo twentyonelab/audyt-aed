@@ -555,6 +555,8 @@ button, input, select, textarea { font: inherit; color: inherit; font-family: va
   transition: var(--t-hover);
 }
 .seg__btn:last-child { border-right: 0; }
+/* Wariant do paska nad mapą – niższy, żeby nie przykrywał kadru. */
+.seg--sm .seg__btn { height: 28px; padding: 0 10px; font-size: 10px; }
 .seg__btn:hover { background: var(--paper-2); color: var(--ink); }
 .seg__btn.is-on { background: var(--ink); color: var(--white); }
 
@@ -959,6 +961,8 @@ button, input, select, textarea { font: inherit; color: inherit; font-family: va
   font-weight: var(--fw-semibold);
 }
 .map-toolbar { position: absolute; right: var(--sp-4); top: var(--sp-4); z-index: 5; display: flex; flex-direction: column; gap: var(--sp-2); align-items: flex-end; }
+/* Kontrolki Mapboksa siedzą w prawym dolnym rogu – pasek nie może na nie wchodzić. */
+.mapboxgl-ctrl-bottom-right { z-index: 4; }
 .map-corner-note { position: absolute; right: 56px; bottom: var(--sp-4); z-index: 5; max-width: 250px; text-align: right; }
 .map-corner-note .pill { height: auto; padding: var(--sp-2) var(--sp-3); line-height: 1.35; white-space: normal; display: inline-block; text-transform: none; letter-spacing: 0.02em; }
 .map-hint {
@@ -1556,8 +1560,62 @@ function resolveMapboxToken() {
 
 const MAPBOX_TOKEN = resolveMapboxToken();
 
-/** Mapbox style. A muted light style keeps the data, not the basemap, in front. */
-const MAP_STYLE = 'mapbox://styles/mapbox/light-v11';
+/**
+ * Styl mapy: Mapbox Standard.
+ *
+ * Standard to styl trójwymiarowy – niesie bryły budynków, drzewa i punkty
+ * charakterystyczne, a jego wygląd ustawia się nie przez podmianę warstw,
+ * tylko przez konfigurację importu `basemap` (patrz MAP_CONFIG). Poprzedni
+ * `light-v11` był płaski i nie dało się w nim rozdzielić podpisów miejsc
+ * od podpisów dróg.
+ */
+const MAP_STYLE = 'mapbox://styles/mapbox/standard';
+
+/** Klucz, pod którym styl Standard trzyma swoje ustawienia. */
+const MAP_IMPORT_ID = 'basemap';
+
+/**
+ * Ustawienia podkładu.
+ *
+ * `monochrome` to chłodno-ciepłe szarości bez zieleni i błękitów – w tym
+ * systemie podkład ma być tłem, a nie treścią: kolor należy do znaczników
+ * AED i do obrysów zasięgu, nie do mapy.
+ *
+ * Podpisy dróg i punktów usługowych są zdjęte. Ta mapa odpowiada na pytanie
+ * „gdzie NIE zdąży dobiec świadek", a nie „którędy dojechać"; nazwy sklepów
+ * i numery dróg zabierałyby uwagę czternastu punktom, które są tu treścią.
+ */
+const MAP_CONFIG = {
+  lightPreset: 'day',
+  theme: 'monochrome',
+  show3dObjects: true,
+  showPlaceLabels: true,
+  showPointOfInterestLabels: false,
+  showRoadLabels: false,
+};
+
+/** Sposoby kolorowania podkładu – przełącznik siedzi w pasku nad mapą. */
+const MAP_THEMES = [
+  { id: 'monochrome', label: 'Szarości', hint: 'Chłodno-ciepłe szarości – domyślny' },
+  { id: 'faded', label: 'Przygaszony', hint: 'Przygaszone barwy' },
+  { id: 'default', label: 'Kolorowy', hint: 'Pełna paleta Mapboxa' },
+];
+
+/** Źródło rzeźby terenu – identyfikator i adres z dokumentacji Mapboxa. */
+const MAP_DEM = {
+  id: 'mapbox-dem',
+  url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+  tileSize: 512,
+  maxzoom: 14,
+  exaggeration: 1.4,
+};
+
+/** Pochylenie kamery. Bez niego „3D" jest tylko nazwą. */
+const MAP_PITCH = 52;
+
+/** Pochylenie i przybliżenie po wybraniu punktu – tak blisko, jak ma to sens. */
+const MAP_PITCH_CLOSE = 62;
+const MAP_ZOOM_CLOSE = 17.5;
 
 /** Fallback view when a project carries no saved camera position. */
 const MAP_DEFAULT = { center: [19.0, 50.118], zoom: 11.6 };
@@ -1580,7 +1638,7 @@ const TODAY = '2026-07-29';
 /** Operator shown in the top bar. */
 const OPERATOR = 'Operator: K. Bogomaz';
 
-return { DB_NAME, DB_VERSION, DEMO_PROJECT_FILE, MAPBOX_TOKEN, MAP_DEFAULT, MAP_STYLE, OPERATOR, PHOTO_MAX_EDGE, PHOTO_QUALITY, PHOTO_THUMB_EDGE, TODAY };
+return { DB_NAME, DB_VERSION, DEMO_PROJECT_FILE, MAPBOX_TOKEN, MAP_CONFIG, MAP_DEFAULT, MAP_DEM, MAP_IMPORT_ID, MAP_PITCH, MAP_PITCH_CLOSE, MAP_STYLE, MAP_THEMES, MAP_ZOOM_CLOSE, OPERATOR, PHOTO_MAX_EDGE, PHOTO_QUALITY, PHOTO_THUMB_EDGE, TODAY };
 };
 
 __defs['js/model.js'] = function () {
@@ -2870,6 +2928,39 @@ function parseCsv(text) {
  * @param {Array<Node>} children treść legendy
  * @param {boolean} open czy rozwinięta na starcie
  */
+/**
+ * Przełącznik sposobu kolorowania podkładu.
+ *
+ * Trafia do paska nad mapą i istnieje tylko wtedy, gdy renderer ma czym
+ * przełączać – render zapasowy zwraca pustą listę motywów i wtedy nie ma
+ * czego pokazywać. Podmiana idzie przez konfigurację stylu, więc kadr,
+ * warstwy i znaczniki zostają na miejscu.
+ */
+function basemapThemeSwitch(map) {
+  const themes = (map && map.basemapThemes) || [];
+  if (!themes.length) return null;
+  const current = map.getBasemapTheme();
+
+  const seg = h('div', { class: 'seg seg--sm', role: 'group', 'aria-label': 'Wygląd podkładu' });
+  for (const t of themes) {
+    const btn = h(
+      'button',
+      {
+        class: `seg__btn${t.id === current ? ' is-on' : ''}`,
+        title: t.hint,
+        onclick: () => {
+          map.setBasemapTheme(t.id);
+          for (const other of seg.children) other.className = 'seg__btn';
+          btn.className = 'seg__btn is-on';
+        },
+      },
+      t.label
+    );
+    seg.appendChild(btn);
+  }
+  return seg;
+}
+
 function mapLegend(title, children, { open = false } = {}) {
   const body = h('div', { class: 'map-legend map-legend--pop' }, h('b', { text: title }), ...children.filter(Boolean));
   body.hidden = !open;
@@ -2892,7 +2983,7 @@ function mapLegend(title, children, { open = false } = {}) {
   return h('div', { class: 'map-legend-wrap' }, body, toggle);
 }
 
-return { PHOTO_ROLES, PRIORITY_LABEL, PRIORITY_VARIANT, barHtml, clear, disabledControl, dotHtml, download, el, escapeHtml, frag, h, icon, iconHtml, mapLegend, modal, mount, parseCsv, photoRoleLabel, pickFile, pillHtml, qs, qsa, statusMeta, toCsv, toast };
+return { PHOTO_ROLES, PRIORITY_LABEL, PRIORITY_VARIANT, barHtml, basemapThemeSwitch, clear, disabledControl, dotHtml, download, el, escapeHtml, frag, h, icon, iconHtml, mapLegend, modal, mount, parseCsv, photoRoleLabel, pickFile, pillHtml, qs, qsa, statusMeta, toCsv, toast };
 };
 
 __defs['js/reach.js'] = function () {
@@ -3724,7 +3815,7 @@ __defs['js/map.js'] = function () {
  * Spec reference: ITERACJA2_SPEC.md §2, §6.2, §6.3.
  */
 
-const { MAPBOX_TOKEN, MAP_STYLE, MAP_DEFAULT } = __req('config.js');
+const { MAPBOX_TOKEN, MAP_STYLE, MAP_DEFAULT, MAP_IMPORT_ID, MAP_CONFIG, MAP_THEMES, MAP_DEM, MAP_PITCH, MAP_PITCH_CLOSE, MAP_ZOOM_CLOSE } = __req('config.js');
 const { metresPerDegLon } = __req('js/model.js');
 const { ICON_PATHS, iconSvg } = __req('js/icons.js');
 const TOKEN_IS_REAL = typeof MAPBOX_TOKEN === 'string' && MAPBOX_TOKEN.startsWith('pk.');
@@ -4106,14 +4197,45 @@ function createMapboxMap(container, opts) {
   container.appendChild(canvas);
 
   window.mapboxgl.accessToken = MAPBOX_TOKEN;
+
+  /** Bieżący sposób kolorowania podkładu – przełącznik nad mapą. */
+  let basemapTheme = opts.basemapTheme || MAP_CONFIG.theme;
+
   const map = new window.mapboxgl.Map({
     container: canvas,
     style: MAP_STYLE,
+    // Konfiguracja podana OD RAZU przy tworzeniu mapy, nie po jej wczytaniu –
+    // inaczej pierwsza klatka mrugnęłaby domyślnym motywem i oświetleniem.
+    config: { [MAP_IMPORT_ID]: { ...MAP_CONFIG, theme: basemapTheme } },
     center: opts.center || MAP_DEFAULT.center,
     zoom: opts.zoom || MAP_DEFAULT.zoom,
+    pitch: opts.pitch ?? MAP_PITCH,
+    bearing: opts.bearing || 0,
+    logoPosition: 'bottom-right',
+    // Domyślną atrybucję wyłączamy tylko po to, żeby zaraz dołożyć ją
+    // w formie zwiniętej – patrz niżej.
     attributionControl: false,
   });
-  map.addControl(new window.mapboxgl.NavigationControl({ showCompass: false }), 'bottom-right');
+
+  /*
+   * ATRYBUCJI NIE WOLNO USUNĄĆ.
+   *
+   * Warunki Mapboxa: mapa korzystająca ze stylów albo danych Mapboxa musi
+   * pokazywać logo ORAZ atrybucję tekstową. Wyjątek dotyczy wyłącznie
+   * własnych stylów i własnych danych – my używamy stylu Standard i kafli
+   * Mapboxa, więc nas nie obejmuje. `compact: true` to najmniejsza forma,
+   * jaką Mapbox przewiduje: krążek „i", który rozwija tekst po kliknięciu.
+   * Do v3 tej kontrolki tu nie było i było to naruszenie licencji.
+   */
+  map.addControl(new window.mapboxgl.AttributionControl({ compact: true }), 'bottom-right');
+
+  // Kompas jest przy pochylonej kamerze niezbędny: bez niego po obróceniu
+  // mapy nie ma jak wrócić do północy. `visualizePitch` dokłada wskaźnik
+  // pochylenia, więc widać, pod jakim kątem się patrzy.
+  map.addControl(
+    new window.mapboxgl.NavigationControl({ visualizePitch: true }),
+    'bottom-right'
+  );
 
   let markers = [];
   let labelMarkers = [];
@@ -4162,6 +4284,23 @@ function createMapboxMap(container, opts) {
     }
   };
 
+  /*
+   * Rzeźba terenu. Przy widoku całego miasta to ona, obok pochylenia kamery,
+   * daje wrażenie przestrzeni – bryły budynków są na tej skali za małe.
+   * Wieszamy to na `style.load`, a nie na `load`, bo podmiana motywu podkładu
+   * przeładowuje styl i teren trzeba dołożyć ponownie.
+   */
+  map.on('style.load', () => {
+    if (map.getSource(MAP_DEM.id)) return;
+    map.addSource(MAP_DEM.id, {
+      type: 'raster-dem',
+      url: MAP_DEM.url,
+      tileSize: MAP_DEM.tileSize,
+      maxzoom: MAP_DEM.maxzoom,
+    });
+    map.setTerrain({ source: MAP_DEM.id, exaggeration: MAP_DEM.exaggeration });
+  });
+
   map.on('load', () => {
     src('boundary', emptyFc);
     src('districts', emptyFc);
@@ -4171,12 +4310,13 @@ function createMapboxMap(container, opts) {
     src('routes', emptyFc);
     src('demand', emptyFc);
 
-    map.addLayer({ id: 'districts-fill', type: 'fill', source: 'districts', paint: { 'fill-color': COLORS.district, 'fill-opacity': 0.55 } });
-    map.addLayer({ id: 'districts-line', type: 'line', source: 'districts', paint: { 'line-color': COLORS.districtLine, 'line-width': 1 } });
-    map.addLayer({ id: 'district-hl-fill', type: 'fill', source: 'district-hl', paint: { 'fill-color': COLORS.highlightLine, 'fill-opacity': 0.1 } });
-    map.addLayer({ id: 'district-hl-line', type: 'line', source: 'district-hl', paint: { 'line-color': COLORS.highlightLine, 'line-width': 1.8 } });
+    map.addLayer({ id: 'districts-fill', slot: 'bottom', type: 'fill', source: 'districts', paint: { 'fill-color': COLORS.district, 'fill-opacity': 0.55 } });
+    map.addLayer({ id: 'districts-line', slot: 'bottom', type: 'line', source: 'districts', paint: { 'line-color': COLORS.districtLine, 'line-width': 1 } });
+    map.addLayer({ id: 'district-hl-fill', slot: 'bottom', type: 'fill', source: 'district-hl', paint: { 'fill-color': COLORS.highlightLine, 'fill-opacity': 0.1 } });
+    map.addLayer({ id: 'district-hl-line', slot: 'bottom', type: 'line', source: 'district-hl', paint: { 'line-color': COLORS.highlightLine, 'line-width': 1.8 } });
     map.addLayer({
       id: 'coverage-fill',
+      slot: 'bottom',
       type: 'fill',
       source: 'coverage',
       paint: {
@@ -4186,6 +4326,7 @@ function createMapboxMap(container, opts) {
     });
     map.addLayer({
       id: 'coverage-line',
+      slot: 'bottom',
       type: 'line',
       source: 'coverage',
       paint: {
@@ -4198,6 +4339,7 @@ function createMapboxMap(container, opts) {
     // żeby kolory kropek pozostały czytelne.
     map.addLayer({
       id: 'reach-fill',
+      slot: 'bottom',
       type: 'fill',
       source: 'reach',
       paint: {
@@ -4207,6 +4349,7 @@ function createMapboxMap(container, opts) {
     });
     map.addLayer({
       id: 'reach-line',
+      slot: 'bottom',
       type: 'line',
       source: 'reach',
       paint: {
@@ -4216,6 +4359,7 @@ function createMapboxMap(container, opts) {
     });
     map.addLayer({
       id: 'routes-line',
+      slot: 'middle',
       type: 'line',
       source: 'routes',
       // Końcówka prosta, nie okrągła: drabinka animacji zawiera kreski
@@ -4230,6 +4374,7 @@ function createMapboxMap(container, opts) {
     });
     map.addLayer({
       id: 'demand-dots',
+      slot: 'middle',
       type: 'circle',
       source: 'demand',
       paint: {
@@ -4243,7 +4388,7 @@ function createMapboxMap(container, opts) {
         ],
       },
     });
-    map.addLayer({ id: 'boundary-line', type: 'line', source: 'boundary', paint: { 'line-color': COLORS.boundary, 'line-width': 1.4, 'line-dasharray': [3, 2] } });
+    map.addLayer({ id: 'boundary-line', slot: 'middle', type: 'line', source: 'boundary', paint: { 'line-color': COLORS.boundary, 'line-width': 1.4, 'line-dasharray': [3, 2] } });
 
     ready = true;
     if (scene.boundary) applyScene(scene);
@@ -4352,7 +4497,16 @@ function createMapboxMap(container, opts) {
         }
         bus.emit('pointclick', p);
       });
-      const marker = new window.mapboxgl.Marker({ element: node, draggable: !!p.draggable })
+      const marker = new window.mapboxgl.Marker({
+        element: node,
+        draggable: !!p.draggable,
+        // Kropla wskazuje miejsce swoim środkiem.
+        anchor: 'center',
+        // Znacznik stoi pionowo niezależnie od pochylenia kamery. Bez tego
+        // przy 52 stopniach położyłby się na mapie i przestał być czytelny.
+        pitchAlignment: 'viewport',
+        rotationAlignment: 'viewport',
+      })
         .setLngLat([p.lon, p.lat])
         .addTo(map);
       if (p.draggable) {
@@ -4376,7 +4530,13 @@ function createMapboxMap(container, opts) {
       const node = document.createElement('div');
       node.className = l.kind === 'gap' ? 'gap-label' : 'pin--district-label';
       node.textContent = l.text;
-      return new window.mapboxgl.Marker({ element: node }).setLngLat([l.lon, l.lat]).addTo(map);
+      return new window.mapboxgl.Marker({
+        element: node,
+        pitchAlignment: 'viewport',
+        rotationAlignment: 'viewport',
+      })
+        .setLngLat([l.lon, l.lat])
+        .addTo(map);
     });
   }
 
@@ -4387,6 +4547,35 @@ function createMapboxMap(container, opts) {
     setAddMode(value) {
       addMode = value;
       canvas.style.cursor = value ? 'crosshair' : '';
+    },
+
+    /** Sposoby kolorowania podkładu do przełącznika w widoku. */
+    basemapThemes: MAP_THEMES,
+    getBasemapTheme: () => basemapTheme,
+
+    /**
+     * Podmiana motywu podkładu. Idzie przez konfigurację importu, a nie przez
+     * podmianę stylu, więc warstwy, źródła i kadr zostają nietknięte.
+     */
+    setBasemapTheme(id) {
+      if (!MAP_THEMES.some((t) => t.id === id)) return;
+      basemapTheme = id;
+      if (ready) map.setConfigProperty(MAP_IMPORT_ID, 'theme', id);
+    },
+
+    /**
+     * Przelot do punktu: bliżej i mocniej pochylony, żeby było widać bryły.
+     * `essential` sprawia, że ruch wykona się także u kogoś, kto wyłączył
+     * animacje w systemie – inaczej mapa po prostu by stanęła.
+     */
+    flyToPoint(lat, lon) {
+      map.flyTo({
+        center: [lon, lat],
+        zoom: Math.max(map.getZoom(), MAP_ZOOM_CLOSE),
+        pitch: MAP_PITCH_CLOSE,
+        duration: 1200,
+        essential: true,
+      });
     },
     /** Camera so a view can restore the framing after a re-render. */
     getCamera() {
@@ -4719,6 +4908,14 @@ function createFallbackMap(container, opts) {
       if (svg) svg.style.cursor = value ? 'crosshair' : 'grab';
     },
     /** Camera so a view can restore the framing after a re-render. */
+    // Render zapasowy nie ma podkładu ani trzeciego wymiaru, ale musi mieć
+    // ten sam interfejs – inaczej widoki musiałyby pytać, który renderer stoi
+    // pod spodem, a to jest dokładnie ta wiedza, której nie mają mieć.
+    basemapThemes: [],
+    getBasemapTheme: () => null,
+    setBasemapTheme() {},
+    flyToPoint() {},
+
     getCamera() {
       return { viewScale: view.scale, viewTx: view.tx, viewTy: view.ty };
     },
@@ -8772,7 +8969,7 @@ __defs['js/views/inventory.js'] = function () {
 
 const { state, save, getPreset, districtName, upsertPoint, removePoint, nextId, makePoint, districtAt, markStepDone, checkpoint, dropCheckpoint } = __req('js/state.js');
 const { completeness, pointStatusLevel, coverageGainFor, ringCentroid, fmtNum, fmtPct, fmtCost } = __req('js/model.js');
-const { h, mount, escapeHtml, dotHtml, statusMeta, toast, modal, disabledControl, mapLegend, download, pickFile, toCsv, parseCsv } = __req('js/ui.js');
+const { h, mount, escapeHtml, dotHtml, statusMeta, toast, modal, disabledControl, mapLegend, basemapThemeSwitch, download, pickFile, toCsv, parseCsv } = __req('js/ui.js');
 const { createMap } = __req('js/map.js');
 const { TODAY } = __req('config.js');
 const meta = {
@@ -9056,7 +9253,7 @@ async function render(root, ctx) {
     'DOPASUJ WIDOK'
   );
 
-  mapEl.appendChild(h('div', { class: 'map-toolbar' }, addBtn, fitBtn));
+  mapEl.appendChild(h('div', { class: 'map-toolbar' }, addBtn, fitBtn, basemapThemeSwitch(map)));
   mapEl.appendChild(hint);
   const legendEl = legend(proposedRows.length);
   mapEl.appendChild(legendEl);
@@ -9993,7 +10190,7 @@ __defs['js/views/analysis.js'] = function () {
 
 const { state, save, markStepDone, getPoint, getPreset, districtName, districtAt, upsertPoint, removePoint, makePoint, nextId, checkpoint } = __req('js/state.js');
 const { analyze, proposeNewPoints, coverageGainFor, completeness, pointStatusLevel, coverageRadiusM, ringCentroid, trimRouteToReach, fmtPct, fmtMin, fmtNum, fmtCost, WALK_SPEED, DETOUR } = __req('js/model.js');
-const { h, mount, toast, barHtml, pillHtml, dotHtml, statusMeta, mapLegend, modal } = __req('js/ui.js');
+const { h, mount, toast, barHtml, pillHtml, dotHtml, statusMeta, mapLegend, basemapThemeSwitch, modal } = __req('js/ui.js');
 const { createMap, circlePolygon } = __req('js/map.js');
 const { reachMapFor, contoursFor, routesFor, fetchRoutes, reachCoverageOf } = __req('js/reach.js');
 const meta = {
@@ -10866,7 +11063,8 @@ async function render(root, ctx) {
         text: reachStats.radius
           ? `ZASIĘG PO SIECI PIESZEJ – ${fmtNum(reachStats.network)}/${fmtNum(reachStats.total)} AED`
           : 'ZASIĘG PO REALNEJ SIECI PIESZEJ',
-      })
+      }),
+      basemapThemeSwitch(map)
     )
   );
 
@@ -11088,6 +11286,9 @@ async function render(root, ctx) {
       return;
     }
     selectedReachId = pin.id;
+    // Kamera schodzi niżej i mocniej się pochyla, żeby było widać bryły wokół
+    // punktu. Na renderze zapasowym to pusta operacja.
+    if (typeof map.flyToPoint === 'function') map.flyToPoint(pin.lat, pin.lon);
     paintScene();
     paintSelected();
   });

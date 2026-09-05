@@ -31,8 +31,62 @@ function resolveMapboxToken() {
 
 export const MAPBOX_TOKEN = resolveMapboxToken();
 
-/** Mapbox style. A muted light style keeps the data, not the basemap, in front. */
-export const MAP_STYLE = 'mapbox://styles/mapbox/light-v11';
+/**
+ * Styl mapy: Mapbox Standard.
+ *
+ * Standard to styl trójwymiarowy – niesie bryły budynków, drzewa i punkty
+ * charakterystyczne, a jego wygląd ustawia się nie przez podmianę warstw,
+ * tylko przez konfigurację importu `basemap` (patrz MAP_CONFIG). Poprzedni
+ * `light-v11` był płaski i nie dało się w nim rozdzielić podpisów miejsc
+ * od podpisów dróg.
+ */
+export const MAP_STYLE = 'mapbox://styles/mapbox/standard';
+
+/** Klucz, pod którym styl Standard trzyma swoje ustawienia. */
+export const MAP_IMPORT_ID = 'basemap';
+
+/**
+ * Ustawienia podkładu.
+ *
+ * `monochrome` to chłodno-ciepłe szarości bez zieleni i błękitów – w tym
+ * systemie podkład ma być tłem, a nie treścią: kolor należy do znaczników
+ * AED i do obrysów zasięgu, nie do mapy.
+ *
+ * Podpisy dróg i punktów usługowych są zdjęte. Ta mapa odpowiada na pytanie
+ * „gdzie NIE zdąży dobiec świadek", a nie „którędy dojechać"; nazwy sklepów
+ * i numery dróg zabierałyby uwagę czternastu punktom, które są tu treścią.
+ */
+export const MAP_CONFIG = {
+  lightPreset: 'day',
+  theme: 'monochrome',
+  show3dObjects: true,
+  showPlaceLabels: true,
+  showPointOfInterestLabels: false,
+  showRoadLabels: false,
+};
+
+/** Sposoby kolorowania podkładu – przełącznik siedzi w pasku nad mapą. */
+export const MAP_THEMES = [
+  { id: 'monochrome', label: 'Szarości', hint: 'Chłodno-ciepłe szarości – domyślny' },
+  { id: 'faded', label: 'Przygaszony', hint: 'Przygaszone barwy' },
+  { id: 'default', label: 'Kolorowy', hint: 'Pełna paleta Mapboxa' },
+];
+
+/** Źródło rzeźby terenu – identyfikator i adres z dokumentacji Mapboxa. */
+export const MAP_DEM = {
+  id: 'mapbox-dem',
+  url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+  tileSize: 512,
+  maxzoom: 14,
+  exaggeration: 1.4,
+};
+
+/** Pochylenie kamery. Bez niego „3D" jest tylko nazwą. */
+export const MAP_PITCH = 52;
+
+/** Pochylenie i przybliżenie po wybraniu punktu – tak blisko, jak ma to sens. */
+export const MAP_PITCH_CLOSE = 62;
+export const MAP_ZOOM_CLOSE = 17.5;
 
 /** Fallback view when a project carries no saved camera position. */
 export const MAP_DEFAULT = { center: [19.0, 50.118], zoom: 11.6 };

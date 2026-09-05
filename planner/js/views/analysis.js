@@ -55,6 +55,7 @@ import {
   dotHtml,
   statusMeta,
   mapLegend,
+  basemapThemeSwitch,
   modal,
 } from '../ui.js';
 
@@ -931,7 +932,8 @@ export async function render(root, ctx) {
         text: reachStats.radius
           ? `ZASIĘG PO SIECI PIESZEJ – ${fmtNum(reachStats.network)}/${fmtNum(reachStats.total)} AED`
           : 'ZASIĘG PO REALNEJ SIECI PIESZEJ',
-      })
+      }),
+      basemapThemeSwitch(map)
     )
   );
 
@@ -1153,6 +1155,9 @@ export async function render(root, ctx) {
       return;
     }
     selectedReachId = pin.id;
+    // Kamera schodzi niżej i mocniej się pochyla, żeby było widać bryły wokół
+    // punktu. Na renderze zapasowym to pusta operacja.
+    if (typeof map.flyToPoint === 'function') map.flyToPoint(pin.lat, pin.lon);
     paintScene();
     paintSelected();
   });

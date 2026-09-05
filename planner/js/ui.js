@@ -274,6 +274,39 @@ export function parseCsv(text) {
  * @param {Array<Node>} children treść legendy
  * @param {boolean} open czy rozwinięta na starcie
  */
+/**
+ * Przełącznik sposobu kolorowania podkładu.
+ *
+ * Trafia do paska nad mapą i istnieje tylko wtedy, gdy renderer ma czym
+ * przełączać – render zapasowy zwraca pustą listę motywów i wtedy nie ma
+ * czego pokazywać. Podmiana idzie przez konfigurację stylu, więc kadr,
+ * warstwy i znaczniki zostają na miejscu.
+ */
+export function basemapThemeSwitch(map) {
+  const themes = (map && map.basemapThemes) || [];
+  if (!themes.length) return null;
+  const current = map.getBasemapTheme();
+
+  const seg = h('div', { class: 'seg seg--sm', role: 'group', 'aria-label': 'Wygląd podkładu' });
+  for (const t of themes) {
+    const btn = h(
+      'button',
+      {
+        class: `seg__btn${t.id === current ? ' is-on' : ''}`,
+        title: t.hint,
+        onclick: () => {
+          map.setBasemapTheme(t.id);
+          for (const other of seg.children) other.className = 'seg__btn';
+          btn.className = 'seg__btn is-on';
+        },
+      },
+      t.label
+    );
+    seg.appendChild(btn);
+  }
+  return seg;
+}
+
 export function mapLegend(title, children, { open = false } = {}) {
   const body = h('div', { class: 'map-legend map-legend--pop' }, h('b', { text: title }), ...children.filter(Boolean));
   body.hidden = !open;

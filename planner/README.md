@@ -29,6 +29,30 @@ się odtworzyć z samych tokenów.
 - **Pasek podtytułu 1:1 z `PlannerChrome`**: szara wstawka zamiast białej belki,
   numer kroku wersalikami, pionowa kreska, licznik dosunięty w prawo.
 
+### Mapa 3D
+
+Podkład przeszedł z płaskiego `light-v11` na **Mapbox Standard** – rozwiązanie
+przeniesione z `twentyonelab/magazyn-pcm`, gdzie jest już sprawdzone w boju:
+
+- konfiguracja podkładu przez import `basemap`, podana od razu przy tworzeniu
+  mapy (inaczej pierwsza klatka mrugnęłaby domyślnym motywem): bryły budynków
+  włączone, podpisy dróg i punktów usługowych zdjęte,
+- **rzeźba terenu** (`mapbox-dem`, przewyższenie 1,4) zakładana na `style.load`,
+  bo podmiana motywu przeładowuje styl,
+- **kamera pochylona o 52°**, po wybraniu punktu przelot do 62° i bliżej,
+- **przełącznik wyglądu podkładu** w pasku nad mapą: szarości (domyślnie),
+  przygaszony, kolorowy. Idzie przez `setConfigProperty`, więc kadr, warstwy
+  i znaczniki zostają na miejscu,
+- własne warstwy dostały **sloty** (`bottom` dla wypełnień, `middle` dla linii),
+  inaczej w stylu Standard lądują na wierzchu i zasłaniają bryły oraz podpisy,
+- znaczniki mają `pitchAlignment: 'viewport'` – bez tego przy 52° położyłyby się
+  na mapie.
+
+Przy okazji naprawiony **błąd licencyjny**: mapa tworzyła się z
+`attributionControl: false` i nigdy nie dostawała atrybucji z powrotem.
+Warunki Mapboxa wymagają logo i atrybucji tekstowej dla map używających
+stylów i danych Mapboxa. Wróciła w formie zwiniętej (`compact: true`).
+
 Przy okazji naprawiona usterka, która siedziała w repozytorium od kilku tur:
 `tools/bundle.py` nie miał na liście `js/reach.js` ani `data/reach-tychy.json`,
 więc **plik samodzielny nie uruchamiał się w ogóle**, a wersja serwowana
@@ -205,7 +229,7 @@ tools/generate-demo.mjs  generator danych z kontrolą KPI
 tools/fetch-reach.mjs    pobiera izochrony i trasy z Mapboksa do cache projektu
 tools/smoke.mjs          test przeglądarkowy całej ścieżki
 tools/interactions.mjs   test interakcji mapy (klik, przeciąganie, cofnij, kadr)
-tools/routeflow.mjs      test animacji tras dojścia na ścieżce Mapboksa (atrapa biblioteki)
+tools/routeflow.mjs      test ścieżki Mapboksa: mapa 3D i animacja tras (atrapa biblioteki)
 tools/routetrim.mjs      test przycinania tras do obrysu i do czasu standardu (dane z cache)
 tools/bundlecheck.mjs    test pliku samodzielnego z dist/ (wszystkie widoki, grafiki, ikony)
 CONTRACT.md           interfejsy modułów (wiążące)
@@ -217,7 +241,7 @@ ITERACJA2_SPEC.md     specyfikacja produktu
 ```bash
 node tools/smoke.mjs          # 35 sprawdzeń: cała ścieżka 0→5, zero błędów konsoli
 node tools/interactions.mjs   # 72 sprawdzenia: interakcje mapy, karta punktu, PDF/ZIP, roadmapa
-node tools/routeflow.mjs      # 9 sprawdzeń: kreskowanie tras w Mapboksie (setPaintProperty)
+node tools/routeflow.mjs      # 18 sprawdzeń: konfiguracja mapy 3D i kreskowanie tras
 node tools/routetrim.mjs      # 6 sprawdzeń: żadna trasa poza obrysem ani ponad standard czasu
 python3 tools/bundle.py       # sklejka do dist/aed-planner-standalone.html
 node tools/bundlecheck.mjs    # 12 sprawdzeń: sklejka realnie działa z file://
